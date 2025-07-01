@@ -1,0 +1,53 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  blue:
+    image: minibrb/linkiving-core:latest
+    container_name: blue
+    environment:
+      - LANG=ko_KR.UTF-8
+      - TZ=Asia/Seoul
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health-check" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  green:
+    image: minibrb/linkiving-core:latest
+    container_name: green
+    environment:
+      - LANG=ko_KR.UTF-8
+      - TZ=Asia/Seoul
+    ports:
+      - '8081:8080'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health-check" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app-network:
+    driver: bridge
