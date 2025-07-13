@@ -1,0 +1,25 @@
+name: "✨ Task"
+description: "가장 최소한의 양식"
+type: "Task"
+projects: ["Team-SoFa/4"]
+body:
+  - type: textarea
+    attributes:
+      label: 이슈 배경
+      description: 작업 내용 or 논의 내용의 배경을 작성해주세요.
+      placeholder: 자세히 적을수록 좋습니다!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 📄 작업 내용 or 논의 내용
+      description: 설명을 작성해 주세요.
+      placeholder: 자세히 적을수록 좋습니다!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🙋🏻 참고 자료
+      description: 참고 자료가 있다면 작성해 주세요.

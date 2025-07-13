@@ -1,0 +1,25 @@
+name: "🐛 Bug"
+description: "버그 이슈"
+type: Bug
+projects: [ "Team-SoFa/4" ]
+body:
+  - type: textarea
+    attributes:
+      label: 버그 내용
+      description: 버그 사항에 대한 설명을 작성해 주세요.
+      placeholder: 자세히 적을수록 좋습니다!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 버그 재현 방법
+      description: 버그를 발생시키려면 어떻게 해야 하는지 적어주세요.
+      placeholder: 자세히 적을수록 좋습니다!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 참고 자료
+      description: 참고 자료가 있다면 작성해 주세요.
