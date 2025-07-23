@@ -2,9 +2,6 @@ name: ✨ Linkiving backend CD ✨
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
   pull_request:
     types: [ closed ]
     branches:
@@ -12,9 +9,7 @@ on:
 
 jobs:
   backend-docker-build-and-push:
-    if: >
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
 
     steps:
