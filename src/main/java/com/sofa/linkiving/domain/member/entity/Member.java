@@ -1,4 +1,4 @@
-package com.sofa.linkiving.domain.user.entity;
+package com.sofa.linkiving.domain.member.entity;
 
 import com.sofa.linkiving.global.common.BaseEntity;
 
@@ -12,14 +12,14 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User extends BaseEntity {
+public class Member extends BaseEntity {
 	@NotBlank
 	private String email;
 	@NotBlank
 	private String password;
 
 	@Builder
-	public User(String email, String password) {
+	public Member(String email, String password) {
 		this.email = email;
 		this.password = password;
 	}
