@@ -18,6 +18,15 @@ public class Member extends BaseEntity {
 	@NotBlank
 	private String password;
 
+	/**
+	 * Constructs a Member with the given email and password.
+	 *
+	 * <p>Intended for use with Lombok's {@code @Builder}. Both fields are subject to
+	 * bean-validation {@code @NotBlank} constraints when validated.</p>
+	 *
+	 * @param email    the member's email address (must be non-blank)
+	 * @param password the member's password (must be non-blank)
+	 */
 	@Builder
 	public Member(String email, String password) {
 		this.email = email;
