@@ -13,4 +13,8 @@ public record MemberRes(
 	public MemberRes(Member member) {
 		this(member.getId(), member.getEmail());
 	}
+
+	public static MemberRes from(Member member) {
+		return new MemberRes(member.getId(), member.getEmail());
+	}
 }
