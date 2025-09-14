@@ -18,6 +18,6 @@ public class MemberService {
 	public MemberRes signup(SignupReq req) {
 		Member member = memberCommandService.addUser(req.email(), req.password());
 
-		return new MemberRes(member);
+		return MemberRes.from(member);
 	}
 }

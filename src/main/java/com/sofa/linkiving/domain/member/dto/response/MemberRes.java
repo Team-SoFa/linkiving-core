@@ -10,7 +10,7 @@ public record MemberRes(
 	@Schema(description = "유저 이메일")
 	String email
 ) {
-	public MemberRes(Member member) {
-		this(member.getId(), member.getEmail());
+	public static MemberRes from(Member member) {
+		return new MemberRes(member.getId(), member.getEmail());
 	}
 }
