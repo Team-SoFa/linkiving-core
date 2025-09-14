@@ -1,5 +1,7 @@
 package com.sofa.linkiving.domain.member.entity;
 
+import java.util.regex.Pattern;
+
 import com.sofa.linkiving.global.common.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -13,6 +15,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseEntity {
+	private static final String EMAIL_REGEX = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z]{2,6}$";
+	private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX, Pattern.CASE_INSENSITIVE);
 
 	@Column(nullable = false)
 	private String email;
@@ -21,7 +25,15 @@ public class Member extends BaseEntity {
 
 	@Builder
 	public Member(String email, String password) {
+		if (!isValidEmail(email)) {
+			// TODO: Global Error Handle 추가 시 변경 필요
+			throw new IllegalArgumentException("Invalid email format: " + email);
+		}
 		this.email = email;
 		this.password = password;
+	}
+
+	private boolean isValidEmail(String email) {
+		return EMAIL_PATTERN.matcher(email).matches();
 	}
 }
