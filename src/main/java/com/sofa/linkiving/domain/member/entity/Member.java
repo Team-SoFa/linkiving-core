@@ -36,4 +36,8 @@ public class Member extends BaseEntity {
 	private boolean isValidEmail(String email) {
 		return EMAIL_PATTERN.matcher(email).matches();
 	}
+
+	public boolean verifyPassword(String rawPassword) {
+		return this.password.equals(rawPassword);
+	}
 }
