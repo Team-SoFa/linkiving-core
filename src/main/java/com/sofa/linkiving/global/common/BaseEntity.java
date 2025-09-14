@@ -21,18 +21,18 @@ import lombok.NoArgsConstructor;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BaseEntity {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	@CreatedDate
-	@Column(name = "created_at", updatable = false)
-	private LocalDateTime createdAt;
 	@LastModifiedDate
 	@Column(name = "updated_at")
 	protected LocalDateTime updatedAt;
 	// reserved for future soft delete implementation
 	@Column(name = "is_delete")
 	protected boolean isDelete = false;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	@CreatedDate
+	@Column(name = "created_at", updatable = false)
+	private LocalDateTime createdAt;
 
 	public boolean isDeleted() {
 		return isDelete;

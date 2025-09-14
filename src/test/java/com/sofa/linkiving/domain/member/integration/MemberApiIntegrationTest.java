@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
+import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
@@ -28,6 +29,7 @@ import com.sofa.linkiving.domain.member.repository.MemberRepository;
 @Transactional
 @ActiveProfiles("test")
 public class MemberApiIntegrationTest {
+
 	private static final String BASE_URL = "/v1/member";
 	@Autowired
 	MockMvc mockMvc;
@@ -35,6 +37,70 @@ public class MemberApiIntegrationTest {
 	ObjectMapper objectMapper;
 	@Autowired
 	MemberRepository memberRepository;
+
+	@Test
+	@DisplayName("회원가입 성공 시 DB에 인코딩된 비밀번호가 저장된다")
+	void shouldSignupSuccessfullyWithRealRepository() throws Exception {
+		// given
+		String url = BASE_URL + "/signup";
+
+		String email = "test@test.com";
+		String password = "test";
+		SignupReq req = new SignupReq(email, password);
+
+		String expectedEncoded = Base64.getEncoder()
+			.encodeToString(password.getBytes(StandardCharsets.UTF_8));
+
+		// when & then
+		mockMvc.perform(
+				post(url)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req))
+					.accept(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.status").value("OK"))
+			.andExpect(jsonPath("$.message").value("회원 가입에 성공하였습니다."))
+			.andExpect(jsonPath("$.data.userId").isNumber())
+			.andExpect(jsonPath("$.data.email").value(email));
+
+		Member saved = memberRepository.findByEmail(email).orElseThrow();
+		assertThat(saved.getEmail()).isEqualTo(email);
+		assertThat(saved.getPassword()).isEqualTo(expectedEncoded);
+	}
+
+	@Test
+	@DisplayName("회원가입 실패 시 중복 이메일로 인한 예외가 발생한다")
+	void shouldFailWhenEmailAlreadyExistsWithRealRepository() throws Exception {
+		// given: 이미 저장된 사용자
+		String url = BASE_URL + "/signup";
+
+		String email = "test@test.com";
+		String password = "test";
+		String encoded = Base64.getEncoder()
+			.encodeToString(password.getBytes(StandardCharsets.UTF_8));
+
+		memberRepository.save(Member.builder()
+			.email(email)
+			.password(encoded)
+			.build());
+
+		SignupReq req = new SignupReq(email, "newPassword");
+
+		// when & then
+		mockMvc.perform(
+				post(url)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req))
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.success").value(false))
+			.andExpect(jsonPath("$.status").value(MemberErrorCode.DUPLICATE_EMAIL.getStatus().name()))
+			.andExpect(jsonPath("$.message").value(MemberErrorCode.DUPLICATE_EMAIL.getMessage()))
+			.andExpect(jsonPath("$.data").value(MemberErrorCode.DUPLICATE_EMAIL.getCode()));
+	}
 
 	@Test
 	@DisplayName("올바른 이메일과 비밀번호로 로그인 시 성공")
