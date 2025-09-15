@@ -1,5 +1,8 @@
 package com.sofa.linkiving.domain.member.service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +22,11 @@ public class MemberService {
 	public MemberRes login(LoginReq req) {
 		Member member = memberQueryService.getUser(req.email());
 
-		if (member.verifyPassword(req.password())) {
+		// TODO: Change this when Security dependency is added later
+		String encoded = Base64.getEncoder()
+			.encodeToString(req.password().getBytes(StandardCharsets.UTF_8));
+
+		if (member.verifyPassword(encoded)) {
 			// exception 발생
 		}
 
