@@ -1,10 +1,15 @@
 package com.sofa.linkiving.domain.link.entity;
 
+import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,11 +17,12 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "links")
 @Getter
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Link extends BaseEntity {
 
-	@Column(name = "member_id", nullable = false)
-	private Long memberId;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "member_id", nullable = false)
+	private Member member;
 
 	@Column(name = "url", nullable = false, length = 2048)
 	private String url;
@@ -34,8 +40,8 @@ public class Link extends BaseEntity {
 	private String imageUrl;
 
 	@Builder
-	public Link(Long memberId, String url, String title, String summary, String memo, String imageUrl) {
-		this.memberId = memberId;
+	public Link(Member member, String url, String title, String summary, String memo, String imageUrl) {
+		this.member = member;
 		this.url = url;
 		this.title = title;
 		this.summary = summary;
