@@ -40,8 +40,8 @@ jobs:
             datasource:
               driver-class-name: org.h2.Driver
               url: jdbc:h2:mem:testdb
-              username: ${{ secrets.TEST_DB_USERNAME }} 
-              password: ${{ secrets.TEST_DB_PASSWORD }}   
+              username: ${{ secrets.TEST_DB_USERNAME }}
+              password: ${{ secrets.TEST_DB_PASSWORD }}
             jpa:
               hibernate:
                 ddl-auto: create-drop
@@ -57,9 +57,32 @@ jobs:
       - name: 🧪 테스트 실행
         run: ./gradlew test
 
+      - name: 📢 Discord 알림 (성공)
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "✅ CI 빌드 성공!"
+          description: "모든 테스트가 통과했습니다."
+          color: 0x00ff00
+
+      - name: 📢 Discord 알림 (실패)
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "❌ CI 빌드 실패!"
+          description: "테스트 또는 빌드에 실패했습니다."
+          color: 0xff0000
+
       - name: 📊 테스트 결과 업로드
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()  # 성공/실패 관계없이 항상 업로드
         with:
-          name: test-results
-          path: build/reports/tests/test/
+          name: test-results-${{ github.run_number }}
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/
+          retention-days: 7  # 7일 후 자동 삭제
