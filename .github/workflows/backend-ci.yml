@@ -1,0 +1,65 @@
+name: ✨ Linkiving backend CI ✨
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
+      - name: ✨ JDK 17 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: ✨ Gradle Caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🗂️ Create test application.yml
+        run: |
+          mkdir -p ./src/main/resources
+          cat > ./src/main/resources/application.yml << EOF
+          server:
+            port: 8080
+          spring:
+            datasource:
+              driver-class-name: org.h2.Driver
+              url: jdbc:h2:mem:testdb
+              username: sa
+              password:
+            jpa:
+              hibernate:
+                ddl-auto: create-drop
+              show_sql: false
+          EOF
+
+      - name: ✨ Gradlew 권한 설정
+        run: chmod +x ./gradlew
+
+      - name: 🏗️ Gradle 빌드
+        run: ./gradlew build
+
+      - name: 🧪 테스트 실행
+        run: ./gradlew test
+
+      - name: 📊 테스트 결과 업로드
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: build/reports/tests/test/
