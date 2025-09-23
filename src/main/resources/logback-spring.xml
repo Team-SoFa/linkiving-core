@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration packagingData="true">
+
+    <!-- CloudWatch Appender -->
+    <appender name="aws_cloud_watch_log" class="ca.pjer.logback.AwsLogsAppender">
+        <layout>
+            <pattern>[%thread] [%date] [%level] [%file:%line] - %msg%n</pattern>
+        </layout>
+        <logGroupName>/aws/linkiving/application</logGroupName>
+        <logStreamUuidPrefix>linkiving-server</logStreamUuidPrefix>
+        <logRegion>ap-northeast-2</logRegion>
+        <maxBatchLogEvents>50</maxBatchLogEvents>
+        <maxFlushTimeMillis>30000</maxFlushTimeMillis>
+        <maxBlockTimeMillis>5000</maxBlockTimeMillis>
+        <retentionTimeDays>30</retentionTimeDays>
+        <accessKeyId>${AWS_ACCESS_KEY_ID}</accessKeyId>
+        <secretAccessKey>${AWS_SECRET_ACCESS_KEY}</secretAccessKey>
+    </appender>
+
+    <appender name="console_log" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%highlight(%-5level) %date [%thread] %cyan([%C{0} :: %M :: %L]) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <springProfile name="!prod">
+        <root level="INFO">
+            <appender-ref ref="console_log"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="console_log"/>
+            <appender-ref ref="aws_cloud_watch_log"/>
+        </root>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="console_log"/>
+    </root>
+
+</configuration>
