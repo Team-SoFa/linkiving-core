@@ -1,5 +1,6 @@
 package com.sofa.linkiving.global.error.handler;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -12,6 +13,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.global.error.code.CommonErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.global.error.util.ErrorResponse;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -24,65 +26,66 @@ public class GlobalExceptionHandler {
 	  도메인 비즈니스 예외
 	  ========================= */
 	@ExceptionHandler(BusinessException.class)
-	public BaseResponse<String> handleBusinessException(BusinessException ex) {
+	public ResponseEntity<BaseResponse<String>> handleBusinessException(BusinessException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(ex.getErrorCode());
+		return ErrorResponse.build(ex.getErrorCode());
 	}
 
 	/* =========================
        검증/바인딩 예외
        ========================= */
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public BaseResponse<String> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+	public ResponseEntity<BaseResponse<String>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.INVALID_INPUT_VALUE);
+		return ErrorResponse.build(CommonErrorCode.INVALID_INPUT_VALUE);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)
-	public BaseResponse<String> handleConstraintViolation(ConstraintViolationException ex) {
+	public ResponseEntity<BaseResponse<String>> handleConstraintViolation(ConstraintViolationException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.INVALID_INPUT_VALUE);
+		return ErrorResponse.build(CommonErrorCode.INVALID_INPUT_VALUE);
 	}
 
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public BaseResponse<String> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+	public ResponseEntity<BaseResponse<String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.TYPE_MISMATCH);
+		return ErrorResponse.build(CommonErrorCode.TYPE_MISMATCH);
 	}
 
 	@ExceptionHandler(MissingServletRequestParameterException.class)
-	public BaseResponse<String> handleMissingParam(MissingServletRequestParameterException ex) {
+	public ResponseEntity<BaseResponse<String>> handleMissingParam(MissingServletRequestParameterException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.MISSING_REQUEST_PARAMS);
+		return ErrorResponse.build(CommonErrorCode.MISSING_REQUEST_PARAMS);
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
-	public BaseResponse<String> handleNotReadable(HttpMessageNotReadableException ex) {
+	public ResponseEntity<BaseResponse<String>> handleNotReadable(HttpMessageNotReadableException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.BAD_REQUEST);
+		return ErrorResponse.build(CommonErrorCode.BAD_REQUEST);
 	}
 
 	/* =========================
 	 HTTP 관련 예외
 	 ========================= */
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public BaseResponse<String> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+	public ResponseEntity<BaseResponse<String>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.METHOD_NOT_ALLOWED);
+		return ErrorResponse.build(CommonErrorCode.METHOD_NOT_ALLOWED);
 	}
 
 	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-	public BaseResponse<String> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+	public ResponseEntity<BaseResponse<String>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.HTTP_MEDIA_NOT_SUPPORT);
+		return ErrorResponse.build(CommonErrorCode.HTTP_MEDIA_NOT_SUPPORT);
 	}
 
 	/* =========================
        그 외 모든 예외
        ========================= */
 	@ExceptionHandler(Exception.class)
-	public BaseResponse<String> handleException(Exception ex) {
+	public ResponseEntity<BaseResponse<String>> handleException(Exception ex) {
 		log.error(ex.getMessage(), ex);
-		return BaseResponse.error(CommonErrorCode.INTERNAL_SERVER_ERROR);
+		return ErrorResponse.build(CommonErrorCode.INTERNAL_SERVER_ERROR);
 	}
+
 }
