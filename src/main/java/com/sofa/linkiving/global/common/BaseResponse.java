@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
 
+import com.sofa.linkiving.global.error.code.ErrorCode;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -35,12 +37,12 @@ public class BaseResponse<T> {
 			.build();
 	}
 
-	public static BaseResponse<String> error(HttpStatus status, String message, String errorCode) {
+	public static BaseResponse<String> error(ErrorCode errorCode) {
 		return BaseResponse.<String>builder()
-			.status(status)
+			.status(errorCode.getStatus())
 			.success(false)
-			.message(message)
-			.data(errorCode)
+			.message(errorCode.getMessage())
+			.data(errorCode.getCode())
 			.timestamp(LocalDateTime.now())
 			.build();
 	}
