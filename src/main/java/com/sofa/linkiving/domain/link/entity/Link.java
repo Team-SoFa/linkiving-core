@@ -8,14 +8,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "links")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Link extends BaseEntity {
@@ -24,19 +22,19 @@ public class Link extends BaseEntity {
 	@JoinColumn(name = "member_id", nullable = false)
 	private Member member;
 
-	@Column(name = "url", nullable = false, length = 2048)
+	@Column(nullable = false, length = 2048)
 	private String url;
 
-	@Column(name = "title", nullable = false, length = 100)
+	@Column(nullable = false, length = 100)
 	private String title;
 
-	@Column(name = "summary", columnDefinition = "TEXT")
+	@Column(columnDefinition = "TEXT")
 	private String summary;
 
-	@Column(name = "memo", columnDefinition = "TEXT")
+	@Column(columnDefinition = "TEXT")
 	private String memo;
 
-	@Column(name = "image_url", length = 2048)
+	@Column(length = 2048)
 	private String imageUrl;
 
 	@Builder
