@@ -1,9 +1,14 @@
 package com.sofa.linkiving.domain.link.controller;
 
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.sofa.linkiving.domain.link.service.LinkService;
 
 import lombok.RequiredArgsConstructor;
 
+@RestController
+@RequestMapping("/v1/link")
 @RequiredArgsConstructor
 public class LinkController {
 
