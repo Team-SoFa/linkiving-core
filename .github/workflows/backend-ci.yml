@@ -33,20 +33,13 @@ jobs:
       - name: 🗂️ Create test application.yml
         run: |
           mkdir -p ./src/main/resources
-          cat > ./src/main/resources/application.yml << EOF
-          server:
-            port: 8080
-          spring:
-            datasource:
-              driver-class-name: org.h2.Driver
-              url: jdbc:h2:mem:testdb
-              username: ${{ secrets.TEST_DB_USERNAME }}
-              password: ${{ secrets.TEST_DB_PASSWORD }}
-            jpa:
-              hibernate:
-                ddl-auto: create-drop
-              show_sql: false
-          EOF
+          cd ./src/main/resources
+          
+          touch ./application.yml
+          echo "${{ secrets.APPLICATION_TEST }}" > ./application.yml
+        env:
+          APPLICATION_TEST: ${{ secrets.APPLICATION_TEST }}
+        shell: bash
 
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew
@@ -63,9 +56,20 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: success
-          title: "✅ CI 빌드 성공!"
-          description: "모든 테스트가 통과했습니다."
+          title: "✅ CI 빌드 성공"
+          description: |
+            **🔖 PR #${{ github.event.pull_request.number }}**: ${{ github.event.pull_request.title }}
+            └─ `${{ github.head_ref }}` → `${{ github.base_ref }}`
+
+            **📋 상세 정보**
+            • **커밋**: `${{ github.event.pull_request.head.sha }}`
+            • **작성자**: @${{ github.actor }}
+
+            **🔗 빠른 액세스**
+            [PR 확인](${{ github.event.pull_request.html_url }}) | [Actions 로그](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           color: 0x00ff00
+          username: "Linkiving CI"
+          avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
 
       - name: 📢 Discord 알림 (실패)
         if: failure()
@@ -73,16 +77,28 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: failure
-          title: "❌ CI 빌드 실패!"
-          description: "테스트 또는 빌드에 실패했습니다."
+          title: "❌ CI 빌드 실패"
+          description: |
+            **🔖 PR #${{ github.event.pull_request.number }}**: ${{ github.event.pull_request.title }}
+            └─ `${{ github.head_ref }}` → `${{ github.base_ref }}`
+
+            **📋 상세 정보**
+            • **커밋**: `${{ github.event.pull_request.head.sha }}`
+            • **작성자**: @${{ github.actor }}
+            • **실패 원인**: 빌드 또는 테스트 실패
+
+            **🔗 빠른 액세스**
+            [PR 확인](${{ github.event.pull_request.html_url }}) | [Actions 로그](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) | [테스트 결과](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)
           color: 0xff0000
+          username: "Linkiving CI"
+          avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
 
       - name: 📊 테스트 결과 업로드
         uses: actions/upload-artifact@v4
-        if: always()  # 성공/실패 관계없이 항상 업로드
+        if: always()
         with:
           name: test-results-${{ github.run_number }}
           path: |
             build/reports/tests/test/
             build/test-results/test/
-          retention-days: 7  # 7일 후 자동 삭제
+          retention-days: 7ㄱ
