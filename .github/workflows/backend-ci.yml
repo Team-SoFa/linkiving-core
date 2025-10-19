@@ -33,20 +33,10 @@ jobs:
       - name: 🗂️ Create test application.yml
         run: |
           mkdir -p ./src/main/resources
-          cat > ./src/main/resources/application.yml << EOF
-          server:
-            port: 8080
-          spring:
-            datasource:
-              driver-class-name: org.h2.Driver
-              url: jdbc:h2:mem:testdb
-              username: ${{ secrets.TEST_DB_USERNAME }}
-              password: ${{ secrets.TEST_DB_PASSWORD }}
-            jpa:
-              hibernate:
-                ddl-auto: create-drop
-              show_sql: false
-          EOF
+          cd ./src/main/resources
+          
+          touch ./application-test.yml
+          echo "APPLICATION_TEST" > ./application-test.yml         
 
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew
