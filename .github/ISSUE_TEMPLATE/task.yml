@@ -1,7 +1,7 @@
 name: "✨ Task"
 description: "가장 최소한의 양식"
 type: "Task"
-projects: ["Team-SoFa/4"]
+projects: [ "Team-SoFa/4" ]
 body:
   - type: textarea
     attributes:
