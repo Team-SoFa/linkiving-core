@@ -41,6 +41,10 @@ dependencies {
     // Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11'
 
+
+    // AWS CloudWatch appender
+    implementation "ca.pjer:logback-awslogs-appender:1.6.0"
+
 }
 
 checkstyle {
