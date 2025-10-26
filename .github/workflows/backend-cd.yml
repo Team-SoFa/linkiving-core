@@ -54,7 +54,9 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: ✨ Jar 파일 빌드
-        run: ./gradlew bootJar
+        run: |
+          pwd
+          ./gradlew bootJar
 
       - name: ✨ DockerHub에 로그인
         uses: docker/login-action@v2
@@ -78,5 +80,6 @@ jobs:
     steps:
       - name: ✨ 배포 스크립트 실행
         run: |
-          chmod +x ../deploy.sh 
-          ../deploy.sh
+          pwd
+          chmod +x ./deploy.sh 
+          ./deploy.sh
