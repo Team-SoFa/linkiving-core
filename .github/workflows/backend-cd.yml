@@ -78,4 +78,5 @@ jobs:
     steps:
       - name: ✨ 배포 스크립트 실행
         run: |
-          sh /home/ubuntu/deploy.sh
+          chmod +x ../deploy.sh 
+          ../deploy.sh
