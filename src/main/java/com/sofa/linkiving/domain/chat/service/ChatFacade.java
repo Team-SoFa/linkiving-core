@@ -11,5 +11,5 @@ import lombok.RequiredArgsConstructor;
 public class ChatFacade {
 	private final ChatService chatService;
 	private final MessageService messageService;
-	private final ReportService reportService;
+	private final FeedbackService feedbackService;
 }
