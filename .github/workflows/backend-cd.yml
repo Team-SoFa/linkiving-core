@@ -9,7 +9,7 @@ on:
 
 jobs:
   backend-docker-build-and-push:
-    if: (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -54,7 +54,8 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: ✨ Jar 파일 빌드
-        run: ./gradlew bootJar
+        run: |
+          ./gradlew bootJar
 
       - name: ✨ DockerHub에 로그인
         uses: docker/login-action@v2
@@ -76,6 +77,10 @@ jobs:
     if: ${{ needs.backend-docker-build-and-push.result == 'success' }}
     needs: [ backend-docker-build-and-push ]
     steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
       - name: ✨ 배포 스크립트 실행
         run: |
-          sh /home/ubuntu/deploy.sh
+          chmod +x deploy.sh 
+          ./deploy.sh
