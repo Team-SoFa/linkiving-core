@@ -3,6 +3,8 @@ package com.sofa.linkiving.domain.chat.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 import com.sofa.linkiving.global.common.BaseEntity;
 import com.sofa.linkiving.global.converter.LongListToStringConverter;
 
@@ -12,6 +14,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -38,4 +41,8 @@ public class Message extends BaseEntity {
 
 	@Convert(converter = LongListToStringConverter.class)
 	private List<Long> linkIds = new ArrayList<>();
+
+	@OneToMany(mappedBy = "message")
+	@BatchSize(size = 100)
+	private List<Feedback> feedbacks = new ArrayList<>();
 }
