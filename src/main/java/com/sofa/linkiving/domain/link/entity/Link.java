@@ -29,22 +29,30 @@ public class Link extends BaseEntity {
 	private String title;
 
 	@Column(columnDefinition = "TEXT")
-	private String summary;
-
-	@Column(columnDefinition = "TEXT")
 	private String memo;
 
-	@Column(length = 2048)
+	@Column(name = "image_url", length = 2048)
 	private String imageUrl;
 
+	@Column(name = "metadata_json", columnDefinition = "TEXT")
+	private String metadataJson;
+
+	@Column(columnDefinition = "TEXT")
+	private String tags;
+
+	@Column(name = "is_important", nullable = false)
+	private boolean isImportant = false;
+
 	@Builder
-	public Link(Member member, String url, String title, String summary, String memo, String imageUrl) {
+	public Link(Member member, String url, String title, String memo, String imageUrl,
+		String metadataJson, String tags, boolean isImportant) {
 		this.member = member;
 		this.url = url;
 		this.title = title;
-		this.summary = summary;
 		this.memo = memo;
 		this.imageUrl = imageUrl;
+		this.metadataJson = metadataJson;
+		this.tags = tags;
+		this.isImportant = isImportant;
 	}
 }
-
