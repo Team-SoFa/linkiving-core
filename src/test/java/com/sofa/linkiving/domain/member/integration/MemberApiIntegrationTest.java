@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.member.integration;
 
 import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -54,6 +55,8 @@ public class MemberApiIntegrationTest {
 		// when & then
 		mockMvc.perform(
 				post(url)
+					.with(csrf())
+					.with(user("tester").roles("USER"))
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(req))
 					.accept(MediaType.APPLICATION_JSON)
@@ -91,6 +94,8 @@ public class MemberApiIntegrationTest {
 		// when & then
 		mockMvc.perform(
 				post(url)
+					.with(csrf())
+					.with(user("tester").roles("USER"))
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(req))
 			)
@@ -122,6 +127,8 @@ public class MemberApiIntegrationTest {
 
 		// when & then
 		mockMvc.perform(post(url)
+				.with(csrf())
+				.with(user("tester").roles("USER"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req))
 				.accept(MediaType.APPLICATION_JSON))
@@ -158,6 +165,8 @@ public class MemberApiIntegrationTest {
 
 		// when & then
 		mockMvc.perform(post(url)
+				.with(csrf())
+				.with(user("tester").roles("USER"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req))
 				.accept(MediaType.APPLICATION_JSON))

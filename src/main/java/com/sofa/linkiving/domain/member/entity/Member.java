@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.member.entity;
 
 import java.util.regex.Pattern;
 
+import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.common.BaseEntity;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -24,6 +25,8 @@ public class Member extends BaseEntity {
 	private String email;
 	@Column(nullable = false)
 	private String password;
+	@Column(nullable = false)
+	private Role role;
 
 	@Builder
 	public Member(String email, String password) {
@@ -32,6 +35,7 @@ public class Member extends BaseEntity {
 		}
 		this.email = email;
 		this.password = password;
+		this.role = Role.USER;
 	}
 
 	private boolean isValidEmail(String email) {
