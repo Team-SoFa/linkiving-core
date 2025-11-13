@@ -80,10 +80,10 @@ public class RedisServiceTest {
 		given(redisTemplate.opsForValue()).willReturn(valueOps);
 
 		// when
-		String v = redisService.get(key);
+		String result = redisService.get(key);
 
 		// then
-		assertThat(v).isEqualTo(value);
+		assertThat(result).isEqualTo(value);
 		verify(valueOps, times(1)).get(key);
 	}
 
@@ -141,7 +141,6 @@ public class RedisServiceTest {
 		String token = "exampleToken";
 
 		given(redisTemplate.opsForValue()).willReturn(valueOps);
-
 
 		Duration configured = Duration.ofDays(7);
 		given(ttlProps.getOrDefault(spec.name(), spec.defaultTtl())).willReturn(configured);
