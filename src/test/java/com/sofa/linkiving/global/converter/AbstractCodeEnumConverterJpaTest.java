@@ -45,6 +45,21 @@ class AbstractCodeEnumConverterJpaTest {
 		assertThat(found.getName()).isEqualTo("hello");
 	}
 
+	@Test
+	void shouldPersistCodeValue() {
+		TestEnumEntity entity = new TestEnumEntity();
+		entity.setStatus(TestEnum.B);
+		em.persist(entity);
+		em.flush();
+		Long id = entity.getId();
+
+		Number rawCode = (Number)em.createNativeQuery(
+				"select status from test_entity where id = :id")
+			.setParameter("id", id).getSingleResult();
+		assertThat(rawCode.intValue()).isEqualTo(2);
+		assertThat(rawCode).isEqualTo(2);
+	}
+
 	@Entity(name = "TestEntity")
 	@Getter
 	@Setter
