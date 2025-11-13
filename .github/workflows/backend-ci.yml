@@ -36,7 +36,7 @@ jobs:
           cd ./src/main/resources
           
           touch ./application-test.yml
-          echo "APPLICATION_TEST" > ./application-test.yml
+          echo "${{secrets.APPLICATION_TEST}}" > ./application-test.yml
           
           touch ./application.yml
           echo "APPLICATION" > ./application.yml
