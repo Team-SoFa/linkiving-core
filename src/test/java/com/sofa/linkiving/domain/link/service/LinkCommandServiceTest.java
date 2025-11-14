@@ -27,6 +27,9 @@ class LinkCommandServiceTest {
 	@Mock
 	private LinkRepository linkRepository;
 
+	@Mock
+	private LinkQueryService linkQueryService;
+
 	@InjectMocks
 	private LinkCommandService linkCommandService;
 
@@ -102,8 +105,8 @@ class LinkCommandServiceTest {
 	@DisplayName("링크를 삭제할 수 있다")
 	void shouldDeleteLink() {
 		// given
-		when(linkRepository.findByIdAndMember(1L, testMember))
-			.thenReturn(Optional.of(testLink));
+		when(linkQueryService.findById(1L, testMember))
+			.thenReturn(testLink);
 
 		// when
 		linkCommandService.deleteLink(1L, testMember);
@@ -116,8 +119,8 @@ class LinkCommandServiceTest {
 	@DisplayName("존재하지 않는 링크에 접근하면 예외가 발생한다")
 	void shouldThrowExceptionWhenLinkNotFound() {
 		// given
-		when(linkRepository.findByIdAndMember(999L, testMember))
-			.thenReturn(Optional.empty());
+		when(linkQueryService.findById(999L, testMember))
+			.thenThrow(new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
 
 		// when & then
 		assertThatThrownBy(() -> linkCommandService.deleteLink(999L, testMember))

@@ -132,4 +132,107 @@ class LinkQueryServiceTest {
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.LINK_NOT_FOUND);
 	}
+
+	@Test
+	@DisplayName("페이징 - 여러 페이지에 걸친 링크 조회가 가능하다")
+	void shouldFindLinksByMultiplePages() {
+		// given
+		Pageable firstPage = PageRequest.of(0, 5);
+		Pageable secondPage = PageRequest.of(1, 5);
+
+		List<Link> firstPageLinks = List.of(testLink, testLink, testLink, testLink, testLink);
+		List<Link> secondPageLinks = List.of(testLink, testLink, testLink);
+
+		Page<Link> firstPageResult = new PageImpl<>(firstPageLinks, firstPage, 8);
+		Page<Link> secondPageResult = new PageImpl<>(secondPageLinks, secondPage, 8);
+
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, firstPage))
+			.thenReturn(firstPageResult);
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, secondPage))
+			.thenReturn(secondPageResult);
+
+		// when
+		Page<Link> firstResult = linkQueryService.findAllByMember(testMember, firstPage);
+		Page<Link> secondResult = linkQueryService.findAllByMember(testMember, secondPage);
+
+		// then
+		assertThat(firstResult.getContent()).hasSize(5);
+		assertThat(firstResult.getTotalElements()).isEqualTo(8);
+		assertThat(firstResult.getTotalPages()).isEqualTo(2);
+		assertThat(firstResult.hasNext()).isTrue();
+		assertThat(firstResult.isFirst()).isTrue();
+
+		assertThat(secondResult.getContent()).hasSize(3);
+		assertThat(secondResult.getTotalElements()).isEqualTo(8);
+		assertThat(secondResult.getTotalPages()).isEqualTo(2);
+		assertThat(secondResult.hasNext()).isFalse();
+		assertThat(secondResult.isLast()).isTrue();
+	}
+
+	@Test
+	@DisplayName("페이징 - 빈 결과를 조회할 수 있다")
+	void shouldReturnEmptyPage() {
+		// given
+		Page<Link> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, pageable))
+			.thenReturn(emptyPage);
+
+		// when
+		Page<Link> result = linkQueryService.findAllByMember(testMember, pageable);
+
+		// then
+		assertThat(result.getContent()).isEmpty();
+		assertThat(result.getTotalElements()).isEqualTo(0);
+		assertThat(result.getTotalPages()).isEqualTo(0);
+		assertThat(result.hasNext()).isFalse();
+		assertThat(result.hasPrevious()).isFalse();
+	}
+
+	@Test
+	@DisplayName("페이징 - 페이지 크기가 다를 때도 정상 동작한다")
+	void shouldWorkWithDifferentPageSizes() {
+		// given
+		Pageable smallPage = PageRequest.of(0, 3);
+		Pageable largePage = PageRequest.of(0, 20);
+
+		List<Link> links = List.of(testLink, testLink, testLink, testLink, testLink);
+		Page<Link> smallPageResult = new PageImpl<>(links.subList(0, 3), smallPage, 5);
+		Page<Link> largePageResult = new PageImpl<>(links, largePage, 5);
+
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, smallPage))
+			.thenReturn(smallPageResult);
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, largePage))
+			.thenReturn(largePageResult);
+
+		// when
+		Page<Link> smallResult = linkQueryService.findAllByMember(testMember, smallPage);
+		Page<Link> largeResult = linkQueryService.findAllByMember(testMember, largePage);
+
+		// then
+		assertThat(smallResult.getContent()).hasSize(3);
+		assertThat(smallResult.getTotalPages()).isEqualTo(2);
+		assertThat(smallResult.hasNext()).isTrue();
+
+		assertThat(largeResult.getContent()).hasSize(5);
+		assertThat(largeResult.getTotalPages()).isEqualTo(1);
+		assertThat(largeResult.hasNext()).isFalse();
+	}
+
+	@Test
+	@DisplayName("페이징 - 삭제된 링크는 페이징 결과에 포함되지 않는다")
+	void shouldNotIncludeDeletedLinksInPagedResults() {
+		// given
+		List<Link> activeLinksOnly = List.of(testLink, testLink);
+		Page<Link> linkPage = new PageImpl<>(activeLinksOnly, pageable, 2);
+		when(linkRepository.findByMemberAndIsDeleteFalse(testMember, pageable))
+			.thenReturn(linkPage);
+
+		// when
+		Page<Link> result = linkQueryService.findAllByMember(testMember, pageable);
+
+		// then
+		assertThat(result.getTotalElements()).isEqualTo(2);
+		assertThat(result.getContent()).hasSize(2);
+		verify(linkRepository).findByMemberAndIsDeleteFalse(testMember, pageable);
+	}
 }
