@@ -36,7 +36,11 @@ jobs:
           cd ./src/main/resources
           
           touch ./application-test.yml
-          echo "APPLICATION_TEST" > ./application-test.yml         
+          echo "$APPLICATION_TEST" > ./application-test.yml      
+
+        env:
+          APPLICATION_TEST: ${{ secrets.APPLICATION_TEST }}
+        shell: bash
 
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew
