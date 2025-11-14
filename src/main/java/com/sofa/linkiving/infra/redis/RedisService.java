@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 public class RedisService {
 
 	private final StringRedisTemplate redisTemplate;
-	private final RedisTtlProperties ttlProps;
 
 	/* -------- Raw key APIs -------- */
 
@@ -45,7 +44,7 @@ public class RedisService {
 
 	public void save(RedisKeySpec type, String value, String... keys) {
 		String key = type.key(keys);
-		Duration ttl = ttlProps.getOrDefault(type.name(), type.defaultTtl());
+		Duration ttl = type.defaultTtl();
 		ValueOperations<String, String> ops = redisTemplate.opsForValue();
 		ops.set(key, value, ttl);
 	}

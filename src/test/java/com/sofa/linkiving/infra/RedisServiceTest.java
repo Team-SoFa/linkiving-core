@@ -17,7 +17,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisKeySpec;
 import com.sofa.linkiving.infra.redis.RedisService;
-import com.sofa.linkiving.infra.redis.RedisTtlProperties;
 
 @ExtendWith(MockitoExtension.class)
 public class RedisServiceTest {
@@ -27,9 +26,6 @@ public class RedisServiceTest {
 
 	@Mock
 	ValueOperations<String, String> valueOps;
-
-	@Mock
-	RedisTtlProperties ttlProps;
 
 	@InjectMocks
 	RedisService redisService;
@@ -142,14 +138,11 @@ public class RedisServiceTest {
 
 		given(redisTemplate.opsForValue()).willReturn(valueOps);
 
-		Duration configured = Duration.ofDays(7);
-		given(ttlProps.getOrDefault(spec.name(), spec.defaultTtl())).willReturn(configured);
-
 		// when
 		redisService.save(spec, token, "user", "42");
 
 		// then
-		verify(valueOps, times(1)).set("rt:user:42", token, configured);
+		verify(valueOps, times(1)).set("rt:user:42", token, spec.defaultTtl());
 	}
 
 	@Test

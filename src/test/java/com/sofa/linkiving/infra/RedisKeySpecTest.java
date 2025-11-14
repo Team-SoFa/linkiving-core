@@ -16,7 +16,7 @@ public class RedisKeySpecTest {
 		// 요청하신 포맷 예시 유지
 	void shouldBuildKeyWithPrefixAndParts() {
 		// given
-		RedisKeySpec spec = new RedisKeySpec("refresh-token", "rt", Duration.ofDays(180));
+		RedisKeySpec spec = new RedisKeySpec("rt", Duration.ofDays(180));
 
 		// when
 		String k1 = spec.key();

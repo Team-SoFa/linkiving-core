@@ -1,7 +1,6 @@
 package com.sofa.linkiving.infra.redis;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -17,7 +16,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
 @EnableRedisRepositories
-@EnableConfigurationProperties(RedisTtlProperties.class)
 public class RedisConfig {
 	@Value("${spring.data.redis.host}")
 	private String host;
