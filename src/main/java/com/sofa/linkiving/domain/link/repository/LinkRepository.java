@@ -1,12 +1,19 @@
 package com.sofa.linkiving.domain.link.repository;
 
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.member.entity.Member;
 
-@Repository
 public interface LinkRepository extends JpaRepository<Link, Long> {
 
-	// TODO: 추후 필요한 쿼리 메서드 추가
+	Optional<Link> findByIdAndMember(Long id, Member member);
+
+	Page<Link> findByMemberAndIsDeleteFalse(Member member, Pageable pageable);
+
+	boolean existsByMemberAndUrlAndIsDeleteFalse(Member member, String url);
 }
