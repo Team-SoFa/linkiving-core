@@ -44,7 +44,7 @@ jobs:
           # yml 파일 생성
           
           touch ./application.yml
-          echo "APPLICATION" > ./application.yml
+          echo "$APPLICATION" > ./application.yml
 
         env:
           APPLICATION: ${{ secrets.APPLICATION }}
