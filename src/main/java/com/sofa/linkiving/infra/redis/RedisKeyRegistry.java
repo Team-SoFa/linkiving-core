@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RedisKeyRegistry {
 
-	public static final RedisKeySpec REFRESH_TOKEN = new RedisKeySpec("refresh-token", "rt", Duration.ofDays(180));
+	public static final RedisKeySpec REFRESH_TOKEN = new RedisKeySpec("rt", Duration.ofDays(180));
 }
