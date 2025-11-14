@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 public class LinkCommandService {
 
 	private final LinkRepository linkRepository;
+	private final LinkQueryService linkQueryService;
 
 	public Link createLink(Member member, String url, String title, String memo,
 		String imageUrl, String metadataJson, String tags, boolean isImportant) {
@@ -47,7 +48,7 @@ public class LinkCommandService {
 	public Link updateLink(Long linkId, Member member, String title, String memo,
 		String metadataJson, String tags, Boolean isImportant) {
 
-		Link link = findLinkByIdAndMember(linkId, member);
+		Link link = linkQueryService.findById(linkId, member);
 
 		Link updatedLink = Link.builder()
 			.member(link.getMember())
@@ -67,14 +68,8 @@ public class LinkCommandService {
 	}
 
 	public void deleteLink(Long linkId, Member member) {
-		Link link = findLinkByIdAndMember(linkId, member);
+		Link link = linkQueryService.findById(linkId, member);
 		link.markDeleted();
 		log.info("Link soft deleted - id: {}, memberId: {}", linkId, member.getId());
-	}
-
-	private Link findLinkByIdAndMember(Long linkId, Member member) {
-		return linkRepository.findByIdAndMember(linkId, member)
-			.filter(link -> !link.isDeleted())
-			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
 	}
 }
