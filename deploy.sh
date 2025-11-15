@@ -7,7 +7,14 @@ set -e  # 에러 발생 시 스크립트 중단
 echo "=== Blue-Green 배포 시작 ==="
 
 echo "이미지 업데이트 중..."
-sudo docker compose pull
+
+if ! sudo docker compose pull; then
+    echo "❌ Docker 이미지 pull 실패! GitHub Actions 빌드를 확인해주세요."
+    echo "❌ 배포를 중단합니다."
+    exit 1
+fi
+
+echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
 
 echo "사용하지 않는 이미지 정리 중..."
 sudo docker image prune -f
