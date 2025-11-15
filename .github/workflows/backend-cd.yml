@@ -9,7 +9,8 @@ on:
 
 jobs:
   backend-docker-build-and-push:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    # 🔧 임시: PR이 열리거나 업데이트될 때도 실행
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -40,9 +41,9 @@ jobs:
           # src/main/resources 경로 이동
           mkdir -p ./src/main/resources
           cd ./src/main/resources
-          
+
           # yml 파일 생성
-          
+
           touch ./application.yml
           echo "$APPLICATION" > ./application.yml
 
@@ -74,13 +75,14 @@ jobs:
 
   backend-docker-pull-and-run:
     runs-on: [ self-hosted, prod ]
-    if: ${{ needs.backend-docker-build-and-push.result == 'success' }}
     needs: [ backend-docker-build-and-push ]
+    if: ${{ needs.backend-docker-build-and-push.result == 'success' && github.event.pull_request.merged == true }}
+
     steps:
       - name: ✨ Checkout repository
         uses: actions/checkout@v5
 
       - name: ✨ 배포 스크립트 실행
         run: |
-          chmod +x deploy.sh 
+          chmod +x deploy.sh
           ./deploy.sh
