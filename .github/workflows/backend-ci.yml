@@ -51,6 +51,15 @@ jobs:
       - name: 🧪 테스트 실행
         run: ./gradlew test
 
+      - name: Docker 빌드 테스트 (push 없음)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: false
+          platforms: linux/amd64
+          tags: test-build:latest
+
       - name: 📢 Discord 알림 (성공)
         if: success()
         uses: sarisia/actions-status-discord@v1
