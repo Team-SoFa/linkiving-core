@@ -3,13 +3,14 @@ name: ✨ Linkiving backend CD ✨
 on:
   workflow_dispatch:
   pull_request:
-    types: [ closed ]
+    types: [ opened, synchronize, closed ]  # 임시: PR에서도 테스트
     branches:
       - main
 
 jobs:
   backend-docker-build-and-push:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    # 임시 PR이 열리거나 업데이트될 때도 실행
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -74,7 +75,8 @@ jobs:
 
   backend-docker-pull-and-run:
     runs-on: [ self-hosted, prod ]
-    if: ${{ needs.backend-docker-build-and-push.result == 'success' }}
+    # main 머지일 때만 실제 배포 실행
+    if: ${{ needs.backend-docker-build-and-push.result == 'success' && github.event.pull_request.merged == true }}
     needs: [ backend-docker-build-and-push ]
     steps:
       - name: ✨ Checkout repository
