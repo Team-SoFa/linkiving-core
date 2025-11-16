@@ -25,8 +25,8 @@ import com.sofa.linkiving.security.jwt.filter.JwtAuthenticationFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 
-public @ExtendWith(MockitoExtension.class)
-class JwtAuthenticationFilterTest {
+@ExtendWith(MockitoExtension.class)
+public class JwtAuthenticationFilterTest {
 
 	@Mock
 	JwtTokenProvider jwtTokenProvider;
