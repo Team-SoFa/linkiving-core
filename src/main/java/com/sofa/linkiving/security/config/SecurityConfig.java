@@ -12,6 +12,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.sofa.linkiving.security.auth.config.OAuth2Properties;
+import com.sofa.linkiving.security.auth.handler.OAuth2FailureHandler;
+import com.sofa.linkiving.security.auth.handler.OAuth2SuccessHandler;
+import com.sofa.linkiving.security.auth.service.CustomOAuth2UserService;
 import com.sofa.linkiving.security.jwt.JwtProperties;
 import com.sofa.linkiving.security.jwt.entrypoint.CustomAuthenticationEntryPoint;
 import com.sofa.linkiving.security.jwt.filter.JwtAuthenticationFilter;
@@ -22,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, OAuth2Properties.class})
 public class SecurityConfig {
 
 	private static final String[] PERMIT_URLS = {
@@ -42,15 +46,22 @@ public class SecurityConfig {
 		"/ws/chat/**",
 
 		/* temp */
-		"/v1/member/**", "/mock/**"
+		"/v1/member/**", "/mock/**",
 
+		/* oauth2 */
+		"/oauth2/**"
 	};
 	private static final String[] SEMI_PERMIT_URLS = {
 		//GET만 허용해야 하는 URL
 	};
+
 	private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtExceptionFilter jwtExceptionFilter;
+
+	private final CustomOAuth2UserService customOAuth2UserService;
+	private final OAuth2SuccessHandler oAuth2SuccessHandler;
+	private final OAuth2FailureHandler oAuth2FailureHandler;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -65,6 +76,13 @@ public class SecurityConfig {
 				authorize
 					.requestMatchers(PERMIT_URLS).permitAll()
 					.anyRequest().authenticated()
+			)
+			.oauth2Login(oauth2 -> oauth2
+				.userInfoEndpoint(userInfo -> userInfo
+					.userService(customOAuth2UserService)
+				)
+				.successHandler(oAuth2SuccessHandler)
+				.failureHandler(oAuth2FailureHandler)
 			)
 			.exceptionHandling(exceptionConfig ->
 				exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))

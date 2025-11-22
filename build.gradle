@@ -54,6 +54,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5-jakarta'
 
     // Security
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     testImplementation "org.springframework.security:spring-security-test"
 
@@ -130,7 +131,8 @@ jacocoTestReport {
                     '**/Q*.class',
                     '**/entity/**',
                     '**/domain/**/*Entity.class',
-                    '**/domain/link/util/OgTagCrawler.class'
+                    '**/domain/link/util/OgTagCrawler.class',
+                    "**/security/auth/**"
             ])
         }))
     }
@@ -172,7 +174,8 @@ jacocoTestCoverageVerification {
                     '**/Q*.class',
                     '**/entity/**',
                     '**/domain/**/*Entity.class',
-                    '**/domain/link/util/OgTagCrawler.class'
+                    '**/domain/link/util/OgTagCrawler.class',
+                    "**/security/auth/**"
             ])
         }))
     }
