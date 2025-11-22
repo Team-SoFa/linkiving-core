@@ -20,4 +20,16 @@ public class MemberCommandService {
 
 		return memberRepository.save(member);
 	}
+
+	public Member createOrUpdate(String email) {
+		return memberRepository.findByEmail(email)
+			.orElseGet(() -> {
+				Member newMember = Member.builder()
+					.email(email)
+					.password(email)
+					.build();
+
+				return memberRepository.save(newMember);
+			});
+	}
 }
