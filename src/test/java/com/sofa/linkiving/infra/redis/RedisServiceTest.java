@@ -1,4 +1,4 @@
-package com.sofa.linkiving.infra;
+package com.sofa.linkiving.infra.redis;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -13,10 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-
-import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
-import com.sofa.linkiving.infra.redis.RedisKeySpec;
-import com.sofa.linkiving.infra.redis.RedisService;
 
 @ExtendWith(MockitoExtension.class)
 public class RedisServiceTest {
