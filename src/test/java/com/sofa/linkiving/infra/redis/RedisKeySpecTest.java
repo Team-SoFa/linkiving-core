@@ -1,4 +1,4 @@
-package com.sofa.linkiving.infra;
+package com.sofa.linkiving.infra.redis;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -6,8 +6,6 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.sofa.linkiving.infra.redis.RedisKeySpec;
 
 public class RedisKeySpecTest {
 
