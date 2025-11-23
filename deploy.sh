@@ -7,13 +7,11 @@ set -e  # 에러 발생 시 스크립트 중단
 echo "=== Blue-Green 배포 시작 ==="
 
 echo "이미지 업데이트 중..."
-
 if ! sudo docker compose pull; then
     echo "❌ Docker 이미지 pull 실패! GitHub Actions 빌드를 확인해주세요."
     echo "❌ 배포를 중단합니다."
     exit 1
 fi
-
 echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
 
 echo "사용하지 않는 이미지 정리 중..."
@@ -45,14 +43,16 @@ echo "서버 헬스체크 시작..."
 HEALTH_CHECK_COUNT=0
 MAX_RETRY=30  # 최대 5분 대기 (10초 * 30회)
 
+HEALTH_URL="http://127.0.0.1:${AFTER_PORT}/health-check"
+
 while [ $HEALTH_CHECK_COUNT -lt $MAX_RETRY ]; do
     HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT + 1))
     echo "서버 응답 확인중 (${HEALTH_CHECK_COUNT}/${MAX_RETRY})"
 
-    # curl로 헬스체크 (타임아웃 5초)
-    UP=$(curl -s --connect-timeout 5 --max-time 10 http://127.0.0.1:${AFTER_PORT}/actuator/health 2>/dev/null || echo "failed")
+    # curl로 헬스체크 (타임아웃 5초, 실패 시 failed 문자열로 치환)
+    UP=$(curl -s --connect-timeout 5 --max-time 10 "${HEALTH_URL}" 2>/dev/null || echo "failed")
 
-   if echo  "${UP}"  | grep -q '"UP"'; then
+    if echo "${UP}" | grep -q "OK"; then
         echo "✅ 서버가 정상적으로 구동되었습니다!"
         break
     else
@@ -101,14 +101,14 @@ else
     echo "⚠️  Nginx 설정 파일을 찾을 수 없습니다: /etc/nginx/conf.d/service-url.inc"
 fi
 
-# 트래픽 전환 확인
+# 트래픽 전환 확인 (Nginx 기준 헬스체크)
 echo "트래픽 전환 확인 중..."
 sleep 5
-NGINX_CHECK=$(curl -s --connect-timeout 5 http://127.0.0.1/api/actuator/health 2>/dev/null || echo "failed")
-if echo "${NGINX_CHECK}" | grep -q "UP"; then
+NGINX_CHECK=$(curl -s --connect-timeout 5 http://127.0.0.1/api/health-check 2>/dev/null || echo "failed")
+if echo "${NGINX_CHECK}" | grep -q "OK"; then
     echo "✅ 트래픽이 성공적으로 전환되었습니다."
 else
-    echo "⚠️  트래픽 전환 확인 실패. 수동으로 확인해주세요."
+    echo "⚠️ 트래픽 전환 확인 실패. 수동으로 확인해주세요."
 fi
 
 # 이전 컨테이너 종료 (안전하게)
