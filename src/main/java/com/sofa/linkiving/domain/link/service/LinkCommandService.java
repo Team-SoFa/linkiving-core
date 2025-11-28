@@ -34,18 +34,8 @@ public class LinkCommandService {
 
 	public Link updateLink(Link link, String title, String memo,
 		String metadataJson, String tags, Boolean isImportant) {
-		Link updatedLink = Link.builder()
-			.member(link.getMember())
-			.url(link.getUrl())
-			.title(title != null ? title : link.getTitle())
-			.memo(memo != null ? memo : link.getMemo())
-			.imageUrl(link.getImageUrl())
-			.metadataJson(metadataJson != null ? metadataJson : link.getMetadataJson())
-			.tags(tags != null ? tags : link.getTags())
-			.isImportant(isImportant != null ? isImportant : link.isImportant())
-			.build();
-
-		return linkRepository.save(updatedLink);
+		link.updateDetails(title, memo, metadataJson, tags, isImportant);
+		return link;
 	}
 
 	public void deleteLink(Link link) {

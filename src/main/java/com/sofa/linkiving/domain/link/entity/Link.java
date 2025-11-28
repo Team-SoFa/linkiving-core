@@ -55,4 +55,22 @@ public class Link extends BaseEntity {
 		this.tags = tags;
 		this.isImportant = isImportant;
 	}
+
+	public void updateDetails(String title, String memo, String metadataJson, String tags, Boolean isImportant) {
+		if (title != null) {
+			this.title = title;
+		}
+		if (memo != null) {
+			this.memo = memo;
+		}
+		if (metadataJson != null) {
+			this.metadataJson = metadataJson;
+		}
+		if (tags != null) {
+			this.tags = tags;
+		}
+		if (isImportant != null) {
+			this.isImportant = isImportant;
+		}
+	}
 }

@@ -85,19 +85,6 @@ class LinkCommandServiceTest {
 			.isImportant(false)
 			.build();
 
-		Link updatedLink = Link.builder()
-			.member(member)
-			.url("https://example.com")
-			.title("수정된 제목")
-			.memo("수정된 메모")
-			.imageUrl("https://example.com/image.jpg")
-			.metadataJson("{}")
-			.tags("tag1,tag2")
-			.isImportant(true)
-			.build();
-
-		given(linkRepository.save(any(Link.class))).willReturn(updatedLink);
-
 		// when
 		Link result = linkCommandService.updateLink(
 			originalLink,
@@ -111,7 +98,11 @@ class LinkCommandServiceTest {
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.getTitle()).isEqualTo("수정된 제목");
-		verify(linkRepository, times(1)).save(any(Link.class));
+		assertThat(result.getMemo()).isEqualTo("수정된 메모");
+		assertThat(result.getMetadataJson()).isEqualTo("{}");
+		assertThat(result.getTags()).isEqualTo("tag1,tag2");
+		assertThat(result.isImportant()).isTrue();
+		verify(linkRepository, never()).save(any(Link.class));
 	}
 
 	@Test

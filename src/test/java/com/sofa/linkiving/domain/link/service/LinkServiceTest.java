@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -55,7 +56,7 @@ class LinkServiceTest {
 			.willReturn(link);
 
 		// when
-		Link createdLink = linkService.createLink(
+		LinkRes createdLink = linkService.createLink(
 			member,
 			"https://example.com",
 			"테스트 링크",
@@ -68,7 +69,7 @@ class LinkServiceTest {
 
 		// then
 		assertThat(createdLink).isNotNull();
-		assertThat(createdLink.getUrl()).isEqualTo("https://example.com");
+		assertThat(createdLink.url()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
 		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any(), any(), any(), anyBoolean());
 	}
@@ -127,13 +128,89 @@ class LinkServiceTest {
 		given(linkCommandService.updateLink(any(), any(), any(), any(), any(), any())).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateLink(1L, member, "수정된 제목", null, null, null, null);
+		LinkRes result = linkService.updateLink(1L, member, "수정된 제목", null, null, null, null);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.getTitle()).isEqualTo("수정된 제목");
+		assertThat(result.title()).isEqualTo("수정된 제목");
 		verify(linkQueryService, times(1)).findById(1L, member);
 		verify(linkCommandService, times(1)).updateLink(any(), any(), any(), any(), any(), any());
+	}
+
+	@Test
+	@DisplayName("링크 제목만 수정할 수 있다")
+	void shouldUpdateTitle() {
+		// given
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+
+		Link originalLink = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("원본 제목")
+			.memo("원본 메모")
+			.build();
+
+		Link updatedLink = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("수정된 제목")
+			.memo("원본 메모")
+			.build();
+
+		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
+		given(linkCommandService.updateLink(any(), eq("수정된 제목"), eq("원본 메모"), any(), any(), anyBoolean()))
+			.willReturn(updatedLink);
+
+		// when
+		LinkRes result = linkService.updateTitle(1L, member, "수정된 제목");
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.title()).isEqualTo("수정된 제목");
+		assertThat(result.memo()).isEqualTo("원본 메모");
+		verify(linkQueryService, times(1)).findById(1L, member);
+		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"), any(), any(), anyBoolean());
+	}
+
+	@Test
+	@DisplayName("링크 메모만 수정할 수 있다")
+	void shouldUpdateMemo() {
+		// given
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+
+		Link originalLink = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("원본 제목")
+			.memo("원본 메모")
+			.build();
+
+		Link updatedLink = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("원본 제목")
+			.memo("수정된 메모")
+			.build();
+
+		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
+		given(linkCommandService.updateLink(any(), eq("원본 제목"), eq("수정된 메모"), any(), any(), anyBoolean()))
+			.willReturn(updatedLink);
+
+		// when
+		LinkRes result = linkService.updateMemo(1L, member, "수정된 메모");
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.title()).isEqualTo("원본 제목");
+		assertThat(result.memo()).isEqualTo("수정된 메모");
+		verify(linkQueryService, times(1)).findById(1L, member);
+		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"), any(), any(), anyBoolean());
 	}
 
 	@Test
@@ -179,11 +256,11 @@ class LinkServiceTest {
 		given(linkQueryService.findById(1L, member)).willReturn(link);
 
 		// when
-		Link result = linkService.getLink(1L, member);
+		LinkRes result = linkService.getLink(1L, member);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.getUrl()).isEqualTo("https://example.com");
+		assertThat(result.url()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).findById(1L, member);
 	}
 
@@ -214,7 +291,7 @@ class LinkServiceTest {
 		given(linkQueryService.findAllByMember(member, pageable)).willReturn(expectedPage);
 
 		// when
-		Page<Link> result = linkService.getLinkList(member, pageable);
+		Page<LinkRes> result = linkService.getLinkList(member, pageable);
 
 		// then
 		assertThat(result).isNotNull();

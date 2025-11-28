@@ -21,7 +21,6 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
-import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -55,7 +54,7 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Link link = linkService.createLink(
+		LinkRes response = linkService.createLink(
 			member,
 			request.url(),
 			request.title(),
@@ -65,7 +64,7 @@ public class LinkController implements LinkApi {
 			request.tags(),
 			request.isImportant()
 		);
-		return ResponseEntity.ok(BaseResponse.success(LinkRes.from(link), "링크 생성 완료"));
+		return ResponseEntity.ok(BaseResponse.success(response, "링크 생성 완료"));
 	}
 
 	@Override
@@ -76,7 +75,7 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Link link = linkService.updateLink(
+		LinkRes response = linkService.updateLink(
 			id,
 			member,
 			request.title(),
@@ -85,7 +84,7 @@ public class LinkController implements LinkApi {
 			request.tags(),
 			request.isImportant()
 		);
-		return ResponseEntity.ok(BaseResponse.success(LinkRes.from(link), "링크 수정 완료"));
+		return ResponseEntity.ok(BaseResponse.success(response, "링크 수정 완료"));
 	}
 
 	@Override
@@ -106,8 +105,8 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Link link = linkService.getLink(id, member);
-		return ResponseEntity.ok(BaseResponse.success(LinkRes.from(link), "링크 조회 완료"));
+		LinkRes response = linkService.getLink(id, member);
+		return ResponseEntity.ok(BaseResponse.success(response, "링크 조회 완료"));
 	}
 
 	@Override
@@ -117,8 +116,7 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Page<Link> links = linkService.getLinkList(member, pageable);
-		Page<LinkRes> response = links.map(LinkRes::from);
+		Page<LinkRes> response = linkService.getLinkList(member, pageable);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 목록 조회 완료"));
 	}
 
@@ -130,8 +128,8 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Link link = linkService.updateLink(id, member, request.title(), null, null, null, null);
-		return ResponseEntity.ok(BaseResponse.success(LinkRes.from(link), "제목 수정 완료"));
+		LinkRes response = linkService.updateTitle(id, member, request.title());
+		return ResponseEntity.ok(BaseResponse.success(response, "제목 수정 완료"));
 	}
 
 	@Override
@@ -142,7 +140,7 @@ public class LinkController implements LinkApi {
 		@AuthenticationPrincipal CustomMemberDetail userDetail
 	) {
 		Member member = userDetail.member();
-		Link link = linkService.updateLink(id, member, null, request.memo(), null, null, null);
-		return ResponseEntity.ok(BaseResponse.success(LinkRes.from(link), "메모 수정 완료"));
+		LinkRes response = linkService.updateMemo(id, member, request.memo());
+		return ResponseEntity.ok(BaseResponse.success(response, "메모 수정 완료"));
 	}
 }
