@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum Format implements CodeEnum<Integer> {
-	BRIEF(1), DETAILED(2);
+	CONCISE(1), DETAILED(2);
 	private final Integer code;
 
 	@Converter(autoApply = true)
