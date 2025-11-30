@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.link.entity;
 
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.global.common.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -24,30 +25,17 @@ public class Summary extends BaseEntity {
 	@Column(nullable = false)
 	private int version;
 
-	@Column(name = "summary_format", nullable = false, length = 64)
-	private String summaryFormat;
+	@Column(length = 64)
+	private Format format;
 
 	@Column(columnDefinition = "TEXT", nullable = false)
 	private String body;
 
-	@Column(name = "token_count")
-	private Integer tokenCount;
-
-	@Column(name = "created_by", length = 255)
-	private String createdBy;
-
-	@Column(nullable = false, length = 64)
-	private String status;
-
 	@Builder
-	public Summary(Link link, int version, String summaryFormat, String body,
-		Integer tokenCount, String createdBy, String status) {
+	public Summary(Link link, int version, Format format, String body) {
 		this.link = link;
 		this.version = version;
-		this.summaryFormat = summaryFormat;
+		this.format = format;
 		this.body = body;
-		this.tokenCount = tokenCount;
-		this.createdBy = createdBy;
-		this.status = status;
 	}
 }
