@@ -56,6 +56,20 @@ public class Link extends BaseEntity {
 		this.isImportant = isImportant;
 	}
 
+	public static Link create(Member member, String url, String title, String memo,
+		String imageUrl, String metadataJson, String tags, boolean isImportant) {
+		return Link.builder()
+			.member(member)
+			.url(url)
+			.title(title)
+			.memo(memo)
+			.imageUrl(imageUrl)
+			.metadataJson(metadataJson)
+			.tags(tags)
+			.isImportant(isImportant)
+			.build();
+	}
+
 	public void updateDetails(String title, String memo, String metadataJson, String tags, Boolean isImportant) {
 		if (title != null) {
 			this.title = title;

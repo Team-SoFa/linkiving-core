@@ -18,17 +18,7 @@ public class LinkCommandService {
 
 	public Link saveLink(Member member, String url, String title, String memo,
 		String imageUrl, String metadataJson, String tags, boolean isImportant) {
-		Link link = Link.builder()
-			.member(member)
-			.url(url)
-			.title(title)
-			.memo(memo)
-			.imageUrl(imageUrl)
-			.metadataJson(metadataJson)
-			.tags(tags)
-			.isImportant(isImportant)
-			.build();
-
+		Link link = Link.create(member, url, title, memo, imageUrl, metadataJson, tags, isImportant);
 		return linkRepository.save(link);
 	}
 
