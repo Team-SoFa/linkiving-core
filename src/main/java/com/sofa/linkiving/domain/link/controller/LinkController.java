@@ -4,7 +4,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -24,7 +23,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
-import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
+import com.sofa.linkiving.security.annotation.AuthMember;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +39,8 @@ public class LinkController implements LinkApi {
 	@GetMapping("/duplicate")
 	public ResponseEntity<BaseResponse<Boolean>> checkDuplicate(
 		@RequestParam String url,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		boolean exists = linkService.checkDuplicate(member, url);
 		return ResponseEntity.ok(BaseResponse.success(exists, "URL 중복 체크 완료"));
 	}
@@ -51,9 +49,8 @@ public class LinkController implements LinkApi {
 	@PostMapping
 	public ResponseEntity<BaseResponse<LinkRes>> createLink(
 		@Valid @RequestBody LinkCreateReq request,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		LinkRes response = linkService.createLink(
 			member,
 			request.url(),
@@ -72,9 +69,8 @@ public class LinkController implements LinkApi {
 	public ResponseEntity<BaseResponse<LinkRes>> updateLink(
 		@PathVariable Long id,
 		@Valid @RequestBody LinkUpdateReq request,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		LinkRes response = linkService.updateLink(
 			id,
 			member,
@@ -91,9 +87,8 @@ public class LinkController implements LinkApi {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<BaseResponse<Void>> deleteLink(
 		@PathVariable Long id,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		linkService.deleteLink(id, member);
 		return ResponseEntity.ok(BaseResponse.noContent("링크 삭제 완료"));
 	}
@@ -102,9 +97,8 @@ public class LinkController implements LinkApi {
 	@GetMapping("/{id}")
 	public ResponseEntity<BaseResponse<LinkRes>> getLink(
 		@PathVariable Long id,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		LinkRes response = linkService.getLink(id, member);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 조회 완료"));
 	}
@@ -113,9 +107,8 @@ public class LinkController implements LinkApi {
 	@GetMapping
 	public ResponseEntity<BaseResponse<Page<LinkRes>>> getLinkList(
 		@PageableDefault(size = 20) Pageable pageable,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		Page<LinkRes> response = linkService.getLinkList(member, pageable);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 목록 조회 완료"));
 	}
@@ -125,9 +118,8 @@ public class LinkController implements LinkApi {
 	public ResponseEntity<BaseResponse<LinkRes>> updateTitle(
 		@PathVariable Long id,
 		@Valid @RequestBody LinkTitleUpdateReq request,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		LinkRes response = linkService.updateTitle(id, member, request.title());
 		return ResponseEntity.ok(BaseResponse.success(response, "제목 수정 완료"));
 	}
@@ -137,9 +129,8 @@ public class LinkController implements LinkApi {
 	public ResponseEntity<BaseResponse<LinkRes>> updateMemo(
 		@PathVariable Long id,
 		@Valid @RequestBody LinkMemoUpdateReq request,
-		@AuthenticationPrincipal CustomMemberDetail userDetail
+		@AuthMember Member member
 	) {
-		Member member = userDetail.member();
 		LinkRes response = linkService.updateMemo(id, member, request.memo());
 		return ResponseEntity.ok(BaseResponse.success(response, "메모 수정 완료"));
 	}
