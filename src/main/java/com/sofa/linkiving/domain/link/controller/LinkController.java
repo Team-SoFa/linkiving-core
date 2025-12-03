@@ -20,7 +20,7 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
-import com.sofa.linkiving.domain.link.service.LinkService;
+import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
@@ -33,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LinkController implements LinkApi {
 
-	private final LinkService linkService;
+	private final LinkFacade linkFacade;
 
 	@Override
 	@GetMapping("/duplicate")
@@ -41,7 +41,7 @@ public class LinkController implements LinkApi {
 		@RequestParam String url,
 		@AuthMember Member member
 	) {
-		boolean exists = linkService.checkDuplicate(member, url);
+		boolean exists = linkFacade.checkDuplicate(member, url);
 		return ResponseEntity.ok(BaseResponse.success(exists, "URL 중복 체크 완료"));
 	}
 
@@ -51,7 +51,7 @@ public class LinkController implements LinkApi {
 		@Valid @RequestBody LinkCreateReq request,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkService.createLink(
+		LinkRes response = linkFacade.createLink(
 			member,
 			request.url(),
 			request.title(),
@@ -71,7 +71,7 @@ public class LinkController implements LinkApi {
 		@Valid @RequestBody LinkUpdateReq request,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkService.updateLink(
+		LinkRes response = linkFacade.updateLink(
 			id,
 			member,
 			request.title(),
@@ -89,7 +89,7 @@ public class LinkController implements LinkApi {
 		@PathVariable Long id,
 		@AuthMember Member member
 	) {
-		linkService.deleteLink(id, member);
+		linkFacade.deleteLink(id, member);
 		return ResponseEntity.ok(BaseResponse.noContent("링크 삭제 완료"));
 	}
 
@@ -99,7 +99,7 @@ public class LinkController implements LinkApi {
 		@PathVariable Long id,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkService.getLink(id, member);
+		LinkRes response = linkFacade.getLink(id, member);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 조회 완료"));
 	}
 
@@ -109,7 +109,7 @@ public class LinkController implements LinkApi {
 		@PageableDefault(size = 20) Pageable pageable,
 		@AuthMember Member member
 	) {
-		Page<LinkRes> response = linkService.getLinkList(member, pageable);
+		Page<LinkRes> response = linkFacade.getLinkList(member, pageable);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 목록 조회 완료"));
 	}
 
@@ -120,7 +120,7 @@ public class LinkController implements LinkApi {
 		@Valid @RequestBody LinkTitleUpdateReq request,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkService.updateTitle(id, member, request.title());
+		LinkRes response = linkFacade.updateTitle(id, member, request.title());
 		return ResponseEntity.ok(BaseResponse.success(response, "제목 수정 완료"));
 	}
 
@@ -131,7 +131,7 @@ public class LinkController implements LinkApi {
 		@Valid @RequestBody LinkMemoUpdateReq request,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkService.updateMemo(id, member, request.memo());
+		LinkRes response = linkFacade.updateMemo(id, member, request.memo());
 		return ResponseEntity.ok(BaseResponse.success(response, "메모 수정 완료"));
 	}
 }
