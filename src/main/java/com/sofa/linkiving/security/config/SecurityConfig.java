@@ -1,4 +1,4 @@
-package com.sofa.linkiving.security;
+package com.sofa.linkiving.security.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -39,10 +39,10 @@ public class SecurityConfig {
 		"/h2-console/**",
 
 		/* web socket */
-		"/v1/chat/**",
+		"/ws/chat/**",
 
 		/* temp */
-		"/v1/member/**", "/mock/**"
+		"/v1/member/**", "/mock/**", "/chat.html"
 
 	};
 	private static final String[] SEMI_PERMIT_URLS = {
