@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.chat.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,4 +22,6 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 		ORDER BY MAX(m.createdAt) DESC
 		""")
 	List<Chat> findAllByMemberOrderByLastMessageDesc(@Param("member") Member member);
+
+	Optional<Chat> findByIdAndMember(Long id, Member member);
 }

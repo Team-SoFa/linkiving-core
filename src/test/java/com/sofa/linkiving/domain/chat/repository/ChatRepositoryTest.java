@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.repository;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +23,10 @@ import jakarta.persistence.EntityManager;
 @DataJpaTest
 @ActiveProfiles("test")
 public class ChatRepositoryTest {
+
 	@Autowired
 	private ChatRepository chatRepository;
+
 	@Autowired
 	private MemberRepository memberRepository;
 	@Autowired
@@ -90,5 +93,56 @@ public class ChatRepositoryTest {
 		assertThat(result).hasSize(2);
 		assertThat(result.get(0).getTitle()).isEqualTo("New Msg Chat");
 		assertThat(result.get(1).getTitle()).isEqualTo("Old Msg Chat");
+	}
+
+	@Test
+	@DisplayName("내 채팅방 조회 시 정상적으로 반환되어야 한다")
+	void shouldReturnChatWhenMyChatExists() {
+		// given
+		Member me = memberRepository.save(
+			Member.builder()
+				.email("me@test.com")
+				.password("password")
+				.build());
+
+		Chat myChat = chatRepository.save(
+			Chat.builder()
+				.member(me)
+				.title("test")
+				.build());
+
+		// when
+		Optional<Chat> result = chatRepository.findByIdAndMember(myChat.getId(), me);
+
+		// then
+		assertThat(result).isPresent();
+	}
+
+	@Test
+	@DisplayName("다른 사람의 채팅방 조회 시 Empty를 반환해야 한다")
+	void shouldReturnEmptyWhenChatIsNotMine() {
+		// given
+		Member me = memberRepository.save(
+			Member.builder()
+				.email("me@test.com")
+				.password("password")
+				.build());
+		Member other = memberRepository.save(
+			Member.builder()
+				.email("other@test.com")
+				.password("password")
+				.build());
+
+		Chat othersChat = chatRepository.save(
+			Chat.builder()
+				.member(other)
+				.title("test")
+				.build());
+
+		// when: 내 정보(me)로 남의 채팅방(othersChat) 조회 시도
+		Optional<Chat> result = chatRepository.findByIdAndMember(othersChat.getId(), me);
+
+		// then
+		assertThat(result).isEmpty(); // 조회되면 안 됨 (보안 검증)
 	}
 }

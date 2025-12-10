@@ -37,4 +37,15 @@ public class ChatFacade {
 		List<Chat> chats = chatService.getChats(member);
 		return ChatsRes.from(chats);
 	}
+
+	@Transactional
+	public void generateAnswer(Long chatId, Member member, String message) {
+		Chat chat = chatService.getChat(chatId, member);
+		messageService.generateAnswer(chat, message);
+	}
+
+	public void cancelAnswer(Long chatId, Member member) {
+		Chat chat = chatService.getChat(chatId, member);
+		messageService.cancelAnswer(chat);
+	}
 }

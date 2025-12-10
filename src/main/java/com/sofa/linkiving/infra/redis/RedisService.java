@@ -33,7 +33,7 @@ public class RedisService {
 
 	public Boolean hasNoKey(String key) {
 		Boolean exists = redisTemplate.hasKey(key);
-		return !Boolean.TRUE.equals(exists);
+		return !exists;
 	}
 
 	public void delete(String key) {
@@ -56,7 +56,7 @@ public class RedisService {
 
 	public Boolean hasNoKey(RedisKeySpec type, String... keys) {
 		Boolean exists = redisTemplate.hasKey(type.key(keys));
-		return !Boolean.TRUE.equals(exists);
+		return !exists;
 	}
 
 	public void delete(RedisKeySpec type, String... keys) {
