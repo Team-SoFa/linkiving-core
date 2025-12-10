@@ -11,7 +11,9 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
@@ -22,6 +24,11 @@ import jakarta.validation.Valid;
 
 @Tag(name = "Link", description = "링크 관리 API")
 public interface LinkApi {
+
+	@Operation(summary = "메타 정보 수집", description = "URL의 OG 태그를 크롤링하여 메타 정보를 반환합니다")
+	ResponseEntity<BaseResponse<MetaScrapeRes>> scrapeMetadata(
+		@Valid @RequestBody MetaScrapeReq request
+	);
 
 	@Operation(summary = "URL 중복 체크", description = "저장하려는 URL이 이미 존재하는지 확인합니다")
 	ResponseEntity<BaseResponse<Boolean>> checkDuplicate(

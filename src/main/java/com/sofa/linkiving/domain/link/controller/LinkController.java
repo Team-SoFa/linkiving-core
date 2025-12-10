@@ -19,7 +19,9 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -34,6 +36,15 @@ import lombok.RequiredArgsConstructor;
 public class LinkController implements LinkApi {
 
 	private final LinkFacade linkFacade;
+
+	@Override
+	@PostMapping("/meta-scrape")
+	public ResponseEntity<BaseResponse<MetaScrapeRes>> scrapeMetadata(
+		@Valid @RequestBody MetaScrapeReq request
+	) {
+		MetaScrapeRes response = linkFacade.scrapeMetadata(request.url());
+		return ResponseEntity.ok(BaseResponse.success(response, "메타 정보 수집 완료"));
+	}
 
 	@Override
 	@GetMapping("/duplicate")
@@ -59,7 +70,8 @@ public class LinkController implements LinkApi {
 			request.imageUrl(),
 			request.metadataJson(),
 			request.tags(),
-			request.isImportant()
+			request.isImportant(),
+			request.force()
 		);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 생성 완료"));
 	}

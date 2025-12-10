@@ -4,8 +4,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.sofa.linkiving.domain.link.dto.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.service.LinkService;
+import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
@@ -15,10 +18,11 @@ import lombok.RequiredArgsConstructor;
 public class LinkFacade {
 
 	private final LinkService linkService;
+	private final OgTagCrawler ogTagCrawler;
 
 	public LinkRes createLink(Member member, String url, String title, String memo,
-		String imageUrl, String metadataJson, String tags, boolean isImportant) {
-		return linkService.createLink(member, url, title, memo, imageUrl, metadataJson, tags, isImportant);
+		String imageUrl, String metadataJson, String tags, boolean isImportant, Boolean force) {
+		return linkService.createLink(member, url, title, memo, imageUrl, metadataJson, tags, isImportant, force);
 	}
 
 	public LinkRes updateLink(Long linkId, Member member, String title, String memo,
@@ -48,5 +52,10 @@ public class LinkFacade {
 
 	public boolean checkDuplicate(Member member, String url) {
 		return linkService.checkDuplicate(member, url);
+	}
+
+	public MetaScrapeRes scrapeMetadata(String url) {
+		OgTagDto ogTag = ogTagCrawler.crawl(url);
+		return MetaScrapeRes.from(ogTag);
 	}
 }
