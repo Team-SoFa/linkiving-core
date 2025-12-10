@@ -19,20 +19,23 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
-import com.sofa.linkiving.domain.member.dto.response.MemberRes;
+import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 public class MemberServiceTest {
 	@Mock
 	MemberCommandService memberCommandService;
+	@Mock
+	JwtTokenProvider jwtTokenProvider;
 	@InjectMocks
 	MemberService memberService;
 	@Mock
-	private MemberQueryService memberQueryService;
+	MemberQueryService memberQueryService;
 
 	@Test
 	@DisplayName("중복된 이메일로 회원가입 시 예외 발생")
@@ -56,7 +59,7 @@ public class MemberServiceTest {
 	}
 
 	@Test
-	@DisplayName("정상 회원가입 시 비밀번호가 Base64로 인코딩되어 저장")
+	@DisplayName("정상 회원가입 시 비밀번호가 Base64로 인코딩되어 저장되고 토큰 반환Z")
 	void shouldSignupAndEncodePassword() {
 		// given
 		String email = "test@test.com";
@@ -75,12 +78,16 @@ public class MemberServiceTest {
 		when(memberCommandService.addUser(eq(req.email()), eq(expectedEncoded)))
 			.thenReturn(saved);
 
+		given(jwtTokenProvider.createAccessToken(any())).willReturn("mock-access-token");
+		given(jwtTokenProvider.createRefreshToken(any())).willReturn("mock-refresh-token");
+
 		// when
-		MemberRes res = memberService.signup(req);
+		TokenRes res = memberService.signup(req);
 
 		// then
 		assertThat(res).isNotNull();
-		assertThat(res.email()).isEqualTo(req.email());
+		assertThat(res.accessToken()).isNotNull();
+		assertThat(res.refreshToken()).isNotNull();
 
 		// verify
 		verify(memberQueryService, times(1)).existsMemberByEmail(email);
@@ -89,7 +96,7 @@ public class MemberServiceTest {
 	}
 
 	@Test
-	@DisplayName("정상 로그인")
+	@DisplayName("정상 로그인 시 토큰 반환")
 	void shouldLoginSuccessfully() {
 		// given
 		String email = "test@test.com";
@@ -100,12 +107,16 @@ public class MemberServiceTest {
 		Member member = Member.builder().email(email).password(encoded).build();
 		given(memberQueryService.getUser(email)).willReturn(member);
 
+		given(jwtTokenProvider.createAccessToken(any())).willReturn("mock-access-token");
+		given(jwtTokenProvider.createRefreshToken(any())).willReturn("mock-refresh-token");
+
 		// when
-		MemberRes res = memberService.login(req);
+		TokenRes res = memberService.login(req);
 
 		// then
-		AssertionsForClassTypes.assertThat(res).isNotNull();
-		AssertionsForClassTypes.assertThat(res.email()).isEqualTo(email);
+		assertThat(res).isNotNull();
+		assertThat(res.accessToken()).isNotNull();
+		assertThat(res.refreshToken()).isNotNull();
 
 		verify(memberQueryService, times(1)).getUser(email);
 	}

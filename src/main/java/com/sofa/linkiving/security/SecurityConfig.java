@@ -1,4 +1,4 @@
-package com.sofa.linkiving.security;
+package com.sofa.linkiving.security.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -36,7 +36,14 @@ public class SecurityConfig {
 		"/favicon.ico",
 
 		/* h2 */
-		"/h2-console/**"
+		"/h2-console/**",
+
+		/* web socket */
+		"/v1/chat/**",
+
+		/* temp */
+		"/v1/member/**"
+
 	};
 	private static final String[] SEMI_PERMIT_URLS = {
 		//GET만 허용해야 하는 URL

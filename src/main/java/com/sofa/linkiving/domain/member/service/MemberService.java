@@ -8,10 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
-import com.sofa.linkiving.domain.member.dto.response.MemberRes;
+import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,8 +22,9 @@ import lombok.RequiredArgsConstructor;
 public class MemberService {
 	private final MemberCommandService memberCommandService;
 	private final MemberQueryService memberQueryService;
+	private final JwtTokenProvider jwtTokenProvider;
 
-	public MemberRes signup(SignupReq req) {
+	public TokenRes signup(SignupReq req) {
 
 		if (memberQueryService.existsMemberByEmail(req.email())) {
 			throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
@@ -34,14 +36,17 @@ public class MemberService {
 
 		Member member = memberCommandService.addUser(req.email(), encoded);
 
-		return MemberRes.from(member);
+		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
+
+		return TokenRes.of(accessToken, refreshToken);
 	}
 
 	@Transactional(readOnly = true)
-	public MemberRes login(LoginReq req) {
+	public TokenRes login(LoginReq req) {
 		Member member = memberQueryService.getUser(req.email());
 
-		// TODO: Change this when Security dependency is added later
+		// TODO: 추후 PasswordEncoder(BCrypt)로 변경 권장
 		String encoded = Base64.getEncoder()
 			.encodeToString(req.password().getBytes(StandardCharsets.UTF_8));
 
@@ -49,6 +54,9 @@ public class MemberService {
 			throw new BusinessException(MemberErrorCode.INCORRECT_PASSWORD);
 		}
 
-		return new MemberRes(member);
+		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
+
+		return TokenRes.of(accessToken, refreshToken);
 	}
 }

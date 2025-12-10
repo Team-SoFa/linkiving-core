@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.infra.redis.RedisService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,6 +40,8 @@ public class MemberApiIntegrationTest {
 	ObjectMapper objectMapper;
 	@Autowired
 	MemberRepository memberRepository;
+	@MockitoBean
+	RedisService redisService;
 
 	@Test
 	@DisplayName("회원가입 성공 시 DB에 인코딩된 비밀번호가 저장된다")
@@ -65,8 +69,8 @@ public class MemberApiIntegrationTest {
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.status").value("OK"))
 			.andExpect(jsonPath("$.message").value("회원 가입에 성공하였습니다."))
-			.andExpect(jsonPath("$.data.userId").isNumber())
-			.andExpect(jsonPath("$.data.email").value(email));
+			.andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+			.andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
 
 		Member saved = memberRepository.findByEmail(email).orElseThrow();
 		assertThat(saved.getEmail()).isEqualTo(email);
@@ -135,8 +139,8 @@ public class MemberApiIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.status").value("OK"))
-			.andExpect(jsonPath("$.data.email").value(email))
-			.andExpect(jsonPath("$.data.userId").isNumber())
+			.andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+			.andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
 			.andExpect(jsonPath("$.message").value("로그인에 성공하였습니다."));
 
 		Member saved = memberRepository.findByEmail(email).orElseThrow();
