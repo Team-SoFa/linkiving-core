@@ -28,16 +28,7 @@ import okhttp3.mockwebserver.MockWebServer;
 @EnableFeignClients(clients = TestExternalClient.class)
 public class OpenFeignIntegrationTest {
 
-	@TestConfiguration
-	static class TestConfig {
-		@Bean
-		public CorsConfigurationSource corsConfigurationSource() {
-			return new UrlBasedCorsConfigurationSource();
-		}
-	}
-
 	private static MockWebServer mockWebServer;
-
 	@Autowired
 	TestExternalClient testExternalClient;
 
@@ -93,5 +84,13 @@ public class OpenFeignIntegrationTest {
 				assertThat(be.getErrorCode())
 					.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 			});
+	}
+
+	@TestConfiguration
+	static class TestConfig {
+		@Bean
+		public CorsConfigurationSource corsConfigurationSource() {
+			return new UrlBasedCorsConfigurationSource();
+		}
 	}
 }

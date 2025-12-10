@@ -12,7 +12,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
+import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
@@ -29,8 +31,13 @@ public class ChatFacadeTest {
 
 	@Mock
 	private MessageService messageService;
+
 	@Mock
 	private FeedbackService feedbackService;
+
+	@Mock
+	private AiTitleClient aiTitleClient;
+
 	@Mock
 	private Member member;
 
@@ -52,5 +59,33 @@ public class ChatFacadeTest {
 		assertThat(result.chats().get(0).title()).isEqualTo("Title");
 
 		verify(chatService).getChats(member);
+	}
+
+	@Test
+	@DisplayName("createChat 호출 및 CreateChatRes 반환")
+	void shouldReturnCreateChatResWhenCreateChat() {
+		// given
+		String firstChat = "안녕하세요";
+		String generatedTitle = "요약된 제목";
+		Long chatId = 100L;
+
+		Chat mockChat = mock(Chat.class);
+
+		given(mockChat.getId()).willReturn(chatId);
+		given(mockChat.getTitle()).willReturn(generatedTitle);
+
+		given(aiTitleClient.generateSummary(firstChat)).willReturn(generatedTitle);
+		given(chatService.createChat(generatedTitle, member)).willReturn(mockChat);
+
+		// when
+		CreateChatRes result = chatFacade.createChat(firstChat, member);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.id()).isEqualTo(chatId);
+		assertThat(result.title()).isEqualTo(generatedTitle);
+		assertThat(result.firstChat()).isEqualTo(firstChat);
+
+		verify(chatService).createChat(generatedTitle, member);
 	}
 }
