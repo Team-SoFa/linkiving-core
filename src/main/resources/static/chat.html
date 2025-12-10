@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chat Service Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        #chat-box {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            background: #fff;
+            overflow-y: scroll;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .msg {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            clear: both;
+        }
+
+        .msg .bubble {
+            padding: 8px 12px;
+            border-radius: 15px;
+            display: inline-block;
+            max-width: 80%;
+        }
+
+        .user {
+            text-align: right;
+        }
+
+        .user .bubble {
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .ai {
+            text-align: left;
+        }
+
+        .ai .bubble {
+            background: #e9ecef;
+            color: #333;
+            border-bottom-left-radius: 0;
+        }
+
+        .system {
+            color: #888;
+            font-size: 0.85em;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .controls {
+            background: #eee;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: inline-block;
+            width: 100px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: calc(100% - 120px);
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .btn-connect {
+            background-color: #28a745;
+        }
+
+        .btn-disconnect {
+            background-color: #6c757d;
+        }
+
+        .btn-send {
+            background-color: #007bff;
+        }
+
+        .btn-cancel {
+            background-color: #dc3545;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🤖 Linkiving AI Chat Test</h2>
+
+    <!-- 1. 연결 설정 -->
+    <div class="controls">
+        <div class="input-group">
+            <label>Token:</label>
+            <input id="token" placeholder="Bearer 없이 토큰값만 입력 (eyJhbGci...)" type="text">
+        </div>
+        <div class="input-group">
+            <label>User ID:</label>
+            <input id="userId" placeholder="구독할 User ID" type="text" value="test2@test.com">
+        </div>
+        <div style="text-align: right;">
+            <button class="btn-connect" id="btnConnect" onclick="connect()">연결 (Connect)</button>
+            <button class="btn-disconnect" disabled id="btnDisconnect" onclick="disconnect()">종료</button>
+        </div>
+    </div>
+
+    <!-- 2. 채팅창 -->
+    <div id="chat-box">
+        <div class="system">서버와 연결되지 않았습니다.</div>
+    </div>
+
+    <!-- 3. 메시지 전송 -->
+    <div class="controls">
+        <div class="input-group">
+            <input disabled id="message" onkeypress="if(event.keyCode==13) sendMessage()" placeholder="AI에게 질문을 입력하세요..."
+                   type="text">
+            <button class="btn-send" disabled id="btnSend" onclick="sendMessage()">전송</button>
+            <button class="btn-cancel" disabled id="btnCancel" onclick="cancelMessage()">답변 취소</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let currentSubscription = null;
+
+    // [1] 연결 함수
+    function connect() {
+        const token = document.getElementById('token').value.trim();
+        const userId = document.getElementById('userId').value.trim();
+
+        if (!token) {
+            alert("토큰을 입력해주세요!");
+            return;
+        }
+
+        // SockJS 연결 (절대 경로 사용)
+        const socket = new SockJS('http://localhost:8080/ws/chat');
+        stompClient = Stomp.over(socket);
+
+        // 디버그 로그 끄기 (원하면 주석 제거)
+        // stompClient.debug = null;
+
+        const headers = {
+            'Authorization': 'Bearer ' + token
+        };
+
+        logSystem("서버에 연결 시도 중...");
+
+        stompClient.connect(headers, function (frame) {
+            console.log('Connected: ' + frame);
+            setConnected(true);
+            logSystem("✅ 서버 연결 성공!");
+
+            // [중요] 내 ID로 오는 답변 구독 (/topic/chat/{userId})
+            currentSubscription = stompClient.subscribe('/topic/chat/' + userId, function (response) {
+                // 서버에서 온 메시지 처리
+                showResponse(response.body);
+            });
+
+        }, function (error) {
+            console.error("STOMP Error:", error);
+            logSystem("<span class='error'>❌ 연결 실패: " + error + "</span>");
+        });
+    }
+
+    // [2] 연결 종료
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        setConnected(false);
+        logSystem("연결이 종료되었습니다.");
+    }
+
+    // [3] 메시지 전송
+    function sendMessage() {
+        const messageInput = document.getElementById('message');
+        const message = messageInput.value.trim();
+
+        if (!message) return;
+
+        showMyMessage(message); // 내 메시지 화면에 표시
+        createAiBubble();       // AI 응답 공간 미리 생성
+
+        stompClient.send("/ws/chat/send", {}, JSON.stringify(message));
+
+        messageInput.value = '';
+    }
+
+    // [4] 취소 요청
+    function cancelMessage() {
+        logSystem("🛑 답변 생성을 취소합니다...");
+
+        stompClient.send("/ws/chat/cancel", {}, JSON.stringify({}));
+    }
+
+    // --- UI 처리 함수들 ---
+
+    let currentAiBubble = null;
+
+    function createAiBubble() {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'msg ai';
+        div.innerHTML = `<span class="bubble">...</span>`;
+        chatBox.appendChild(div);
+        scrollToBottom();
+        currentAiBubble = div.querySelector('.bubble');
+    }
+
+    function showResponse(text) {
+        if (!currentAiBubble) return;
+
+        // 스트리밍 종료 신호
+        if (text === 'END_OF_STREAM') {
+            currentAiBubble = null;
+            return;
+        }
+        // 취소 신호
+        if (text === 'GENERATION_CANCELLED') {
+            currentAiBubble.innerHTML += " <br><span style='color:#dc3545; font-size:0.9em'>(답변이 취소되었습니다)</span>";
+            currentAiBubble = null;
+            return;
+        }
+        // 에러 메시지
+        if (text.startsWith("ERROR:")) {
+            currentAiBubble.innerHTML = `<span style='color:red'>${text}</span>`;
+            currentAiBubble = null;
+            return;
+        }
+
+        // 로딩 표시(...) 제거 후 텍스트 추가
+        if (currentAiBubble.innerText === '...') {
+            currentAiBubble.innerText = '';
+        }
+        currentAiBubble.innerText += text;
+        scrollToBottom();
+    }
+
+    function showMyMessage(msg) {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'msg user';
+        div.innerHTML = `<span class="bubble">${msg}</span>`;
+        chatBox.appendChild(div);
+        scrollToBottom();
+    }
+
+    function logSystem(msg) {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'system';
+        div.innerHTML = msg;
+        chatBox.appendChild(div);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const chatBox = document.getElementById('chat-box');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function setConnected(connected) {
+        document.getElementById('btnConnect').disabled = connected;
+        document.getElementById('token').disabled = connected;
+        document.getElementById('userId').disabled = connected;
+
+        document.getElementById('btnDisconnect').disabled = !connected;
+        document.getElementById('btnSend').disabled = !connected;
+        document.getElementById('btnCancel').disabled = !connected;
+        document.getElementById('message').disabled = !connected;
+
+        if (connected) {
+            document.getElementById('message').focus();
+        }
+    }
+</script>
+</body>
+</html>

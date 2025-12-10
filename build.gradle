@@ -68,6 +68,12 @@ dependencies {
     testImplementation "org.springframework.cloud:spring-cloud-starter-openfeign"
     testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 
+    // WebSocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // WebFlux (WebClient 사용을 위해 필수)
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 }
 
 dependencyManagement {
