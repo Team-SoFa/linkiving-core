@@ -21,6 +21,8 @@ import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -128,5 +130,16 @@ public class LinkController implements LinkApi {
 	) {
 		LinkRes response = linkFacade.updateMemo(id, member, request.memo());
 		return ResponseEntity.ok(BaseResponse.success(response, "메모 수정 완료"));
+	}
+
+	@Override
+	@GetMapping("/{id}/summary")
+	public BaseResponse<RecreateSummaryResponse> recreateSummary(
+		@PathVariable Long id,
+		@Valid @RequestParam Format format,
+		@AuthMember Member member
+	) {
+		RecreateSummaryResponse response = linkFacade.recreateSummary(member, id, format);
+		return BaseResponse.success(response, "요약 재성성 완료");
 	}
 }

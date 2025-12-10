@@ -1,8 +1,10 @@
 package com.sofa.linkiving.domain.link.integration;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,17 +16,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofa.linkiving.domain.link.ai.AiSummaryClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.repository.LinkRepository;
+import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
@@ -49,8 +56,14 @@ public class LinkApiIntegrationTest {
 
 	@Autowired
 	MemberRepository memberRepository;
-	private Member testMember;
 
+	@Autowired
+	private SummaryRepository summaryRepository;
+
+	@MockitoBean
+	private AiSummaryClient aiSummaryClient;
+
+	private Member testMember;
 	private Member otherMember;
 	private UserDetails testUserDetails;
 	private UserDetails otherUserDetails;
@@ -557,5 +570,48 @@ public class LinkApiIntegrationTest {
 					.content(objectMapper.writeValueAsString(req))
 			)
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DisplayName("요약 재생성 요청 시 DB 조회 및 AI 클라이언트 호출 후 결과 반환 및 200 OK 응답")
+	void shouldRecreateSummarySuccessfully() throws Exception {
+
+		//given
+		Link savedLink = linkRepository.save(Link.builder()
+			.member(testMember)
+			.url("https://example.com/article")
+			.title("테스트 링크")
+			.build());
+
+		Format format = Format.DETAILED;
+		Long linkId = savedLink.getId();
+
+		summaryRepository.save(Summary.builder()
+			.link(savedLink)
+			.content("기존 요약입니다.")
+			.build());
+
+		String newSummaryText = "새로 생성된 상세 요약입니다.";
+		String comparisonText = "내용이 더 보강되었습니다.";
+
+		given(aiSummaryClient.generateSummary(eq(linkId), anyString(), eq(format)))
+			.willReturn(newSummaryText);
+
+		given(aiSummaryClient.comparisonSummary(anyString(), eq(newSummaryText)))
+			.willReturn(comparisonText);
+
+		// when & then
+		mockMvc.perform(get(BASE_URL + "/{id}/summary", linkId)
+				.param("format", "DETAILED")
+				.with(csrf())
+				.with(user(testUserDetails))
+				.contentType(MediaType.APPLICATION_JSON))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.message").value("요약 재성성 완료"))
+			.andExpect(jsonPath("$.data.existingSummary").value("기존 요약입니다."))
+			.andExpect(jsonPath("$.data.newSummary").value(newSummaryText))
+			.andExpect(jsonPath("$.data.comparison").value(comparisonText));
 	}
 }
