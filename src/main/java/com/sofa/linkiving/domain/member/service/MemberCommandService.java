@@ -20,4 +20,16 @@ public class MemberCommandService {
 
 		return memberRepository.save(member);
 	}
+
+	public Member createOrUpdate(String email) {
+		return memberRepository.findByEmail(email)
+			.orElseGet(() -> {
+				// 신규 유저라면 생성
+				Member newMember = Member.builder()
+					.email(email)
+					.build();
+
+				return memberRepository.save(newMember);
+			});
+	}
 }
