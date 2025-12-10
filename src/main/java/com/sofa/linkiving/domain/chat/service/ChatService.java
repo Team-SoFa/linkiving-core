@@ -18,4 +18,8 @@ public class ChatService {
 	public List<Chat> getChats(Member member) {
 		return chatQueryService.findAllOrderByLastMessageDesc(member);
 	}
+
+	public Chat createChat(String title, Member member) {
+		return chatCommandService.saveChat(title, member);
+	}
 }

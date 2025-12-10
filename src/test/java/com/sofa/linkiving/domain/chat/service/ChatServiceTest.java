@@ -43,4 +43,21 @@ public class ChatServiceTest {
 		assertThat(result).isEqualTo(expectedChats);
 		verify(chatQueryService).findAllOrderByLastMessageDesc(member);
 	}
+
+	@Test
+	@DisplayName("createChat 요청 시 ChatCommandService.saveChat 위임")
+	void shouldCallSaveChatWhenCreateChat() {
+		// given
+		String firstChat = "첫 대화입니다";
+		Chat chat = mock(Chat.class);
+
+		given(chatCommandService.saveChat(firstChat, member)).willReturn(chat);
+
+		// when
+		Chat result = chatService.createChat(firstChat, member);
+
+		// then
+		assertThat(result).isEqualTo(chat);
+		verify(chatCommandService).saveChat(firstChat, member);
+	}
 }
