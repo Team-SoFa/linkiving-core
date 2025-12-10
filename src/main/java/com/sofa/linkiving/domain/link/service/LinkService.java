@@ -24,11 +24,25 @@ public class LinkService {
 	private final LinkQueryService linkQueryService;
 
 	public LinkRes createLink(Member member, String url, String title, String memo,
-		String imageUrl, String metadataJson, String tags, boolean isImportant) {
-		if (linkQueryService.existsByUrl(member, url)) {
+		String imageUrl, String metadataJson, String tags, boolean isImportant, Boolean force) {
+		boolean isDuplicate = linkQueryService.existsByUrl(member, url);
+
+		// 중복 확인 및 force 파라미터 처리
+		if (isDuplicate && (force == null || !force)) {
 			throw new BusinessException(LinkErrorCode.DUPLICATE_URL);
 		}
 
+		// force=true인 경우 기존 링크 덮어쓰기
+		if (isDuplicate && force) {
+			Link existingLink = linkQueryService.findByUrl(member, url);
+			Link updatedLink = linkCommandService.updateLink(
+				existingLink, title, memo, metadataJson, tags, isImportant
+			);
+			log.info("Link overwritten - id: {}, memberId: {}, url: {}", updatedLink.getId(), member.getId(), url);
+			return LinkRes.from(updatedLink);
+		}
+
+		// 신규 링크 저장
 		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl, metadataJson, tags, isImportant);
 		log.info("Link created - id: {}, memberId: {}, url: {}", link.getId(), member.getId(), url);
 

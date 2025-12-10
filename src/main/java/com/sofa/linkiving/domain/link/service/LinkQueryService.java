@@ -35,4 +35,9 @@ public class LinkQueryService {
 	public boolean existsByUrl(Member member, String url) {
 		return linkRepository.existsByMemberAndUrlAndIsDeleteFalse(member, url);
 	}
+
+	public Link findByUrl(Member member, String url) {
+		return linkRepository.findByMemberAndUrlAndIsDeleteFalse(member, url)
+			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
+	}
 }

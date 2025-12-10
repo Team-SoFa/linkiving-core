@@ -16,4 +16,6 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 	Page<Link> findByMemberAndIsDeleteFalse(Member member, Pageable pageable);
 
 	boolean existsByMemberAndUrlAndIsDeleteFalse(Member member, String url);
+
+	Optional<Link> findByMemberAndUrlAndIsDeleteFalse(Member member, String url);
 }

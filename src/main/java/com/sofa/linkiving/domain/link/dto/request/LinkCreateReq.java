@@ -28,6 +28,9 @@ public record LinkCreateReq(
 	String tags,
 
 	@Schema(description = "중요 여부", example = "false")
-	boolean isImportant
+	boolean isImportant,
+
+	@Schema(description = "중복 링크 덮어쓰기 여부", example = "false")
+	Boolean force
 ) {
 }
