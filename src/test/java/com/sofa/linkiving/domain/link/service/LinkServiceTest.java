@@ -64,7 +64,8 @@ class LinkServiceTest {
 			null,
 			null,
 			null,
-			false
+			false,
+			null
 		);
 
 		// then
@@ -94,7 +95,8 @@ class LinkServiceTest {
 			null,
 			null,
 			null,
-			false
+			false,
+			null
 		))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.DUPLICATE_URL);

@@ -87,7 +87,8 @@ public class LinkApiIntegrationTest {
 			null,
 			null,
 			"tag1,tag2",
-			false
+			false,
+			null
 		);
 
 		// when & then
@@ -132,7 +133,8 @@ public class LinkApiIntegrationTest {
 			null,
 			null,
 			null,
-			false
+			false,
+			null
 		);
 
 		// when & then
@@ -565,7 +567,8 @@ public class LinkApiIntegrationTest {
 			null,
 			null,
 			null,
-			false
+			false,
+			null
 		);
 
 		// when & then
@@ -591,7 +594,8 @@ public class LinkApiIntegrationTest {
 			null,
 			null,
 			null,
-			false
+			false,
+			null
 		);
 
 		// when & then
