@@ -3,18 +3,24 @@ package com.sofa.linkiving.domain.link.facade;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.service.LinkService;
+import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class LinkFacade {
 
 	private final LinkService linkService;
+	private final SummaryService summaryService;
 
 	public LinkRes createLink(Member member, String url, String title, String memo,
 		String imageUrl, String metadataJson, String tags, boolean isImportant) {
@@ -48,5 +54,22 @@ public class LinkFacade {
 
 	public boolean checkDuplicate(Member member, String url) {
 		return linkService.checkDuplicate(member, url);
+	}
+
+	@Transactional(readOnly = true)
+	public RecreateSummaryResponse recreateSummary(Member member, Long linkId, Format format) {
+
+		String url = linkService.getLink(linkId, member).url();
+
+		String existingSummary = summaryService.getSummary(linkId).getBody();
+		String newSummary = summaryService.createSummary(linkId, url, format);
+
+		String comparison = summaryService.comparisonSummary(existingSummary, newSummary);
+
+		return RecreateSummaryResponse.builder()
+			.existingSummary(existingSummary)
+			.newSummary(newSummary)
+			.comparison(comparison)
+			.build();
 	}
 }

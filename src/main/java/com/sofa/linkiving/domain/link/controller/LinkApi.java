@@ -12,6 +12,8 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
@@ -71,6 +73,13 @@ public interface LinkApi {
 	ResponseEntity<BaseResponse<LinkRes>> updateMemo(
 		@PathVariable Long id,
 		@Valid @RequestBody LinkMemoUpdateReq request,
+		@AuthMember Member member
+	);
+
+	@Operation(summary = "요약 재생성", description = "요약을 재생성 하고 신규 요약 기존 요약, 기존 및 신규 요약 비교 정보을 제공합니다.")
+	ResponseEntity<BaseResponse<RecreateSummaryResponse>> recreateSummary(
+		@PathVariable Long id,
+		@Valid @RequestParam Format format,
 		@AuthMember Member member
 	);
 }
