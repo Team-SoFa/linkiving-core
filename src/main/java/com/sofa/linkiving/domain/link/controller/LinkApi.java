@@ -19,6 +19,7 @@ import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -79,7 +80,7 @@ public interface LinkApi {
 	@Operation(summary = "요약 재생성", description = "요약을 재생성 하고 신규 요약 기존 요약, 기존 및 신규 요약 비교 정보을 제공합니다.")
 	ResponseEntity<BaseResponse<RecreateSummaryResponse>> recreateSummary(
 		@PathVariable Long id,
-		@Valid @RequestParam Format format,
+		@Valid @RequestParam @Schema(description = "요청 형식(CONCISE: 간결하게, DETAILED:자세하게)") Format format,
 		@AuthMember Member member
 	);
 }
