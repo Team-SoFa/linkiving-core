@@ -39,10 +39,10 @@ public class SecurityConfig {
 		"/h2-console/**",
 
 		/* web socket */
-		"/v1/chat/**",
+		"/ws/chat/**",
 
 		/* temp */
-		"/v1/member/**"
+		"/v1/member/**", "/mock/**"
 
 	};
 	private static final String[] SEMI_PERMIT_URLS = {

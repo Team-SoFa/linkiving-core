@@ -1,5 +1,8 @@
 package com.sofa.linkiving.domain.chat.controller;
 
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,5 +38,17 @@ public class ChatController implements ChatApi {
 	public BaseResponse<CreateChatRes> createChat(@RequestBody @Valid CreateChatReq req, @AuthMember Member member) {
 		CreateChatRes res = chatFacade.createChat(req.firstChat(), member);
 		return BaseResponse.success(res, "채팅방 생성 완료");
+	}
+
+	@MessageMapping("/send/{chatId}")
+	@Override
+	public void sendMessage(@DestinationVariable Long chatId, @Payload String message, @AuthMember Member member) {
+		chatFacade.generateAnswer(chatId, member, message);
+	}
+
+	@MessageMapping("/cancel/{chatId}")
+	@Override
+	public void cancelMessage(@DestinationVariable Long chatId, @AuthMember Member member) {
+		chatFacade.cancelAnswer(chatId, member);
 	}
 }
