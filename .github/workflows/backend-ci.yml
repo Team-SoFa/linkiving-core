@@ -9,6 +9,9 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     env:
       SPRING_PROFILES_ACTIVE: test
 
@@ -52,6 +55,33 @@ jobs:
 
       - name: 🧪 테스트 실행
         run: ./gradlew test
+
+      - name: 📊 JaCoCo 커버리지 리포트 생성
+        run: ./gradlew jacocoTestReport
+
+      - name: 📈 JaCoCo 커버리지 검증
+        run: ./gradlew jacocoTestCoverageVerification
+
+      - name: 💬 PR에 JaCoCo 커버리지 코멘트 추가
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 30
+          min-coverage-changed-files: 30
+          title: '📊 코드 커버리지 리포트'
+          update-comment: true
+
+      - name: 📊 JaCoCo 리포트 업로드
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report-${{ github.run_number }}
+          path: |
+            build/reports/jacoco/
+            build/jacoco/
+          retention-days: 7
 
       - name: Docker 빌드 테스트 (push 없음)
         uses: docker/build-push-action@v4
