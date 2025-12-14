@@ -1,5 +1,7 @@
 package com.sofa.linkiving.domain.link.service;
 
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,5 +36,9 @@ public class LinkQueryService {
 
 	public boolean existsByUrl(Member member, String url) {
 		return linkRepository.existsByMemberAndUrlAndIsDeleteFalse(member, url);
+	}
+
+	public Optional<Long> findIdByUrl(Member member, String url) {
+		return linkRepository.findIdByMemberAndUrlAndIsDeleteFalse(member, url);
 	}
 }

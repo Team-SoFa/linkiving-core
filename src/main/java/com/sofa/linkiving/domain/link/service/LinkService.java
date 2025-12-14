@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
@@ -97,7 +98,9 @@ public class LinkService {
 	}
 
 	@Transactional(readOnly = true)
-	public boolean checkDuplicate(Member member, String url) {
-		return linkQueryService.existsByUrl(member, url);
+	public LinkDuplicateCheckRes checkDuplicate(Member member, String url) {
+		return linkQueryService.findIdByUrl(member, url)
+			.map(LinkDuplicateCheckRes::exists)
+			.orElse(LinkDuplicateCheckRes.notExists());
 	}
 }

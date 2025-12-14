@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
@@ -300,7 +301,7 @@ class LinkServiceTest {
 	}
 
 	@Test
-	@DisplayName("URL 중복을 체크할 수 있다")
+	@DisplayName("URL 중복 체크 - 중복된 링크 존재")
 	void shouldCheckDuplicate() {
 		// given
 		Member member = Member.builder()
@@ -308,13 +309,34 @@ class LinkServiceTest {
 			.password("password")
 			.build();
 
-		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(true);
+		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.of(123L));
 
 		// when
-		boolean result = linkService.checkDuplicate(member, "https://example.com");
+		LinkDuplicateCheckRes result = linkService.checkDuplicate(member, "https://example.com");
 
 		// then
-		assertThat(result).isTrue();
-		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
+		assertThat(result.exists()).isTrue();
+		assertThat(result.linkId()).isEqualTo(123L);
+		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
+	}
+
+	@Test
+	@DisplayName("URL 중복 체크 - 중복된 링크 없음")
+	void shouldCheckDuplicateNotExists() {
+		// given
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+
+		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.empty());
+
+		// when
+		LinkDuplicateCheckRes result = linkService.checkDuplicate(member, "https://example.com");
+
+		// then
+		assertThat(result.exists()).isFalse();
+		assertThat(result.linkId()).isNull();
+		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
 	}
 }

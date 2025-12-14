@@ -19,6 +19,7 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -37,12 +38,12 @@ public class LinkController implements LinkApi {
 
 	@Override
 	@GetMapping("/duplicate")
-	public ResponseEntity<BaseResponse<Boolean>> checkDuplicate(
+	public ResponseEntity<BaseResponse<LinkDuplicateCheckRes>> checkDuplicate(
 		@RequestParam String url,
 		@AuthMember Member member
 	) {
-		boolean exists = linkFacade.checkDuplicate(member, url);
-		return ResponseEntity.ok(BaseResponse.success(exists, "URL 중복 체크 완료"));
+		LinkDuplicateCheckRes response = linkFacade.checkDuplicate(member, url);
+		return ResponseEntity.ok(BaseResponse.success(response, "URL 중복 체크 완료"));
 	}
 
 	@Override
