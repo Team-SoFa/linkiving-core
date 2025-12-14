@@ -275,7 +275,8 @@ public class LinkApiIntegrationTest {
 			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data").value(true))
+			.andExpect(jsonPath("$.data.exists").value(true))
+			.andExpect(jsonPath("$.data.linkId").isNumber())
 			.andExpect(jsonPath("$.message").value("URL 중복 체크 완료"));
 	}
 
@@ -295,7 +296,8 @@ public class LinkApiIntegrationTest {
 			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data").value(false));
+			.andExpect(jsonPath("$.data.exists").value(false))
+			.andExpect(jsonPath("$.data.linkId").isEmpty());
 	}
 
 	@Test

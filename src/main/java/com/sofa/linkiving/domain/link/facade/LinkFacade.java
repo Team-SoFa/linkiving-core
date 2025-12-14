@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -46,7 +47,7 @@ public class LinkFacade {
 		return linkService.getLinkList(member, pageable);
 	}
 
-	public boolean checkDuplicate(Member member, String url) {
+	public LinkDuplicateCheckRes checkDuplicate(Member member, String url) {
 		return linkService.checkDuplicate(member, url);
 	}
 }

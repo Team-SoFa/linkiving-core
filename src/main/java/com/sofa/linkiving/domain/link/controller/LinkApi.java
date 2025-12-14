@@ -11,6 +11,7 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -23,8 +24,8 @@ import jakarta.validation.Valid;
 @Tag(name = "Link", description = "링크 관리 API")
 public interface LinkApi {
 
-	@Operation(summary = "URL 중복 체크", description = "저장하려는 URL이 이미 존재하는지 확인합니다")
-	ResponseEntity<BaseResponse<Boolean>> checkDuplicate(
+	@Operation(summary = "URL 중복 체크", description = "저장하려는 URL이 이미 존재하는지 확인하고, 존재 시 linkId를 반환합니다")
+	ResponseEntity<BaseResponse<LinkDuplicateCheckRes>> checkDuplicate(
 		@RequestParam String url,
 		@AuthMember Member member
 	);
