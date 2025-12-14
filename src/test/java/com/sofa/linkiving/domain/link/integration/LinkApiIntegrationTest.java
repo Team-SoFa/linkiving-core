@@ -26,6 +26,7 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
@@ -613,5 +614,75 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.existingSummary").value("기존 요약입니다."))
 			.andExpect(jsonPath("$.data.newSummary").value(newSummaryText))
 			.andExpect(jsonPath("$.data.comparison").value(comparisonText));
+	}
+
+	@Test
+	@DisplayName("메타데이터 크롤링 성공 시 OG 태그 정보를 반환한다")
+	void shouldScrapeMetadataSuccessfully() throws Exception {
+		// given
+		MetaScrapeReq req = new MetaScrapeReq(
+			"https://velog.io/@jjeongdong/%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4");
+
+		// when & then
+		mockMvc.perform(
+				post(BASE_URL + "/meta-scrape")
+					.with(csrf())
+					.with(user(testUserDetails))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req))
+					.accept(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.message").value("메타 정보 수집 완료"))
+			.andExpect(jsonPath("$.data").exists())
+			.andExpect(jsonPath("$.data.title").exists())
+			.andExpect(jsonPath("$.data.description").exists())
+			.andExpect(jsonPath("$.data.image").exists())
+			.andExpect(jsonPath("$.data.url").exists());
+	}
+
+	@Test
+	@DisplayName("메타데이터 크롤링 실패 시 빈 값을 반환한다")
+	void shouldReturnEmptyWhenScrapeFails() throws Exception {
+		// given - OG 태그가 없는 URL
+		MetaScrapeReq req = new MetaScrapeReq("https://example.com");
+
+		// when & then
+		mockMvc.perform(
+				post(BASE_URL + "/meta-scrape")
+					.with(csrf())
+					.with(user(testUserDetails))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req))
+					.accept(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.message").value("메타 정보 수집 완료"))
+			.andExpect(jsonPath("$.data.title").value(""))
+			.andExpect(jsonPath("$.data.description").value(""))
+			.andExpect(jsonPath("$.data.image").value(""))
+			.andExpect(jsonPath("$.data.url").value(""));
+	}
+
+	@Test
+	@DisplayName("메타데이터 크롤링 시 URL이 누락되면 400 BAD_REQUEST 응답")
+	void shouldFailWhenMetaScrapeUrlIsMissing() throws Exception {
+		// given
+		String invalidJson = """
+			{
+			}
+			""";
+
+		// when & then
+		mockMvc.perform(
+				post(BASE_URL + "/meta-scrape")
+					.with(csrf())
+					.with(user(testUserDetails))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(invalidJson)
+			)
+			.andExpect(status().isBadRequest());
 	}
 }

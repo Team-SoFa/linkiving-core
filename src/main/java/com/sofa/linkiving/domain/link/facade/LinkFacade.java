@@ -5,12 +5,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sofa.linkiving.domain.link.dto.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
+import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class LinkFacade {
 
 	private final LinkService linkService;
+	private final OgTagCrawler ogTagCrawler;
 	private final SummaryService summaryService;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
@@ -73,5 +77,11 @@ public class LinkFacade {
 			.newSummary(newSummary)
 			.comparison(comparison)
 			.build();
+	}
+
+	@Transactional(readOnly = true)
+	public MetaScrapeRes scrapeMetadata(String url) {
+		OgTagDto ogTag = ogTagCrawler.crawl(url);
+		return MetaScrapeRes.from(ogTag);
 	}
 }

@@ -19,8 +19,10 @@ import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
+import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
@@ -37,6 +39,16 @@ import lombok.RequiredArgsConstructor;
 public class LinkController implements LinkApi {
 
 	private final LinkFacade linkFacade;
+
+	@Override
+	@PostMapping("/meta-scrape")
+	public BaseResponse<MetaScrapeRes> scrapeMetadata(
+		@Valid @RequestBody MetaScrapeReq request,
+		@AuthMember Member member
+	) {
+		MetaScrapeRes response = linkFacade.scrapeMetadata(request.url());
+		return BaseResponse.success(response, "메타 정보 수집 완료");
+	}
 
 	@Override
 	@GetMapping("/duplicate")

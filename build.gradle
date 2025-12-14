@@ -67,6 +67,9 @@ dependencies {
     testImplementation "org.springframework.cloud:spring-cloud-starter-openfeign"
     testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 
+    // Jsoup (HTML parsing for OG tag crawling)
+    implementation 'org.jsoup:jsoup:1.18.3'
+
     // WebSocket
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
@@ -116,13 +119,18 @@ jacocoTestReport {
                     '**/*Request$*.class',
                     '**/*Response.class',
                     '**/*Response$*.class',
+                    '**/*Req.class',
+                    '**/*Req$*.class',
+                    '**/*Res.class',
+                    '**/*Res$*.class',
                     '**/config/**',
                     '**/configuration/**',
                     '**/exception/**',
                     '**/*Application.class',
                     '**/Q*.class',
                     '**/entity/**',
-                    '**/domain/**/*Entity.class'
+                    '**/domain/**/*Entity.class',
+                    '**/domain/link/util/OgTagCrawler.class'
             ])
         }))
     }
@@ -153,13 +161,18 @@ jacocoTestCoverageVerification {
                     '**/*Request$*.class',
                     '**/*Response.class',
                     '**/*Response$*.class',
+                    '**/*Req.class',
+                    '**/*Req$*.class',
+                    '**/*Res.class',
+                    '**/*Res$*.class',
                     '**/config/**',
                     '**/configuration/**',
                     '**/exception/**',
                     '**/*Application.class',
                     '**/Q*.class',
                     '**/entity/**',
-                    '**/domain/**/*Entity.class'
+                    '**/domain/**/*Entity.class',
+                    '**/domain/link/util/OgTagCrawler.class'
             ])
         }))
     }
