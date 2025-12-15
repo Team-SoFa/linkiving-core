@@ -47,4 +47,17 @@ public class ChatCommandServiceTest {
 
 		verify(chatRepository).save(any(Chat.class));
 	}
+
+	@Test
+	@DisplayName("ChatRepository.delete 호출")
+	void shouldCallDeleteWhenDeleteChat() {
+		// given
+		Chat chat = mock(Chat.class);
+
+		// when
+		chatCommandService.deleteChat(chat);
+
+		// then
+		verify(chatRepository).delete(chat);
+	}
 }

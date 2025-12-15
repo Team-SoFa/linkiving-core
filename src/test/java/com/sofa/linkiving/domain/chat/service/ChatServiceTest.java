@@ -17,14 +17,15 @@ import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
 public class ChatServiceTest {
+
 	@InjectMocks
 	private ChatService chatService;
 
 	@Mock
-	private ChatQueryService chatQueryService;
+	private ChatCommandService chatCommandService;
 
 	@Mock
-	private ChatCommandService chatCommandService;
+	private ChatQueryService chatQueryService;
 
 	@Mock
 	private Member member;
@@ -59,5 +60,34 @@ public class ChatServiceTest {
 		// then
 		assertThat(result).isEqualTo(chat);
 		verify(chatCommandService).saveChat(firstChat, member);
+	}
+
+	@Test
+	@DisplayName("ChatQueryService.findChat 호출 및 결과 반환")
+	void shouldReturnChatWhenGetChat() {
+		// given
+		Long chatId = 1L;
+		Chat chat = mock(Chat.class);
+		given(chatQueryService.findChat(chatId, member)).willReturn(chat);
+
+		// when
+		Chat result = chatService.getChat(chatId, member);
+
+		// then
+		assertThat(result).isEqualTo(chat);
+		verify(chatQueryService).findChat(chatId, member);
+	}
+
+	@Test
+	@DisplayName("ChatCommandService.deleteChat 호출 위임")
+	void shouldCallDeleteChatWhenDelete() {
+		// given
+		Chat chat = mock(Chat.class);
+
+		// when
+		chatService.delete(chat);
+
+		// then
+		verify(chatCommandService).deleteChat(chat);
 	}
 }

@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.repository.MessageRepository;
 
@@ -35,5 +36,18 @@ public class MessageCommandServiceTest {
 		// then
 		assertThat(result).isEqualTo(message);
 		verify(messageRepository).save(message);
+	}
+
+	@Test
+	@DisplayName("MessageRepository.deleteAllByChat 호출")
+	void shouldCallDeleteAllByChatWhenDeleteAllByChat() {
+		// given
+		Chat chat = mock(Chat.class);
+
+		// when
+		messageCommandService.deleteAllByChat(chat);
+
+		// then
+		verify(messageRepository).deleteAllByChat(chat);
 	}
 }

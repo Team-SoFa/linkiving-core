@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.chat.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,6 +27,14 @@ public class MessageService {
 
 	private final WebClient webClient = WebClient.create("http://localhost:8080/mock/ai");
 	private final Map<String, StringBuilder> messageBuffers = new ConcurrentHashMap<>();
+
+	public void deleteAll(Chat chat) {
+		messageCommandService.deleteAllByChat(chat);
+	}
+
+	public List<Message> getMessagesByChat(Chat chat) {
+		return messageQueryService.findAllByChat(chat);
+	}
 
 	public void generateAnswer(Chat chat, String userMessage) {
 

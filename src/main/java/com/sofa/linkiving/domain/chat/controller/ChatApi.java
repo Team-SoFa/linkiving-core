@@ -36,6 +36,9 @@ public interface ChatApi {
 		Member member
 	);
 
+	@Operation(summary = "링크 삭제", description = "해당 링크방과 채팅 기록을 전부 Hard Delete 진행합니다.")
+	BaseResponse<String> deleteChat(Member member, Long chatId);
+
 	void sendMessage(@Parameter(description = "채팅방 Id", required = true) Long chatId,
 		@Parameter(description = "사용자 질문 내용", required = true) String message, Member member);
 

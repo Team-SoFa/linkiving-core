@@ -39,6 +39,15 @@ public class ChatFacade {
 	}
 
 	@Transactional
+	public void deleteChat(Member member, Long chatId) {
+		Chat chat = chatService.getChat(chatId, member);
+
+		feedbackService.deleteAll(chat);
+		messageService.deleteAll(chat);
+		chatService.delete(chat);
+	}
+
+	@Transactional
 	public void generateAnswer(Long chatId, Member member, String message) {
 		Chat chat = chatService.getChat(chatId, member);
 		messageService.generateAnswer(chat, message);
