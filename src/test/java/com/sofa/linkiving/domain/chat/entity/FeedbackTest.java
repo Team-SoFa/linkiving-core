@@ -23,7 +23,6 @@ public class FeedbackTest {
 	private TestEntityManager em;
 
 	@Test
-	// ❌ "저장된다" (X) -> ⭕ "정상 저장" (O)
 	@DisplayName("피드백 저장 시 메시지 연관관계 및 감정 상태 정상 저장")
 	void shouldSaveFeedbackWithSentiment() {
 		// given
@@ -34,7 +33,10 @@ public class FeedbackTest {
 			.build();
 		em.persist(member);
 
-		Chat chat = Chat.builder().member(member).build();
+		Chat chat = Chat.builder()
+			.member(member)
+			.title("test")
+			.build();
 		em.persist(chat);
 
 		Message message = Message.builder()
@@ -59,7 +61,7 @@ public class FeedbackTest {
 
 		// then
 		assertThat(savedFeedback).isNotNull();
-		assertThat(savedFeedback.getMessage()).isEqualTo(message);
+		assertThat(savedFeedback.getMessage().getId()).isEqualTo(message.getId());
 		assertThat(savedFeedback.getText()).isEqualTo(feedbackText);
 		assertThat(savedFeedback.getSentiment()).isEqualTo(sentiment);
 	}
