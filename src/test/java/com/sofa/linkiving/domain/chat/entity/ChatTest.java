@@ -30,6 +30,7 @@ public class ChatTest {
 
 		Chat chat = Chat.builder()
 			.member(member)
+			.title("test")
 			.build();
 
 		// when

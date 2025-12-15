@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.entity;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseEntity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -22,8 +23,12 @@ public class Chat extends BaseEntity {
 	@JoinColumn(name = "member_id", nullable = false)
 	private Member member;
 
+	@Column(nullable = false)
+	private String title;
+
 	@Builder
-	public Chat(Member member) {
+	public Chat(Member member, String title) {
 		this.member = member;
+		this.title = title;
 	}
 }

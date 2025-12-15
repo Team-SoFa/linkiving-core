@@ -3,8 +3,6 @@ package com.sofa.linkiving.domain.chat.entity;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.hibernate.annotations.BatchSize;
-
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.global.common.BaseEntity;
 import com.sofa.linkiving.global.converter.LongListToStringConverter;
@@ -15,7 +13,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -38,24 +36,17 @@ public class Message extends BaseEntity {
 	@Column(columnDefinition = "text", nullable = false)
 	private String content;
 
-	@Column(name = "original_prompt", columnDefinition = "text")
-	private String originalPrompt;
-
 	@Convert(converter = LongListToStringConverter.class)
 	private List<Long> linkIds = new ArrayList<>();
 
-	@OneToMany(mappedBy = "message")
-	@BatchSize(size = 100)
-	private List<Feedback> feedbacks = new ArrayList<>();
+	@OneToOne(mappedBy = "message")
+	private Feedback feedback;
 
 	@Builder
-	public Message(Chat chat, Type type, String content, String originalPrompt, List<Long> linkIds,
-		List<Feedback> feedbacks) {
+	public Message(Chat chat, Type type, String content, List<Long> linkIds) {
 		this.chat = chat;
 		this.type = type;
 		this.content = content;
-		this.originalPrompt = originalPrompt;
 		this.linkIds = linkIds;
-		this.feedbacks = feedbacks;
 	}
 }

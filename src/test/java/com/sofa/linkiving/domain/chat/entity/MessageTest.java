@@ -32,18 +32,19 @@ public class MessageTest {
 			.build();
 		em.persist(member);
 
-		Chat chat = Chat.builder().member(member).build();
+		Chat chat = Chat.builder()
+			.member(member)
+			.title("test")
+			.build();
 		em.persist(chat);
 
 		List<Long> linkIds = List.of(1L, 100L, 500L);
 		String content = "테스트 메시지입니다.";
-		String prompt = "원본 프롬프트";
 
 		Message message = Message.builder()
 			.chat(chat)
 			.type(Type.AI)
 			.content(content)
-			.originalPrompt(prompt)
 			.linkIds(linkIds)
 			.build();
 
@@ -53,7 +54,6 @@ public class MessageTest {
 		// then
 		assertThat(savedMessage).isNotNull();
 		assertThat(savedMessage.getContent()).isEqualTo(content);
-		assertThat(savedMessage.getOriginalPrompt()).isEqualTo(prompt);
 		assertThat(savedMessage.getChat()).isEqualTo(chat);
 
 		// Converter 동작 검증
