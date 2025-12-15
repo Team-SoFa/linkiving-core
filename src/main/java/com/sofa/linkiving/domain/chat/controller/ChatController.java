@@ -3,7 +3,9 @@ package com.sofa.linkiving.domain.chat.controller;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,14 +42,21 @@ public class ChatController implements ChatApi {
 		return BaseResponse.success(res, "채팅방 생성 완료");
 	}
 
-	@MessageMapping("/send/{chatId}")
 	@Override
+	@DeleteMapping("/{chatId}")
+	public BaseResponse<String> deleteChat(@AuthMember Member member, @PathVariable Long chatId) {
+		chatFacade.deleteChat(member, chatId);
+		return BaseResponse.noContent("성공적으로 삭제했습니다.");
+	}
+
+	@Override
+	@MessageMapping("/send/{chatId}")
 	public void sendMessage(@DestinationVariable Long chatId, @Payload String message, @AuthMember Member member) {
 		chatFacade.generateAnswer(chatId, member, message);
 	}
 
-	@MessageMapping("/cancel/{chatId}")
 	@Override
+	@MessageMapping("/cancel/{chatId}")
 	public void cancelMessage(@DestinationVariable Long chatId, @AuthMember Member member) {
 		chatFacade.cancelAnswer(chatId, member);
 	}

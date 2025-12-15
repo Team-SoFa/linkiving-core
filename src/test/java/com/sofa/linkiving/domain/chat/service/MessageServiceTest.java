@@ -1,7 +1,9 @@
 package com.sofa.linkiving.domain.chat.service;
 
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -16,6 +18,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,6 +26,12 @@ public class MessageServiceTest {
 
 	@InjectMocks
 	private MessageService messageService;
+
+	@Mock
+	private MessageCommandService messageCommandService;
+
+	@Mock
+	private MessageQueryService messageQueryService;
 
 	@Mock
 	private SimpMessagingTemplate messagingTemplate;
@@ -37,6 +46,36 @@ public class MessageServiceTest {
 	void setUp() {
 		// Chat ID Mocking
 		lenient().when(chat.getId()).thenReturn(1L);
+	}
+
+	@Test
+	@DisplayName("MessageCommandService.deleteAllByChat 호출 위임")
+	void shouldCallDeleteAllByChatWhenDeleteAll() {
+		// given
+		Chat chat = mock(Chat.class);
+
+		// when
+		messageService.deleteAll(chat);
+
+		// then
+		verify(messageCommandService).deleteAllByChat(chat);
+	}
+
+	@Test
+	@DisplayName("MessageQueryService.findAllByChat 호출 및 결과 반환")
+	void shouldReturnMessagesWhenGetMessagesByChat() {
+		// given
+		Chat chat = mock(Chat.class);
+		List<Message> messages = List.of(mock(Message.class));
+
+		given(messageQueryService.findAllByChat(chat)).willReturn(messages);
+
+		// when
+		List<Message> result = messageService.getMessagesByChat(chat);
+
+		// then
+		assertThat(result).isEqualTo(messages);
+		verify(messageQueryService).findAllByChat(chat);
 	}
 
 	@Test

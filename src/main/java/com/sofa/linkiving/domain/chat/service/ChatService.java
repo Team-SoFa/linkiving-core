@@ -8,9 +8,7 @@ import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatService {
@@ -19,6 +17,10 @@ public class ChatService {
 
 	public Chat getChat(Long chatId, Member member) {
 		return chatQueryService.findChat(chatId, member);
+	}
+
+	public void delete(Chat chat) {
+		chatCommandService.deleteChat(chat);
 	}
 
 	public List<Chat> getChats(Member member) {

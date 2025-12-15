@@ -88,4 +88,25 @@ public class ChatFacadeTest {
 
 		verify(chatService).createChat(generatedTitle, member);
 	}
+
+	@Test
+	@DisplayName("채팅방 삭제 요청 시 하위 데이터(피드백, 메시지) 일괄 삭제 및 채팅방 제거 위임")
+	void shouldDeleteAllRelatedDataWhenDeleteChat() {
+		// given
+		Long chatId = 1L;
+		Chat chat = mock(Chat.class);
+
+		given(chatService.getChat(chatId, member)).willReturn(chat);
+
+		// when
+		chatFacade.deleteChat(member, chatId);
+
+		// then
+		// 1. 피드백 삭제 호출 확인
+		verify(feedbackService).deleteAll(chat);
+		// 2. 메시지 삭제 호출 확인
+		verify(messageService).deleteAll(chat);
+		// 3. 채팅방 삭제 호출 확인
+		verify(chatService).delete(chat);
+	}
 }

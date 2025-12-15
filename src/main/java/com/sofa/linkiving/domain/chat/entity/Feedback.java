@@ -3,7 +3,6 @@ package com.sofa.linkiving.domain.chat.entity;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.global.common.BaseEntity;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -20,7 +19,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "feedbacks")
 public class Feedback extends BaseEntity {
-	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "message_id")
 	private Message message;
 

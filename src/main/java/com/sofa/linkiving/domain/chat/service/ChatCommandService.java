@@ -21,4 +21,8 @@ public class ChatCommandService {
 				.build()
 		);
 	}
+
+	public void deleteChat(Chat chat) {
+		chatRepository.delete(chat);
+	}
 }

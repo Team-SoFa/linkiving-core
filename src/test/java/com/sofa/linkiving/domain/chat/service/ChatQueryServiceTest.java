@@ -31,6 +31,21 @@ public class ChatQueryServiceTest {
 	private Member member;
 
 	@Test
+	@DisplayName("ChatRepository.findByIdAndMember 호출 및 반환")
+	void shouldReturnChatWhenFindChat() {
+		// given
+		Long chatId = 1L;
+		Chat chat = mock(Chat.class);
+		given(chatRepository.findByIdAndMember(chatId, member)).willReturn(Optional.of(chat));
+
+		// when
+		Chat result = chatQueryService.findChat(chatId, member);
+
+		// then
+		assertThat(result).isEqualTo(chat);
+	}
+
+	@Test
 	@DisplayName("ChatRepository.findAllByMemberOrderByCreatedAtDesc 호출 및 반환")
 	void shouldReturnChatListWhenFindAllOrderByLastMessageDesc() {
 		// given
