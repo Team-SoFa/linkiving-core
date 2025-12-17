@@ -21,6 +21,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -36,6 +37,9 @@ class LinkServiceTest {
 
 	@Mock
 	private LinkQueryService linkQueryService;
+
+	@Mock
+	private SummaryQueue summaryQueue;
 
 	@Test
 	@DisplayName("링크를 생성할 수 있다")
