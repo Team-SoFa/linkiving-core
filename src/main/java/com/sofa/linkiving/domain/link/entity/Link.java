@@ -34,57 +34,31 @@ public class Link extends BaseEntity {
 	@Column(name = "image_url", length = 2048)
 	private String imageUrl;
 
-	@Column(name = "metadata_json", columnDefinition = "TEXT")
-	private String metadataJson;
-
-	@Column(columnDefinition = "TEXT")
-	private String tags;
-
-	@Column(name = "is_important", nullable = false)
-	private boolean isImportant = false;
-
 	@Builder
-	public Link(Member member, String url, String title, String memo, String imageUrl,
-		String metadataJson, String tags, boolean isImportant) {
+	public Link(Member member, String url, String title, String memo, String imageUrl) {
 		this.member = member;
 		this.url = url;
 		this.title = title;
 		this.memo = memo;
 		this.imageUrl = imageUrl;
-		this.metadataJson = metadataJson;
-		this.tags = tags;
-		this.isImportant = isImportant;
 	}
 
-	public static Link create(Member member, String url, String title, String memo,
-		String imageUrl, String metadataJson, String tags, boolean isImportant) {
+	public static Link create(Member member, String url, String title, String memo, String imageUrl) {
 		return Link.builder()
 			.member(member)
 			.url(url)
 			.title(title)
 			.memo(memo)
 			.imageUrl(imageUrl)
-			.metadataJson(metadataJson)
-			.tags(tags)
-			.isImportant(isImportant)
 			.build();
 	}
 
-	public void updateDetails(String title, String memo, String metadataJson, String tags, Boolean isImportant) {
+	public void updateDetails(String title, String memo) {
 		if (title != null) {
 			this.title = title;
 		}
 		if (memo != null) {
 			this.memo = memo;
-		}
-		if (metadataJson != null) {
-			this.metadataJson = metadataJson;
-		}
-		if (tags != null) {
-			this.tags = tags;
-		}
-		if (isImportant != null) {
-			this.isImportant = isImportant;
 		}
 	}
 }

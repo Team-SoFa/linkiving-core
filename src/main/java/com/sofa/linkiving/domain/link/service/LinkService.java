@@ -24,22 +24,20 @@ public class LinkService {
 	private final LinkCommandService linkCommandService;
 	private final LinkQueryService linkQueryService;
 
-	public LinkRes createLink(Member member, String url, String title, String memo,
-		String imageUrl, String metadataJson, String tags, boolean isImportant) {
+	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
 		if (linkQueryService.existsByUrl(member, url)) {
 			throw new BusinessException(LinkErrorCode.DUPLICATE_URL);
 		}
 
-		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl, metadataJson, tags, isImportant);
+		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl);
 		log.info("Link created - id: {}, memberId: {}, url: {}", link.getId(), member.getId(), url);
 
 		return LinkRes.from(link);
 	}
 
-	public LinkRes updateLink(Long linkId, Member member, String title, String memo,
-		String metadataJson, String tags, Boolean isImportant) {
+	public LinkRes updateLink(Long linkId, Member member, String title, String memo) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(link, title, memo, metadataJson, tags, isImportant);
+		Link updatedLink = linkCommandService.updateLink(link, title, memo);
 
 		log.info("Link updated - id: {}, memberId: {}", linkId, member.getId());
 
@@ -48,14 +46,7 @@ public class LinkService {
 
 	public LinkRes updateTitle(Long linkId, Member member, String title) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(
-			link,
-			title,
-			link.getMemo(),
-			link.getMetadataJson(),
-			link.getTags(),
-			link.isImportant()
-		);
+		Link updatedLink = linkCommandService.updateLink(link, title, link.getMemo());
 
 		log.info("Link title updated - id: {}, memberId: {}", linkId, member.getId());
 
@@ -64,14 +55,7 @@ public class LinkService {
 
 	public LinkRes updateMemo(Long linkId, Member member, String memo) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(
-			link,
-			link.getTitle(),
-			memo,
-			link.getMetadataJson(),
-			link.getTags(),
-			link.isImportant()
-		);
+		Link updatedLink = linkCommandService.updateLink(link, link.getTitle(), memo);
 
 		log.info("Link memo updated - id: {}, memberId: {}", linkId, member.getId());
 

@@ -17,14 +17,12 @@ public class LinkFacade {
 
 	private final LinkService linkService;
 
-	public LinkRes createLink(Member member, String url, String title, String memo,
-		String imageUrl, String metadataJson, String tags, boolean isImportant) {
-		return linkService.createLink(member, url, title, memo, imageUrl, metadataJson, tags, isImportant);
+	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
+		return linkService.createLink(member, url, title, memo, imageUrl);
 	}
 
-	public LinkRes updateLink(Long linkId, Member member, String title, String memo,
-		String metadataJson, String tags, Boolean isImportant) {
-		return linkService.updateLink(linkId, member, title, memo, metadataJson, tags, isImportant);
+	public LinkRes updateLink(Long linkId, Member member, String title, String memo) {
+		return linkService.updateLink(linkId, member, title, memo);
 	}
 
 	public LinkRes updateTitle(Long linkId, Member member, String title) {

@@ -22,20 +22,20 @@ public class Summary extends BaseEntity {
 	@JoinColumn(name = "link_id", nullable = false)
 	private Link link;
 
-	@Column(nullable = false)
-	private int version;
-
 	@Column(length = 64)
 	private Format format;
 
 	@Column(columnDefinition = "TEXT", nullable = false)
-	private String body;
+	private String content;
+
+	@Column(name = "select", columnDefinition = "TEXT")
+	private String select;
 
 	@Builder
-	public Summary(Link link, int version, Format format, String body) {
+	public Summary(Link link, Format format, String content, String select) {
 		this.link = link;
-		this.version = version;
 		this.format = format;
-		this.body = body;
+		this.content = content;
+		this.select = select;
 	}
 }

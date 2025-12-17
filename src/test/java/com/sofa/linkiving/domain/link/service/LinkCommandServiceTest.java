@@ -40,9 +40,6 @@ class LinkCommandServiceTest {
 			.title("테스트 링크")
 			.memo("메모")
 			.imageUrl("https://example.com/image.jpg")
-			.metadataJson("{}")
-			.tags("tag1,tag2")
-			.isImportant(false)
 			.build();
 
 		given(linkRepository.save(any(Link.class))).willReturn(link);
@@ -53,10 +50,7 @@ class LinkCommandServiceTest {
 			"https://example.com",
 			"테스트 링크",
 			"메모",
-			"https://example.com/image.jpg",
-			"{}",
-			"tag1,tag2",
-			false
+			"https://example.com/image.jpg"
 		);
 
 		// then
@@ -80,28 +74,19 @@ class LinkCommandServiceTest {
 			.title("원본 제목")
 			.memo("원본 메모")
 			.imageUrl("https://example.com/image.jpg")
-			.metadataJson("{}")
-			.tags("tag1")
-			.isImportant(false)
 			.build();
 
 		// when
 		Link result = linkCommandService.updateLink(
 			originalLink,
 			"수정된 제목",
-			"수정된 메모",
-			"{}",
-			"tag1,tag2",
-			true
+			"수정된 메모"
 		);
 
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.getTitle()).isEqualTo("수정된 제목");
 		assertThat(result.getMemo()).isEqualTo("수정된 메모");
-		assertThat(result.getMetadataJson()).isEqualTo("{}");
-		assertThat(result.getTags()).isEqualTo("tag1,tag2");
-		assertThat(result.isImportant()).isTrue();
 		verify(linkRepository, never()).save(any(Link.class));
 	}
 
