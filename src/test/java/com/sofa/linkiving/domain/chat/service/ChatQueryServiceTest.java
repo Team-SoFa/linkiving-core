@@ -21,6 +21,7 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
 public class ChatQueryServiceTest {
+
 	@InjectMocks
 	private ChatQueryService chatQueryService;
 

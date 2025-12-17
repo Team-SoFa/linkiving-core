@@ -68,10 +68,7 @@ public class ChatController implements ChatApi {
 		@AuthMember Member member,
 		@PathVariable Long chatId,
 		@RequestParam(required = false) Long lastId,
-
-		@RequestParam(defaultValue = "20")
-
-		int size
+		@RequestParam(defaultValue = "20") int size
 	) {
 		MessagesRes res = chatFacade.getMessages(member, chatId, lastId, size);
 		return BaseResponse.success(res, "채팅 기록을 가져오는데 성공했습니다.");

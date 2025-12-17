@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum Sentiment implements CodeEnum<Integer> {
-	LIKE(0), DISLIKE(1);
+	LIKE(0), DISLIKE(1), NONE(2);
 	private final Integer code;
 
 	@Converter(autoApply = true)
