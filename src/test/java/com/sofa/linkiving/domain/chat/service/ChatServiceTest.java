@@ -34,13 +34,13 @@ public class ChatServiceTest {
 	void shouldReturnChatsWhenGetChats() {
 		// given
 		List<Chat> expectedChats = List.of(mock(Chat.class));
-		given(chatQueryService.findAll(member)).willReturn(expectedChats);
+		given(chatQueryService.findAllOrderByLastMessageDesc(member)).willReturn(expectedChats);
 
 		// when
 		List<Chat> result = chatService.getChats(member);
 
 		// then
 		assertThat(result).isEqualTo(expectedChats);
-		verify(chatQueryService).findAll(member);
+		verify(chatQueryService).findAllOrderByLastMessageDesc(member);
 	}
 }

@@ -29,16 +29,16 @@ public class ChatQueryServiceTest {
 
 	@Test
 	@DisplayName("ChatRepository.findAllByMemberOrderByCreatedAtDesc 호출 및 반환")
-	void shouldReturnChatListWhenFindAll() {
+	void shouldReturnChatListWhenFindAllOrderByLastMessageDesc() {
 		// given
 		List<Chat> chats = List.of(mock(Chat.class));
-		given(chatRepository.findAllByMemberOrderByCreatedAtDesc(member)).willReturn(chats);
+		given(chatRepository.findAllByMemberOrderByLastMessageDesc(member)).willReturn(chats);
 
 		// when
-		List<Chat> result = chatQueryService.findAll(member);
+		List<Chat> result = chatQueryService.findAllOrderByLastMessageDesc(member);
 
 		// then
 		assertThat(result).isEqualTo(chats);
-		verify(chatRepository).findAllByMemberOrderByCreatedAtDesc(member);
+		verify(chatRepository).findAllByMemberOrderByLastMessageDesc(member);
 	}
 }

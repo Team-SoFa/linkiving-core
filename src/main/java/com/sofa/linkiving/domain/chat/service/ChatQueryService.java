@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 public class ChatQueryService {
 	private final ChatRepository chatRepository;
 
-	public List<Chat> findAll(Member member) {
-		return chatRepository.findAllByMemberOrderByCreatedAtDesc(member);
+	public List<Chat> findAllOrderByLastMessageDesc(Member member) {
+		return chatRepository.findAllByMemberOrderByLastMessageDesc(member);
 	}
 }

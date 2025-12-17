@@ -16,6 +16,6 @@ public class ChatService {
 	private final ChatQueryService chatQueryService;
 
 	public List<Chat> getChats(Member member) {
-		return chatQueryService.findAll(member);
+		return chatQueryService.findAllOrderByLastMessageDesc(member);
 	}
 }

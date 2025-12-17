@@ -33,7 +33,7 @@ import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
-public class ChatControllerIntegrationTest {
+public class ChatIntegrationTest {
 	@Autowired
 	private MockMvc mockMvc;
 	@Autowired
