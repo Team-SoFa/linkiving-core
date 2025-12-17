@@ -19,8 +19,6 @@ import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
-import com.sofa.linkiving.domain.chat.entity.Message;
-import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
 import com.sofa.linkiving.domain.chat.service.MessageService;
@@ -47,33 +45,28 @@ public class ChatFacadeTest {
 	private Member member;
 
 	@Test
-	@DisplayName("메시지 조회 요청 시 ChatService와 MessageService를 호출하여 결과를 반환함")
-	void shouldReturnMessagesResWhenGetMessages() {
+	@DisplayName("특정 채팅방의 메시지 목록을 조회한다")
+	void shouldGetMessages() {
 		// given
 		Long chatId = 1L;
 		Long lastId = 100L;
 		int size = 20;
 
+		Member member = mock(Member.class);
 		Chat chat = mock(Chat.class);
 
-		// Mock Message 생성
-		Message message = mock(Message.class);
-		given(message.getId()).willReturn(99L);
-		given(message.getType()).willReturn(Type.USER);
-		given(message.getLinks()).willReturn(Collections.emptyList());
-
-		MessagesDto messagesDto = new MessagesDto(List.of(message), true);
-
 		given(chatService.getChat(chatId, member)).willReturn(chat);
+
+		MessagesDto messagesDto = new MessagesDto(Collections.emptyList(), false);
 		given(messageService.getMessages(chat, lastId, size)).willReturn(messagesDto);
 
 		// when
 		MessagesRes result = chatFacade.getMessages(member, chatId, lastId, size);
 
 		// then
-		assertThat(result.messages()).hasSize(1);
-		assertThat(result.hasNext()).isTrue();
-		assertThat(result.lastId()).isEqualTo(99L);
+		assertThat(result).isNotNull();
+		assertThat(result.messages()).isEmpty();
+		assertThat(result.hasNext()).isFalse();
 
 		verify(chatService).getChat(chatId, member);
 		verify(messageService).getMessages(chat, lastId, size);

@@ -27,6 +27,12 @@ public class ChatFacade {
 	private final FeedbackService feedbackService;
 	private final AiTitleClient aiTitleClient;
 
+	public MessagesRes getMessages(Member member, Long chatId, Long lastId, int size) {
+		Chat chat = chatService.getChat(chatId, member);
+		MessagesDto result = messageService.getMessages(chat, lastId, size);
+		return MessagesRes.of(result.messageDtos(), result.hasNext());
+	}
+
 	@Transactional
 	public CreateChatRes createChat(String firstChat, Member member) {
 		String title = aiTitleClient.generateSummary(firstChat);

@@ -17,8 +17,6 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
-import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
-import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;

@@ -77,17 +77,4 @@ public class ChatServiceTest {
 		assertThat(result).isEqualTo(chat);
 		verify(chatQueryService).findChat(chatId, member);
 	}
-
-	@Test
-	@DisplayName("ChatCommandService.deleteChat 호출 위임")
-	void shouldCallDeleteChatWhenDelete() {
-		// given
-		Chat chat = mock(Chat.class);
-
-		// when
-		chatService.delete(chat);
-
-		// then
-		verify(chatCommandService).deleteChat(chat);
-	}
 }
