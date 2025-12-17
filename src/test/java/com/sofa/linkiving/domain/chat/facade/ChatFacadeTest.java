@@ -12,10 +12,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.domain.chat.entity.Message;
+import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
 import com.sofa.linkiving.domain.chat.service.MessageService;
@@ -40,6 +44,38 @@ public class ChatFacadeTest {
 
 	@Mock
 	private Member member;
+
+	@Test
+	@DisplayName("메시지 조회 요청 시 ChatService와 MessageService를 호출하여 결과를 반환한다")
+	void shouldReturnMessagesResWhenGetMessages() {
+		// given
+		Long chatId = 1L;
+		Long lastId = 100L;
+		int size = 20;
+
+		Chat chat = mock(Chat.class);
+
+		// Mock Message 생성
+		Message message = mock(Message.class);
+		given(message.getId()).willReturn(99L);
+		given(message.getType()).willReturn(Type.USER);
+
+		MessagesDto messagesDto = new MessagesDto(List.of(message), true);
+
+		given(chatService.getChat(chatId, member)).willReturn(chat);
+		given(messageService.getMessages(chat, lastId, size)).willReturn(messagesDto);
+
+		// when
+		MessagesRes result = chatFacade.getMessages(member, chatId, lastId, size);
+
+		// then
+		assertThat(result.messages()).hasSize(1);
+		assertThat(result.hasNext()).isTrue();
+		assertThat(result.lastId()).isEqualTo(99L);
+
+		verify(chatService).getChat(chatId, member);
+		verify(messageService).getMessages(chat, lastId, size);
+	}
 
 	@Test
 	@DisplayName("ChatService.getChats 호출 및 ChatsRes 변환 반환")

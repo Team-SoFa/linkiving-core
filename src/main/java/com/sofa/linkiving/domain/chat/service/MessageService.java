@@ -1,6 +1,5 @@
 package com.sofa.linkiving.domain.chat.service;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,6 +11,8 @@ import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
+
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.Disposable;
@@ -32,8 +33,8 @@ public class MessageService {
 		messageCommandService.deleteAllByChat(chat);
 	}
 
-	public List<Message> getMessagesByChat(Chat chat) {
-		return messageQueryService.findAllByChat(chat);
+	public MessagesDto getMessages(Chat chat, Long lastId, int size) {
+		return messageQueryService.getMessages(chat, lastId, size);
 	}
 
 	public void generateAnswer(Chat chat, String userMessage) {
