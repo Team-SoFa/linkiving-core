@@ -9,15 +9,6 @@ public record LinkUpdateReq(
 	String title,
 
 	@Schema(description = "메모", example = "나중에 읽어볼 것")
-	String memo,
-
-	@Schema(description = "메타데이터 JSON")
-	String metadataJson,
-
-	@Schema(description = "태그 (쉼표로 구분)", example = "개발,자료,참고")
-	String tags,
-
-	@Schema(description = "중요 여부", example = "true")
-	Boolean isImportant
+	String memo
 ) {
 }

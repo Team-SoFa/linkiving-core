@@ -57,10 +57,7 @@ public class LinkController implements LinkApi {
 			request.url(),
 			request.title(),
 			request.memo(),
-			request.imageUrl(),
-			request.metadataJson(),
-			request.tags(),
-			request.isImportant()
+			request.imageUrl()
 		);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 생성 완료"));
 	}
@@ -76,10 +73,7 @@ public class LinkController implements LinkApi {
 			id,
 			member,
 			request.title(),
-			request.memo(),
-			request.metadataJson(),
-			request.tags(),
-			request.isImportant()
+			request.memo()
 		);
 		return ResponseEntity.ok(BaseResponse.success(response, "링크 수정 완료"));
 	}

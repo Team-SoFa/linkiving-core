@@ -19,15 +19,6 @@ public record LinkCreateReq(
 	String memo,
 
 	@Schema(description = "이미지 URL", example = "https://example.com/image.jpg")
-	String imageUrl,
-
-	@Schema(description = "메타데이터 JSON")
-	String metadataJson,
-
-	@Schema(description = "태그 (쉼표로 구분)", example = "개발,자료,참고")
-	String tags,
-
-	@Schema(description = "중요 여부", example = "false")
-	boolean isImportant
+	String imageUrl
 ) {
 }

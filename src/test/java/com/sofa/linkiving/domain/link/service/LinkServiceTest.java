@@ -53,7 +53,7 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(false);
-		given(linkCommandService.saveLink(any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
+		given(linkCommandService.saveLink(any(), any(), any(), any(), any()))
 			.willReturn(link);
 
 		// when
@@ -62,17 +62,14 @@ class LinkServiceTest {
 			"https://example.com",
 			"테스트 링크",
 			"메모",
-			null,
-			null,
-			null,
-			false
+			null
 		);
 
 		// then
 		assertThat(createdLink).isNotNull();
 		assertThat(createdLink.url()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
-		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any(), any(), any(), anyBoolean());
+		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
 	}
 
 	@Test
@@ -92,16 +89,13 @@ class LinkServiceTest {
 			"https://example.com",
 			"테스트 링크",
 			null,
-			null,
-			null,
-			null,
-			false
+			null
 		))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.DUPLICATE_URL);
 
 		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
-		verify(linkCommandService, never()).saveLink(any(), any(), any(), any(), any(), any(), any(), anyBoolean());
+		verify(linkCommandService, never()).saveLink(any(), any(), any(), any(), any());
 	}
 
 	@Test
@@ -126,16 +120,16 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), any(), any(), any(), any(), any())).willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), any(), any())).willReturn(updatedLink);
 
 		// when
-		LinkRes result = linkService.updateLink(1L, member, "수정된 제목", null, null, null, null);
+		LinkRes result = linkService.updateLink(1L, member, "수정된 제목", null);
 
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.title()).isEqualTo("수정된 제목");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), any(), any(), any(), any(), any());
+		verify(linkCommandService, times(1)).updateLink(any(), any(), any());
 	}
 
 	@Test
@@ -162,7 +156,7 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("수정된 제목"), eq("원본 메모"), any(), any(), anyBoolean()))
+		given(linkCommandService.updateLink(any(), eq("수정된 제목"), eq("원본 메모")))
 			.willReturn(updatedLink);
 
 		// when
@@ -173,7 +167,7 @@ class LinkServiceTest {
 		assertThat(result.title()).isEqualTo("수정된 제목");
 		assertThat(result.memo()).isEqualTo("원본 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"), any(), any(), anyBoolean());
+		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"));
 	}
 
 	@Test
@@ -200,7 +194,7 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("원본 제목"), eq("수정된 메모"), any(), any(), anyBoolean()))
+		given(linkCommandService.updateLink(any(), eq("원본 제목"), eq("수정된 메모")))
 			.willReturn(updatedLink);
 
 		// when
@@ -211,7 +205,7 @@ class LinkServiceTest {
 		assertThat(result.title()).isEqualTo("원본 제목");
 		assertThat(result.memo()).isEqualTo("수정된 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"), any(), any(), anyBoolean());
+		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"));
 	}
 
 	@Test

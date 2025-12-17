@@ -26,7 +26,6 @@ public class LinkTest {
 		assertThat(link.getMember()).isEqualTo(member);
 		assertThat(link.getUrl()).isEqualTo(url);
 		assertThat(link.getTitle()).isEqualTo(title);
-		assertThat(link.isImportant()).isFalse();
 	}
 
 	@Test
@@ -39,9 +38,6 @@ public class LinkTest {
 		String title = "Example Title";
 		String memo = "Test memo";
 		String imageUrl = "https://example.com/image.jpg";
-		String metadataJson = "{\"key\":\"value\"}";
-		String tags = "[\"tag1\",\"tag2\"]";
-		boolean isImportant = true;
 
 		Link link = Link.builder()
 			.member(member)
@@ -49,9 +45,6 @@ public class LinkTest {
 			.title(title)
 			.memo(memo)
 			.imageUrl(imageUrl)
-			.metadataJson(metadataJson)
-			.tags(tags)
-			.isImportant(isImportant)
 			.build();
 
 		assertThat(link.getMember()).isEqualTo(member);
@@ -59,8 +52,5 @@ public class LinkTest {
 		assertThat(link.getTitle()).isEqualTo(title);
 		assertThat(link.getMemo()).isEqualTo(memo);
 		assertThat(link.getImageUrl()).isEqualTo(imageUrl);
-		assertThat(link.getMetadataJson()).isEqualTo(metadataJson);
-		assertThat(link.getTags()).isEqualTo(tags);
-		assertThat(link.isImportant()).isTrue();
 	}
 }

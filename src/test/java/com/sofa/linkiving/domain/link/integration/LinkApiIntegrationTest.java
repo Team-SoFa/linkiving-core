@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,7 +28,6 @@ import com.sofa.linkiving.domain.link.repository.LinkRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
-import com.sofa.linkiving.infra.feign.TestExternalClient;
 import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
 @SpringBootTest
@@ -51,11 +49,8 @@ public class LinkApiIntegrationTest {
 
 	@Autowired
 	MemberRepository memberRepository;
-
-	@MockBean
-	private TestExternalClient testExternalClient;
-
 	private Member testMember;
+
 	private Member otherMember;
 	private UserDetails testUserDetails;
 	private UserDetails otherUserDetails;
@@ -80,15 +75,7 @@ public class LinkApiIntegrationTest {
 	@DisplayName("링크 생성 성공 시 DB에 저장되고 200 OK 응답")
 	void shouldCreateLinkSuccessfully() throws Exception {
 		// given
-		LinkCreateReq req = new LinkCreateReq(
-			"https://example.com",
-			"테스트 링크",
-			"테스트 메모",
-			null,
-			null,
-			"tag1,tag2",
-			false
-		);
+		LinkCreateReq req = new LinkCreateReq("https://example.com", "테스트 링크", "테스트 메모", null);
 
 		// when & then
 		mockMvc.perform(
@@ -105,9 +92,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.message").value("링크 생성 완료"))
 			.andExpect(jsonPath("$.data.url").value(req.url()))
 			.andExpect(jsonPath("$.data.title").value(req.title()))
-			.andExpect(jsonPath("$.data.memo").value(req.memo()))
-			.andExpect(jsonPath("$.data.tags").value(req.tags()))
-			.andExpect(jsonPath("$.data.isImportant").value(req.isImportant()));
+			.andExpect(jsonPath("$.data.memo").value(req.memo()));
 
 		// DB 검증
 		boolean exists = linkRepository.existsByMemberAndUrlAndIsDeleteFalse(testMember, req.url());
@@ -125,15 +110,7 @@ public class LinkApiIntegrationTest {
 			.title("기존 링크")
 			.build());
 
-		LinkCreateReq req = new LinkCreateReq(
-			duplicateUrl,
-			"새 링크",
-			null,
-			null,
-			null,
-			null,
-			false
-		);
+		LinkCreateReq req = new LinkCreateReq(duplicateUrl, "새 링크", null, null);
 
 		// when & then
 		mockMvc.perform(
@@ -341,17 +318,9 @@ public class LinkApiIntegrationTest {
 			.url("https://example.com")
 			.title("원래 제목")
 			.memo("원래 메모")
-			.tags("tag1")
-			.isImportant(false)
 			.build());
 
-		LinkUpdateReq req = new LinkUpdateReq(
-			"수정된 제목",
-			"수정된 메모",
-			null,
-			"tag1,tag2",
-			true
-		);
+		LinkUpdateReq req = new LinkUpdateReq("수정된 제목", "수정된 메모");
 
 		// when & then
 		mockMvc.perform(
@@ -366,16 +335,12 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.message").value("링크 수정 완료"))
 			.andExpect(jsonPath("$.data.title").value(req.title()))
-			.andExpect(jsonPath("$.data.memo").value(req.memo()))
-			.andExpect(jsonPath("$.data.tags").value(req.tags()))
-			.andExpect(jsonPath("$.data.isImportant").value(req.isImportant()));
+			.andExpect(jsonPath("$.data.memo").value(req.memo()));
 
 		// DB 검증
 		Link updated = linkRepository.findById(link.getId()).orElseThrow();
 		assertThat(updated.getTitle()).isEqualTo(req.title());
 		assertThat(updated.getMemo()).isEqualTo(req.memo());
-		assertThat(updated.getTags()).isEqualTo(req.tags());
-		assertThat(updated.isImportant()).isEqualTo(req.isImportant());
 	}
 
 	@Test
@@ -516,8 +481,7 @@ public class LinkApiIntegrationTest {
 		String invalidJson = """
 			{
 				"title": "테스트 링크",
-				"memo": "메모",
-				"isImportant": false
+				"memo": "메모"
 			}
 			""";
 
@@ -539,8 +503,7 @@ public class LinkApiIntegrationTest {
 		String invalidJson = """
 			{
 				"url": "https://example.com",
-				"memo": "메모",
-				"isImportant": false
+				"memo": "메모"
 			}
 			""";
 
@@ -564,10 +527,7 @@ public class LinkApiIntegrationTest {
 			"https://example.com",
 			longTitle,
 			null,
-			null,
-			null,
-			null,
-			false
+			null
 		);
 
 		// when & then
@@ -586,15 +546,7 @@ public class LinkApiIntegrationTest {
 	void shouldFailWhenUrlExceedsMaxLength() throws Exception {
 		// given
 		String longUrl = "https://example.com/" + "a".repeat(2048);
-		LinkCreateReq req = new LinkCreateReq(
-			longUrl,
-			"테스트 링크",
-			null,
-			null,
-			null,
-			null,
-			false
-		);
+		LinkCreateReq req = new LinkCreateReq(longUrl, "테스트 링크", null, null);
 
 		// when & then
 		mockMvc.perform(

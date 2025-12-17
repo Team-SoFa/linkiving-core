@@ -49,10 +49,6 @@ class LinkRepositoryTest {
 			.url("https://example.com")
 			.title("테스트 링크")
 			.memo("테스트 메모")
-			.imageUrl("https://example.com/image.jpg")
-			.metadataJson("{\"key\":\"value\"}")
-			.tags("[\"tag1\",\"tag2\"]")
-			.isImportant(false)
 			.build();
 
 		// when

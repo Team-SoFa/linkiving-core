@@ -23,23 +23,20 @@ public class SummaryTest {
 			.title("Test Title")
 			.build();
 
-		int version = 1;
 		Format format = Format.DETAILED;
-		String body = "This is a summary";
+		String content = "This is a summary";
 
 		//when
 		Summary summary = Summary.builder()
 			.link(link)
-			.version(version)
 			.format(format)
-			.body(body)
+			.content(content)
 			.build();
 
 		//then
 		assertThat(summary.getLink()).isEqualTo(link);
-		assertThat(summary.getVersion()).isEqualTo(version);
 		assertThat(summary.getFormat()).isEqualTo(format);
-		assertThat(summary.getBody()).isEqualTo(body);
+		assertThat(summary.getContent()).isEqualTo(content);
 	}
 
 	@Test
@@ -56,20 +53,20 @@ public class SummaryTest {
 			.title("Test Title")
 			.build();
 
-		int version = 2;
 		Format format = Format.DETAILED;
-		String body = "This is a detailed summary";
+		String content = "This is a detailed summary";
+		String select = "Selected text from the page";
 
 		Summary summary = Summary.builder()
 			.link(link)
-			.version(version)
 			.format(format)
-			.body(body)
+			.content(content)
+			.select(select)
 			.build();
 
 		assertThat(summary.getLink()).isEqualTo(link);
-		assertThat(summary.getVersion()).isEqualTo(version);
-		assertThat(summary.getBody()).isEqualTo(body);
+		assertThat(summary.getContent()).isEqualTo(content);
 		assertThat(summary.getFormat()).isEqualTo(format);
+		assertThat(summary.getSelect()).isEqualTo(select);
 	}
 }
