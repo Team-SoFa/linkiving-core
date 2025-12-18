@@ -43,14 +43,17 @@ public class LinkFacade {
 		linkService.deleteLink(linkId, member);
 	}
 
+	@Transactional(readOnly = true)
 	public LinkRes getLink(Long linkId, Member member) {
 		return linkService.getLink(linkId, member);
 	}
 
+	@Transactional(readOnly = true)
 	public Page<LinkRes> getLinkList(Member member, Pageable pageable) {
 		return linkService.getLinkList(member, pageable);
 	}
 
+	@Transactional(readOnly = true)
 	public LinkDuplicateCheckRes checkDuplicate(Member member, String url) {
 		return linkService.checkDuplicate(member, url);
 	}
