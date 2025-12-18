@@ -23,10 +23,44 @@ public class LinkEventListener {
 	/**
 	 * 링크 생성 완료 이벤트 처리
 	 * 트랜잭션 커밋 후에만 실행되어 롤백 시 큐에 추가되지 않음
+	 *
+	 * <p>AFTER_COMMIT 단계에서 실행되므로 메인 트랜잭션은 이미 커밋됨.
+	 * 큐 추가 실패 시에도 링크는 정상 저장되며, 재시도 로직으로 안정성 보장</p>
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
 		log.debug("Link created event received - linkId: {}", event.linkId());
-		summaryQueue.addToQueue(event.linkId());
+
+		int maxRetries = 3;
+		int retryCount = 0;
+		boolean success = false;
+
+		while (retryCount < maxRetries && !success) {
+			try {
+				summaryQueue.addToQueue(event.linkId());
+				success = true;
+			} catch (Exception e) {
+				retryCount++;
+				log.warn("Failed to add link to summary queue (attempt {}/{}): linkId={}, error={}",
+					retryCount, maxRetries, event.linkId(), e.getMessage());
+
+				if (retryCount >= maxRetries) {
+					// 최종 실패 시 에러 로그 및 모니터링 알림
+					log.error("Failed to add link to summary queue after {} retries - linkId: {}. "
+							+ "Summary generation will be skipped for this link.",
+						maxRetries, event.linkId(), e);
+					// TODO: 관리자 알림 또는 실패 큐에 저장하여 수동 처리 가능하도록 개선 필요
+				} else {
+					// 재시도 전 짧은 대기
+					try {
+						Thread.sleep(100L * retryCount); // 100ms, 200ms, 300ms
+					} catch (InterruptedException ie) {
+						Thread.currentThread().interrupt();
+						log.error("Retry interrupted for linkId: {}", event.linkId());
+						break;
+					}
+				}
+			}
+		}
 	}
 }

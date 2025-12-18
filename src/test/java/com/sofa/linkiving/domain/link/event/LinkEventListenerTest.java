@@ -53,5 +53,59 @@ class LinkEventListenerTest {
 		verify(summaryQueue, times(1)).addToQueue(2L);
 		verify(summaryQueue, times(1)).addToQueue(3L);
 	}
+
+	@Test
+	@DisplayName("큐 추가 실패 시 최대 3번까지 재시도한다")
+	void shouldRetryWhenAddToQueueFails() {
+		// given
+		Long linkId = 123L;
+		LinkCreatedEvent event = new LinkCreatedEvent(linkId);
+
+		// 첫 2번 실패, 3번째 성공
+		willThrow(new RuntimeException("Queue full"))
+			.willThrow(new RuntimeException("Queue full"))
+			.willDoNothing()
+			.given(summaryQueue).addToQueue(linkId);
+
+		// when
+		linkEventListener.handleLinkCreated(event);
+
+		// then
+		verify(summaryQueue, times(3)).addToQueue(linkId);
+	}
+
+	@Test
+	@DisplayName("큐 추가가 3번 모두 실패하면 재시도를 중단하고 에러 로그를 남긴다")
+	void shouldStopRetryingAfterMaxAttempts() {
+		// given
+		Long linkId = 123L;
+		LinkCreatedEvent event = new LinkCreatedEvent(linkId);
+
+		// 3번 모두 실패
+		willThrow(new RuntimeException("Queue full"))
+			.given(summaryQueue).addToQueue(linkId);
+
+		// when
+		linkEventListener.handleLinkCreated(event);
+
+		// then
+		verify(summaryQueue, times(3)).addToQueue(linkId); // 최대 3번 시도
+	}
+
+	@Test
+	@DisplayName("첫 번째 시도에서 성공하면 재시도하지 않는다")
+	void shouldNotRetryWhenFirstAttemptSucceeds() {
+		// given
+		Long linkId = 123L;
+		LinkCreatedEvent event = new LinkCreatedEvent(linkId);
+
+		willDoNothing().given(summaryQueue).addToQueue(linkId);
+
+		// when
+		linkEventListener.handleLinkCreated(event);
+
+		// then
+		verify(summaryQueue, times(1)).addToQueue(linkId); // 1번만 시도
+	}
 }
 
