@@ -2,12 +2,30 @@
 
 # deploy.sh - Blue-Green 무중단 배포 스크립트
 
-set -e  # 에러 발생 시 스크립트 중단
+set -euo pipefail
 
 echo "=== Blue-Green 배포 시작 ==="
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${SCRIPT_DIR}"
+COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
+
+PROJECT="linkiving-core"
+COMPOSE="sudo docker compose -p ${PROJECT} -f ${COMPOSE_FILE}"
+
+# compose 파일 존재 확인
+if [ ! -f "${COMPOSE_FILE}" ]; then
+  echo "❌ Compose file not found: ${COMPOSE_FILE}"
+  echo "현재 위치: $(pwd)"
+  echo "스크립트 위치: ${SCRIPT_DIR}"
+  exit 1
+fi
+
+echo "✅ Using compose file: ${COMPOSE_FILE}"
+echo "✅ Using project name: ${PROJECT}"
+
 echo "이미지 업데이트 중..."
-if ! sudo docker compose pull; then
+if ! ${COMPOSE} pull; then
     echo "❌ Docker 이미지 pull 실패! GitHub Actions 빌드를 확인해주세요."
     echo "❌ 배포를 중단합니다."
     exit 1
@@ -22,14 +40,14 @@ EXIST_BLUE=$(sudo docker ps --filter "name=blue" --filter "status=running" -q)
 
 if [ -z "$EXIST_BLUE" ]; then
     echo "BLUE 컨테이너 실행"
-    sudo docker compose up -d blue
+    ${COMPOSE} up -d blue
     BEFORE_COLOR="green"
     AFTER_COLOR="blue"
     BEFORE_PORT=8081
     AFTER_PORT=8080
 else
     echo "GREEN 컨테이너 실행"
-    sudo docker compose up -d green
+    ${COMPOSE} up -d green
     BEFORE_COLOR="blue"
     AFTER_COLOR="green"
     BEFORE_PORT=8080
@@ -64,13 +82,13 @@ done
 # 헬스체크 실패 시 롤백
 if [ $HEALTH_CHECK_COUNT -eq $MAX_RETRY ]; then
     echo "❌ 서버가 정상적으로 구동되지 않았습니다. 롤백을 시작합니다."
-    sudo docker compose stop ${AFTER_COLOR}
-    sudo docker compose rm -f ${AFTER_COLOR}
+    ${COMPOSE} stop ${AFTER_COLOR}
+    ${COMPOSE} rm -f ${AFTER_COLOR}
 
     # 이전 컨테이너가 있다면 다시 시작
     if [ "${BEFORE_COLOR}" != "" ]; then
         echo "이전 ${BEFORE_COLOR} 컨테이너를 다시 시작합니다."
-        sudo docker compose up -d ${BEFORE_COLOR}
+        ${COMPOSE} up -d ${BEFORE_COLOR}
     fi
 
     echo "❌ 배포 실패 - 롤백 완료"
@@ -119,8 +137,8 @@ if [ "${BEFORE_COLOR}" != "" ]; then
     echo "이전 컨테이너 종료 전 30초 대기..."
     sleep 30
 
-    sudo docker compose stop ${BEFORE_COLOR} 2>/dev/null || true
-    sudo docker compose rm -f ${BEFORE_COLOR} 2>/dev/null || true
+    ${COMPOSE} stop ${BEFORE_COLOR} 2>/dev/null || true
+    ${COMPOSE} rm -f ${BEFORE_COLOR} 2>/dev/null || true
     echo "✅ 이전 ${BEFORE_COLOR} 컨테이너가 종료되었습니다."
 fi
 
