@@ -3,7 +3,6 @@ package com.sofa.linkiving.domain.link.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
@@ -17,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class LinkService {
 
@@ -69,19 +67,16 @@ public class LinkService {
 		log.info("Link soft deleted - id: {}, memberId: {}", linkId, member.getId());
 	}
 
-	@Transactional(readOnly = true)
 	public LinkRes getLink(Long linkId, Member member) {
 		Link link = linkQueryService.findById(linkId, member);
 		return LinkRes.from(link);
 	}
 
-	@Transactional(readOnly = true)
 	public Page<LinkRes> getLinkList(Member member, Pageable pageable) {
 		Page<Link> links = linkQueryService.findAllByMember(member, pageable);
 		return links.map(LinkRes::from);
 	}
 
-	@Transactional(readOnly = true)
 	public LinkDuplicateCheckRes checkDuplicate(Member member, String url) {
 		return linkQueryService.findIdByUrl(member, url)
 			.map(LinkDuplicateCheckRes::exists)
