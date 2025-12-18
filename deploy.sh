@@ -122,7 +122,7 @@ fi
 # 트래픽 전환 확인 (Nginx 기준 헬스체크)
 echo "트래픽 전환 확인 중..."
 sleep 5
-NGINX_CHECK=$(curl -s --connect-timeout 5 http://127.0.0.1/api/health-check 2>/dev/null || echo "failed")
+NGINX_CHECK=$(curl -s --connect-timeout 5 http://127.0.0.1/health-check 2>/dev/null || echo "failed")
 if echo "${NGINX_CHECK}" | grep -q "OK"; then
     echo "✅ 트래픽이 성공적으로 전환되었습니다."
 else
