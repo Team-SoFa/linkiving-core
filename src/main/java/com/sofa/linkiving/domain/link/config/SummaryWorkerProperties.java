@@ -1,14 +1,16 @@
 package com.sofa.linkiving.domain.link.config;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "summary.worker")
 public record SummaryWorkerProperties(
-	long sleepMs
+	Duration sleepDuration
 ) {
 	public SummaryWorkerProperties {
-		if (sleepMs <= 0) {
-			throw new IllegalArgumentException("sleepMs must be positive");
+		if (sleepDuration == null || sleepDuration.isZero() || sleepDuration.isNegative()) {
+			throw new IllegalArgumentException("sleepDuration must be positive");
 		}
 	}
 }

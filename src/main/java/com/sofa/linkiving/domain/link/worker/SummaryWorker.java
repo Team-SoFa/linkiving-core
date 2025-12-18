@@ -59,7 +59,7 @@ public class SummaryWorker {
 
 		if (linkIdOpt.isEmpty()) {
 			// 큐가 비어있으면 대기
-			Thread.sleep(properties.sleepMs());
+			Thread.sleep(properties.sleepDuration().toMillis());
 			return;
 		}
 

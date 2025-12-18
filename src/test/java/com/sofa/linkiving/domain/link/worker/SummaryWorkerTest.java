@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.link.worker;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -27,7 +28,7 @@ class SummaryWorkerTest {
 
 	@BeforeEach
 	void setUp() {
-		properties = new SummaryWorkerProperties(100); // 테스트용 짧은 sleep 시간
+		properties = new SummaryWorkerProperties(Duration.ofMillis(100)); // 테스트용 짧은 sleep 시간
 		summaryWorker = new SummaryWorker(summaryQueue, properties);
 	}
 
@@ -77,7 +78,7 @@ class SummaryWorkerTest {
 		// when
 		summaryWorker.startWorker();
 		long startTime = System.currentTimeMillis();
-		Thread.sleep(250); // sleep-ms(100) * 2회 이상 호출될 시간 대기
+		Thread.sleep(250); // sleep(100ms) * 2회 이상 호출될 시간 대기
 		long endTime = System.currentTimeMillis();
 
 		// then
@@ -143,4 +144,3 @@ class SummaryWorkerTest {
 		verify(summaryQueue, atLeast(3)).pollFromQueue();
 	}
 }
-
