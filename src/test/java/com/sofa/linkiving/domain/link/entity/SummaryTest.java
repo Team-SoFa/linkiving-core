@@ -67,6 +67,6 @@ public class SummaryTest {
 		assertThat(summary.getLink()).isEqualTo(link);
 		assertThat(summary.getContent()).isEqualTo(content);
 		assertThat(summary.getFormat()).isEqualTo(format);
-		assertThat(summary.getSelect()).isEqualTo(select);
+		assertThat(summary.getSelected()).isEqualTo(select);
 	}
 }
