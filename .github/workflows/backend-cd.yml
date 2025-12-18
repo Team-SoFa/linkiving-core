@@ -9,7 +9,6 @@ on:
 
 jobs:
   backend-docker-build-and-push:
-    # 🔧 임시: PR이 열리거나 업데이트될 때도 실행
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
@@ -76,7 +75,7 @@ jobs:
   backend-docker-pull-and-run:
     runs-on: [ self-hosted, prod ]
     needs: [ backend-docker-build-and-push ]
-    if: ${{ needs.backend-docker-build-and-push.result == 'success' && github.event.pull_request.merged == true }}
+    if: ${{ needs.backend-docker-build-and-push.result == 'success' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true) }}
 
     steps:
       - name: ✨ Checkout repository
