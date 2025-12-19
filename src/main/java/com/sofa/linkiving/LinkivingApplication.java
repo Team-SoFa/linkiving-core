@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
 @EnableJpaAuditing
-@EnableFeignClients(basePackages = "com.sofa.linkiving.infra.feign")
+@EnableFeignClients
 public class LinkivingApplication {
 
 	public static void main(String[] args) {
