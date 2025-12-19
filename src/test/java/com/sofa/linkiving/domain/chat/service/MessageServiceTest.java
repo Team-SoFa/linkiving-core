@@ -27,6 +27,7 @@ import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.service.SummaryQueryService;
+import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
 public class MessageServiceTest {
@@ -74,7 +75,6 @@ public class MessageServiceTest {
 	@DisplayName("메시지 목록과 포함된 링크의 요약을 정상적으로 조회하여 DTO로 반환한다")
 	void shouldGetMessagesWithLinksAndSummaries() {
 		// given
-		Chat chat = mock(Chat.class);
 		Long lastId = 100L;
 		int size = 10;
 
@@ -125,7 +125,6 @@ public class MessageServiceTest {
 	@DisplayName("메시지가 없을 경우 빈 목록을 반환한다")
 	void shouldReturnEmptyWhenNoMessages() {
 		// given
-		Chat chat = mock(Chat.class);
 		Long lastId = null;
 		int size = 10;
 
@@ -134,7 +133,6 @@ public class MessageServiceTest {
 		given(messageQueryService.findAllByChatAndCursor(chat, lastId, size))
 			.willReturn(emptySlice);
 
-		// 빈 리스트가 넘어가면 SummaryService는 호출되지만 빈 맵을 반환하도록 설정 (혹은 실제 로직에 따라 호출됨)
 		given(summaryQueryService.getSelectedSummariesByLinks(anyList()))
 			.willReturn(Collections.emptyMap());
 
@@ -150,15 +148,13 @@ public class MessageServiceTest {
 	@DisplayName("중복된 링크가 있어도 요약 조회 시에는 중복을 제거하여 요청한다")
 	void shouldRequestSummariesForDistinctLinks() {
 		// given
-		Chat chat = mock(Chat.class);
-
-		Link link1 = mock(Link.class); // 동일한 객체
+		Link link1 = mock(Link.class);
 
 		Message msg1 = mock(Message.class);
 		given(msg1.getLinks()).willReturn(List.of(link1));
 
 		Message msg2 = mock(Message.class);
-		given(msg2.getLinks()).willReturn(List.of(link1)); // msg1과 같은 링크 포함
+		given(msg2.getLinks()).willReturn(List.of(link1));
 
 		Slice<Message> messageSlice = new SliceImpl<>(List.of(msg1, msg2));
 
@@ -171,9 +167,7 @@ public class MessageServiceTest {
 		messageService.getMessages(chat, null, 10);
 
 		// then
-		verify(summaryQueryService).getSelectedSummariesByLinks(argThat(list ->
-			list.size() == 1 // 두 메시지에 링크가 총 2개지만, 같은 객체이므로 1개로 줄어야 함
-		));
+		verify(summaryQueryService).getSelectedSummariesByLinks(argThat(list -> list.size() == 1));
 	}
 
 	@Test
@@ -194,7 +188,6 @@ public class MessageServiceTest {
 	@DisplayName("이미 답변 생성 중일 경우 중복 요청 무시")
 	void shouldIgnoreRequestWhenAlreadyGenerating() {
 		// given
-		// messageBuffers 필드에 강제로 현재 채팅방 ID를 넣어 생성 중인 상태로 만듦
 		@SuppressWarnings("unchecked")
 		Map<String, StringBuilder> buffers = (Map<String, StringBuilder>)ReflectionTestUtils.getField(messageService,
 			"messageBuffers");
@@ -205,7 +198,24 @@ public class MessageServiceTest {
 		messageService.generateAnswer(chat, "질문");
 
 		// then
-		// WebClient 호출 로직으로 넘어가지 않아야 하므로 SubscriptionManager 호출이 없어야 함
 		verify(subscriptionManager, never()).add(anyString(), any());
+	}
+
+	@Test
+	@DisplayName("단일 메시지 조회 요청 시 QueryService를 호출하여 결과를 반환함")
+	void shouldCallFindByIdWhenGet() {
+		// given
+		Long messageId = 1L;
+		Message message = mock(Message.class);
+		Member member = mock(Member.class);
+
+		given(messageQueryService.findByIdAndMember(messageId, member)).willReturn(message);
+
+		// when
+		Message result = messageService.get(messageId, member);
+
+		// then
+		assertThat(result).isEqualTo(message);
+		verify(messageQueryService).findByIdAndMember(messageId, member);
 	}
 }

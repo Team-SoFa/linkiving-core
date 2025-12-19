@@ -19,6 +19,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.service.SummaryQueryService;
+import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.Disposable;
@@ -93,6 +94,10 @@ public class MessageService {
 			.build();
 
 		messageCommandService.saveMessage(message);
+	}
+
+	public Message get(Long messageId, Member member) {
+		return messageQueryService.findByIdAndMember(messageId, member);
 	}
 
 	public void deleteAll(Chat chat) {
