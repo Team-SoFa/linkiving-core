@@ -23,9 +23,6 @@ public class LinkEventListener {
 	/**
 	 * 링크 생성 완료 이벤트 처리
 	 * 트랜잭션 커밋 후에만 실행되어 롤백 시 큐에 추가되지 않음
-	 *
-	 * <p>AFTER_COMMIT 단계에서 실행되므로 메인 트랜잭션은 이미 커밋됨.
-	 * 큐 추가 실패 시에도 링크는 정상 저장되며, 재시도 로직으로 안정성 보장</p>
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
