@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.chat.service;
 
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
 
 import java.util.Map;
 
@@ -16,13 +17,18 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
+import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
 public class MessageServiceTest {
 
 	@InjectMocks
 	private MessageService messageService;
+
+	@Mock
+	private MessageQueryService messageQueryService;
 
 	@Mock
 	private SimpMessagingTemplate messagingTemplate;
@@ -35,7 +41,6 @@ public class MessageServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		// Chat ID Mocking
 		lenient().when(chat.getId()).thenReturn(1L);
 	}
 
@@ -57,7 +62,6 @@ public class MessageServiceTest {
 	@DisplayName("이미 답변 생성 중일 경우 중복 요청 무시")
 	void shouldIgnoreRequestWhenAlreadyGenerating() {
 		// given
-		// messageBuffers 필드에 강제로 현재 채팅방 ID를 넣어 생성 중인 상태로 만듦
 		@SuppressWarnings("unchecked")
 		Map<String, StringBuilder> buffers = (Map<String, StringBuilder>)ReflectionTestUtils.getField(messageService,
 			"messageBuffers");
@@ -68,7 +72,24 @@ public class MessageServiceTest {
 		messageService.generateAnswer(chat, "질문");
 
 		// then
-		// WebClient 호출 로직으로 넘어가지 않아야 하므로 SubscriptionManager 호출이 없어야 함
 		verify(subscriptionManager, never()).add(anyString(), any());
+	}
+
+	@Test
+	@DisplayName("단일 메시지 조회 요청 시 QueryService를 호출하여 결과를 반환함")
+	void shouldCallFindByIdWhenGet() {
+		// given
+		Long messageId = 1L;
+		Message message = mock(Message.class);
+		Member member = mock(Member.class);
+
+		given(messageQueryService.findByIdAndMember(messageId, member)).willReturn(message);
+
+		// when
+		Message result = messageService.get(messageId, member);
+
+		// then
+		assertThat(result).isEqualTo(message);
+		verify(messageQueryService).findByIdAndMember(messageId, member);
 	}
 }

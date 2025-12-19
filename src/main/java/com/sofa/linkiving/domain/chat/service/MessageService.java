@@ -11,6 +11,7 @@ import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
+import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.Disposable;
@@ -84,5 +85,9 @@ public class MessageService {
 			.build();
 
 		messageCommandService.saveMessage(message);
+	}
+
+	public Message get(Long messageId, Member member) {
+		return messageQueryService.findByIdAndMember(messageId, member);
 	}
 }
