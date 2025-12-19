@@ -85,4 +85,8 @@ public class MessageService {
 
 		messageCommandService.saveMessage(message);
 	}
+
+	public Message get(Long messageId) {
+		return messageQueryService.findById(messageId);
+	}
 }
