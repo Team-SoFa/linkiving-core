@@ -1,10 +1,10 @@
 package com.sofa.linkiving.domain.chat.ai;
 
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Primary
+@Profile("test")
 public class MockAiTitleClient implements AiTitleClient {
 	@Override
 	public String generateSummary(String firstChat) {
