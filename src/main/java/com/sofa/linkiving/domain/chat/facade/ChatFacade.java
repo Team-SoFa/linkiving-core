@@ -27,7 +27,7 @@ public class ChatFacade {
 
 	@Transactional
 	public CreateChatRes createChat(String firstChat, Member member) {
-		String title = aiTitleClient.generateSummary(firstChat);
+		String title = aiTitleClient.generateTitle(firstChat);
 		Chat chat = chatService.createChat(title, member);
 
 		return CreateChatRes.from(chat, firstChat);

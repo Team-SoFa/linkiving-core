@@ -39,7 +39,7 @@ import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
-class ChatIntegrationTest {
+class ChatApiIntegrationTest {
 
 	private static final String BASE_URL = "/v1/chats";
 
@@ -89,7 +89,7 @@ class ChatIntegrationTest {
 		// given
 		String firstChatContent = "AI 관련 최신 뉴스 알려줘";
 		CreateChatReq req = new CreateChatReq(firstChatContent);
-		String title = aiTitleClient.generateSummary(firstChatContent);
+		String title = aiTitleClient.generateTitle(firstChatContent);
 
 		// when & then
 		mockMvc.perform(post(BASE_URL)
