@@ -43,7 +43,7 @@ public class FeedbackTest {
 			.chat(chat)
 			.type(Type.USER)
 			.content("답변입니다.")
-			.linkIds(Collections.emptyList())
+			.links(Collections.emptyList())
 			.build();
 		em.persist(message);
 

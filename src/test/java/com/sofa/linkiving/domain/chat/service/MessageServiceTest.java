@@ -34,17 +34,16 @@ public class MessageServiceTest {
 	private MessageQueryService messageQueryService;
 
 	@Mock
+	private Chat chat;
+
+	@Mock
 	private SimpMessagingTemplate messagingTemplate;
 
 	@Mock
 	private SubscriptionManager subscriptionManager;
 
-	@Mock
-	private Chat chat;
-
 	@BeforeEach
 	void setUp() {
-		// Chat ID Mocking
 		lenient().when(chat.getId()).thenReturn(1L);
 	}
 
@@ -62,22 +61,21 @@ public class MessageServiceTest {
 	}
 
 	@Test
-	@DisplayName("메시지 조회 요청 시 QueryService로 로직을 위임하고 결과를 반환함")
-	void shouldCallGetMessagesWhenGetMessages() {
+	@DisplayName("메시지 조회 요청 시 QueryService를 호출하여 결과를 반환함")
+	void shouldDelegateToQueryServiceWhenGetMessages() {
 		// given
-		Chat chat = mock(Chat.class);
 		Long lastId = 1L;
 		int size = 20;
 		MessagesDto expectedDto = new MessagesDto(Collections.emptyList(), false);
 
-		given(messageQueryService.getMessages(chat, lastId, size)).willReturn(expectedDto);
+		given(messageQueryService.findAllByChatAndCursor(chat, lastId, size)).willReturn(expectedDto);
 
 		// when
 		MessagesDto result = messageService.getMessages(chat, lastId, size);
 
 		// then
 		assertThat(result).isEqualTo(expectedDto);
-		verify(messageQueryService).getMessages(chat, lastId, size);
+		verify(messageQueryService).findAllByChatAndCursor(chat, lastId, size);
 	}
 
 	@Test

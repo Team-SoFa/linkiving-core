@@ -7,12 +7,11 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
-
-import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.Disposable;
@@ -34,7 +33,7 @@ public class MessageService {
 	}
 
 	public MessagesDto getMessages(Chat chat, Long lastId, int size) {
-		return messageQueryService.getMessages(chat, lastId, size);
+		return messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 	}
 
 	public void generateAnswer(Chat chat, String userMessage) {

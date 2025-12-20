@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.facade;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -12,11 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
-import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
@@ -46,7 +47,7 @@ public class ChatFacadeTest {
 	private Member member;
 
 	@Test
-	@DisplayName("메시지 조회 요청 시 ChatService와 MessageService를 호출하여 결과를 반환한다")
+	@DisplayName("메시지 조회 요청 시 ChatService와 MessageService를 호출하여 결과를 반환함")
 	void shouldReturnMessagesResWhenGetMessages() {
 		// given
 		Long chatId = 1L;
@@ -59,6 +60,7 @@ public class ChatFacadeTest {
 		Message message = mock(Message.class);
 		given(message.getId()).willReturn(99L);
 		given(message.getType()).willReturn(Type.USER);
+		given(message.getLinks()).willReturn(Collections.emptyList());
 
 		MessagesDto messagesDto = new MessagesDto(List.of(message), true);
 

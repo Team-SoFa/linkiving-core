@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.enums.Type;
+import com.sofa.linkiving.domain.link.entity.Link;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -41,24 +42,47 @@ public record MessagesRes(
 
 		@JsonInclude(JsonInclude.Include.NON_NULL)
 		@Schema(description = "피드백 상태 (AI 메시지인 경우만 포함: LIKE, DISLIKE, NONE)")
-		Sentiment feedback
+		Sentiment feedback,
+
+		@Schema(description = "첨부된 링크 목록")
+		List<LinkPreviewDto> links
 	) {
 		public static MessageDto from(Message message) {
 			Sentiment feedbackStatus = null;
 
 			if (message.getType() == Type.AI) {
-				if (message.getFeedback() != null) {
-					feedbackStatus = message.getFeedback().getSentiment();
-				} else {
-					feedbackStatus = Sentiment.NONE;
-				}
+				feedbackStatus = (message.getFeedback() != null)
+					? message.getFeedback().getSentiment()
+					: Sentiment.NONE;
 			}
+
+			// [변경] 엔티티에서 링크 목록을 바로 변환
+			List<LinkPreviewDto> linkDtos = message.getLinks().stream()
+				.map(LinkPreviewDto::from)
+				.toList();
 
 			return new MessageDto(
 				message.getId(),
 				message.getContent(),
 				message.getType(),
-				feedbackStatus
+				feedbackStatus,
+				linkDtos
+			);
+		}
+	}
+
+	public record LinkPreviewDto(
+		Long id,
+		String title,
+		String url,
+		String imageUrl
+	) {
+		public static LinkPreviewDto from(Link link) {
+			return new LinkPreviewDto(
+				link.getId(),
+				link.getTitle(),
+				link.getUrl(),
+				link.getImageUrl()
 			);
 		}
 	}

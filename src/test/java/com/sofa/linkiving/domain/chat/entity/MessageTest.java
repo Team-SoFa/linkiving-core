@@ -12,6 +12,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.sofa.linkiving.domain.chat.enums.Type;
+import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @DataJpaTest
@@ -38,14 +39,27 @@ public class MessageTest {
 			.build();
 		em.persist(chat);
 
-		List<Long> linkIds = List.of(1L, 100L, 500L);
+		Link link1 = Link.builder()
+			.member(member)
+			.url("https://example1.com")
+			.title("Link 1")
+			.build();
+		em.persist(link1);
+
+		Link link2 = Link.builder()
+			.member(member)
+			.url("https://example2.com")
+			.title("Link 2")
+			.build();
+		em.persist(link2);
+
 		String content = "테스트 메시지입니다.";
 
 		Message message = Message.builder()
 			.chat(chat)
 			.type(Type.AI)
 			.content(content)
-			.linkIds(linkIds)
+			.links(List.of(link1, link2))
 			.build();
 
 		// when
@@ -57,7 +71,8 @@ public class MessageTest {
 		assertThat(savedMessage.getChat()).isEqualTo(chat);
 
 		// Converter 동작 검증
-		assertThat(savedMessage.getLinkIds()).hasSize(3)
-			.containsExactly(1L, 100L, 500L);
+		assertThat(savedMessage.getLinks()).hasSize(2)
+			.extracting("url")
+			.containsExactlyInAnyOrder("https://example1.com", "https://example2.com");
 	}
 }

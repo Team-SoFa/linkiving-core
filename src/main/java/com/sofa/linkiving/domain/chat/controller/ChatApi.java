@@ -2,16 +2,15 @@ package com.sofa.linkiving.domain.chat.controller;
 
 import org.springframework.validation.annotation.Validated;
 
+import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
+import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
+import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
-import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
-import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
-
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;

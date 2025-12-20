@@ -28,11 +28,13 @@ public class MessageQueryServiceTest {
 	@Mock
 	private MessageRepository messageRepository;
 
+	@Mock
+	private Chat chat;
+
 	@Test
-	@DisplayName("요청 개수보다 데이터가 많으면 hasNext가 true이고 마지막 데이터를 제외하고 반환함")
+	@DisplayName("요청 개수 초과 데이터가 존재 시 hasNext=true 반환 및 데이터를 잘라서 반환: (요청 개수 :10개 ,데이터 :11개)")
 	void shouldReturnHasNextTrueWhenMoreDataExists() {
 		// given
-		Chat chat = mock(Chat.class);
 		Long lastId = 100L;
 		int size = 10;
 
@@ -45,7 +47,7 @@ public class MessageQueryServiceTest {
 			.willReturn(messages);
 
 		// when
-		MessagesDto result = messageQueryService.getMessages(chat, lastId, size);
+		MessagesDto result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 
 		// then
 		assertThat(result.hasNext()).isTrue();
@@ -53,10 +55,9 @@ public class MessageQueryServiceTest {
 	}
 
 	@Test
-	@DisplayName("요청 개수보다 데이터가 적거나 같으면 hasNext가 false임")
+	@DisplayName("요청 개수 이하로 데이터 존재 시 hasNext=false 반환 (요청 개수 :10개 ,데이터 :10개)")
 	void shouldReturnHasNextFalseWhenNoMoreData() {
 		// given
-		Chat chat = mock(Chat.class);
 		Long lastId = 100L;
 		int size = 10;
 
@@ -69,7 +70,7 @@ public class MessageQueryServiceTest {
 			.willReturn(messages);
 
 		// when
-		MessagesDto result = messageQueryService.getMessages(chat, lastId, size);
+		MessagesDto result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 
 		// then
 		assertThat(result.hasNext()).isFalse();

@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 public class MessageQueryService {
 	private final MessageRepository messageRepository;
 
-	public MessagesDto getMessages(Chat chat, Long lastId, int size) {
+	public MessagesDto findAllByChatAndCursor(Chat chat, Long lastId, int size) {
 		PageRequest pageRequest = PageRequest.of(0, size + 1);
 		List<Message> messages = messageRepository.findAllByChatAndCursor(chat, lastId, pageRequest);
 
