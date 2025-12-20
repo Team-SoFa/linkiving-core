@@ -15,12 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.facade.ChatFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
-
-import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 
 import lombok.RequiredArgsConstructor;
 

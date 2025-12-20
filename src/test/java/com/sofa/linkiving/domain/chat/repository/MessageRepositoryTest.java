@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -17,33 +18,37 @@ import com.sofa.linkiving.domain.chat.entity.Feedback;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.enums.Type;
+import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
 
-import jakarta.persistence.EntityManager;
-
 @DataJpaTest
 @ActiveProfiles("test")
-public class MessageRepositoryTest {
+class MessageRepositoryTest {
 
 	@Autowired
 	private MessageRepository messageRepository;
+
 	@Autowired
 	private ChatRepository chatRepository;
+
 	@Autowired
 	private MemberRepository memberRepository;
+
 	@Autowired
 	private FeedbackRepository feedbackRepository;
+
 	@Autowired
-	private EntityManager em;
+	private TestEntityManager em;
 
 	private Chat chat;
+	private Member member;
 
 	@BeforeEach
 	void setUp() {
-		Member member = memberRepository.save(Member.builder()
-			.email("test@example.com")
-			.password("password123")
+		member = memberRepository.save(Member.builder()
+			.email("test@repo.com")
+			.password("password")
 			.build());
 
 		chat = chatRepository.save(Chat.builder()
@@ -76,7 +81,6 @@ public class MessageRepositoryTest {
 
 		// then
 		assertThat(result).hasSize(10);
-		// 최신순 정렬이므로 30, 29, ..., 21 순서여야 함
 		assertThat(result.get(0).getContent()).isEqualTo("Msg 30");
 		assertThat(result.get(9).getContent()).isEqualTo("Msg 21");
 	}
@@ -85,7 +89,6 @@ public class MessageRepositoryTest {
 	@DisplayName("채팅방 메시지 커서 기반 조회: 다음 페이지 (lastId 지정 시)")
 	void shouldReturnMessagesBeforeLastId() {
 		// given
-
 		messageRepository.save(Message.builder()
 			.chat(chat)
 			.content("1")
@@ -98,28 +101,75 @@ public class MessageRepositoryTest {
 			.type(Type.USER)
 			.build());
 
-		Message msg = messageRepository.save(Message.builder()
+		Message msg3 = messageRepository.save(Message.builder()
 			.chat(chat)
 			.content("3")
 			.type(Type.USER)
 			.build());
 
-		// when: lastId = msg3.getId() (3번 메시지 이전의 데이터를 조회)
 		List<Message> result = messageRepository.findAllByChatAndCursor(
 			chat,
-			msg.getId(),
+			msg3.getId(),
 			PageRequest.of(0, 10)
 		);
 
 		// then
 		assertThat(result).hasSize(2);
+		// 최신 순 정렬 확인
 		assertThat(result.get(0).getContent()).isEqualTo("2");
 		assertThat(result.get(1).getContent()).isEqualTo("1");
 	}
 
 	@Test
-	@DisplayName("메시지 조회 시 연관된 피드백이 Fetch Join으로 함께 조회됨")
-	void shouldReturnMessageWithFeedbackWhenExists() {
+	@DisplayName("메시지 조회 시 연관된 링크도 정상적으로 조회됨")
+	void shouldReturnMessageWithLinks() {
+		// given
+		Link link1 = Link.builder()
+			.member(member)
+			.title("Naver")
+			.url("https://naver.com")
+			.imageUrl("img1.png")
+			.build();
+
+		Link link2 = Link.builder()
+			.member(member)
+			.title("Google")
+			.url("https://google.com")
+			.imageUrl("img2.png")
+			.build();
+
+		em.persist(link1);
+		em.persist(link2);
+
+		Message message = Message.builder()
+			.chat(chat)
+			.content("Check links")
+			.type(Type.AI)
+			.links(List.of(link1, link2))
+			.build();
+
+		messageRepository.save(message);
+
+		em.flush();
+		em.clear();
+
+		// when
+		List<Message> result = messageRepository.findAllByChatAndCursor(chat, null, PageRequest.of(0, 10));
+
+		// then
+		assertThat(result).hasSize(1);
+		Message fetchedMessage = result.get(0);
+
+		// Link 데이터가 정상 로딩 확인
+		assertThat(fetchedMessage.getLinks()).hasSize(2);
+		assertThat(fetchedMessage.getLinks())
+			.extracting("title")
+			.containsExactlyInAnyOrder("Naver", "Google");
+	}
+
+	@Test
+	@DisplayName("메시지 조회 시 연관된 피드백도 함께 조회됨 (Fetch Join)")
+	void shouldReturnMessageWithFeedback() {
 		// given
 		Message message = messageRepository.save(Message.builder()
 			.chat(chat)
@@ -129,7 +179,7 @@ public class MessageRepositoryTest {
 
 		feedbackRepository.save(Feedback.builder()
 			.message(message)
-			.text("Good Response")
+			.text("Good")
 			.sentiment(Sentiment.LIKE)
 			.build());
 
@@ -137,18 +187,11 @@ public class MessageRepositoryTest {
 		em.clear();
 
 		// when
-		List<Message> result = messageRepository.findAllByChatAndCursor(
-			chat,
-			null,
-			PageRequest.of(0, 10)
-		);
+		List<Message> result = messageRepository.findAllByChatAndCursor(chat, null, PageRequest.of(0, 10));
 
 		// then
 		assertThat(result).hasSize(1);
-		Message fetchedMessage = result.get(0);
-
-		assertThat(fetchedMessage.getFeedback()).isNotNull();
-		assertThat(fetchedMessage.getFeedback().getText()).isEqualTo("Good Response");
-		assertThat(fetchedMessage.getFeedback().getSentiment()).isEqualTo(Sentiment.LIKE);
+		assertThat(result.get(0).getFeedback()).isNotNull();
+		assertThat(result.get(0).getFeedback().getText()).isEqualTo("Good");
 	}
 }

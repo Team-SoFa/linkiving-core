@@ -45,7 +45,6 @@ public class ChatApiIntegrationTest {
 	@Autowired
 	private MockMvc mockMvc;
 
-
 	@Autowired
 	private ObjectMapper objectMapper;
 
@@ -100,7 +99,6 @@ public class ChatApiIntegrationTest {
 			.content("반갑습니다")
 			.type(Type.AI)
 			.build());
-
 
 		// when & then
 		mockMvc.perform(get(BASE_URL + "/{chatId}", chat.getId())
