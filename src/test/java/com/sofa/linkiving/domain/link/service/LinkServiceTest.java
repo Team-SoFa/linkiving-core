@@ -14,12 +14,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
+import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -263,38 +264,59 @@ class LinkServiceTest {
 	}
 
 	@Test
-	@DisplayName("링크 목록을 조회할 수 있다")
-	void shouldGetLinkList() {
+	@DisplayName("링크 (요약 포함) 단건 조회 시 LinkDto를 반환함")
+	void shouldGetLinkWithSummary() {
 		// given
-		Member member = Member.builder()
-			.email("test@example.com")
-			.password("password")
-			.build();
+		Member member = mock(Member.class);
 
-		Link link1 = Link.builder()
-			.member(member)
-			.url("https://example1.com")
-			.title("링크 1")
-			.build();
+		// Link Mock
+		Link link = mock(Link.class);
 
-		Link link2 = Link.builder()
-			.member(member)
-			.url("https://example2.com")
-			.title("링크 2")
-			.build();
+		Summary summary = mock(Summary.class);
 
-		Pageable pageable = PageRequest.of(0, 10);
-		Page<Link> expectedPage = new PageImpl<>(List.of(link1, link2));
+		LinkDto linkDto = new LinkDto(link, summary);
 
-		given(linkQueryService.findAllByMember(member, pageable)).willReturn(expectedPage);
+		given(linkQueryService.findByIdWithSummary(1L, member)).willReturn(linkDto);
 
 		// when
-		Page<Link> result = linkService.getLinkList(member, pageable);
+		LinkDto result = linkService.getLinkWithSummary(1L, member);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.getContent()).hasSize(2);
-		verify(linkQueryService, times(1)).findAllByMember(member, pageable);
+		assertThat(result.link()).isEqualTo(link);
+		assertThat(result.summary()).isEqualTo(summary);
+
+		verify(linkQueryService).findByIdWithSummary(1L, member);
+	}
+
+	@Test
+	@DisplayName("링크 목록 조회 시 커서 기반 페이징된 LinksRes를 반환함")
+	void shouldGetLinksWithSummary() {
+		// given
+		Member member = mock(Member.class);
+		Long lastId = 10L;
+		int size = 5;
+
+		// Link & LinkDto Mock
+		Link link = mock(Link.class);
+
+		LinkDto linkDto = new LinkDto(link, null); // 요약 없음 가정
+		List<LinkDto> dtos = List.of(linkDto);
+
+		LinksDto linksDto = new LinksDto(dtos, true); // 다음 페이지 있음
+
+		given(linkQueryService.findAllByMemberWithSummaryAndCursor(member, lastId, size))
+			.willReturn(linksDto);
+
+		// when
+		LinksDto result = linkService.getLinksWithSummary(member, lastId, size);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.linkDtos()).hasSize(1);
+		assertThat(result.hasNext()).isTrue();
+
+		verify(linkQueryService).findAllByMemberWithSummaryAndCursor(member, lastId, size);
 	}
 
 	@Test

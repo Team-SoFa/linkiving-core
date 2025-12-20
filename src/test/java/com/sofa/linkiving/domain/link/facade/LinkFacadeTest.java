@@ -14,12 +14,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
-import com.sofa.linkiving.domain.link.dto.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
+import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
 import com.sofa.linkiving.domain.link.entity.Link;
@@ -94,24 +93,40 @@ public class LinkFacadeTest {
 	void shouldReturnRecreateSummaryResponseWhenRecreateSummary() {
 		// given
 		Long linkId = 1L;
-		Member member = mock(Member.class);
+		Member member = mock(Member.class); // Member 객체 Mock
+		Format format = Format.DETAILED;
 		String url = "https://example.com";
-		Link link = mock(Link.class);
+		String existingSummaryBody = "기존 요약 내용입니다.";
+		String newSummaryBody = "새로운 상세 요약 내용입니다.";
+		String comparisonBody = "기존 대비 상세 내용이 추가되었습니다.";
 
-		given(link.getUrl()).willReturn(url);
-		given(linkService.getLink(linkId, member)).willReturn(link); // Service Mock 동작 정의
+		// 1. LinkService Mocking (URL 가져오기)
+		Link mockLink = mock(Link.class);
+		given(mockLink.getUrl()).willReturn(url);
+		given(linkService.getLink(linkId, member)).willReturn(mockLink);
 
+		// 2. SummaryService (기존 요약 가져오기)
 		Summary mockSummary = mock(Summary.class);
-		given(mockSummary.getContent()).willReturn("Old");
+		given(mockSummary.getContent()).willReturn(existingSummaryBody);
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
-		given(summaryService.createSummary(linkId, url, Format.DETAILED)).willReturn("New");
-		given(summaryService.comparisonSummary("Old", "New")).willReturn("Diff");
+
+		// 3. SummaryService (새 요약 생성 및 비교)
+		given(summaryService.createSummary(linkId, url, format)).willReturn(newSummaryBody);
+		given(summaryService.comparisonSummary(existingSummaryBody, newSummaryBody)).willReturn(comparisonBody);
 
 		// when
-		RecreateSummaryResponse res = linkFacade.recreateSummary(member, linkId, Format.DETAILED);
+		RecreateSummaryResponse response = linkFacade.recreateSummary(member, linkId, format);
 
 		// then
-		assertThat(res.newSummary()).isEqualTo("New");
+		assertThat(response).isNotNull();
+		assertThat(response.existingSummary()).isEqualTo(existingSummaryBody);
+		assertThat(response.newSummary()).isEqualTo(newSummaryBody);
+		assertThat(response.comparison()).isEqualTo(comparisonBody);
+
+		// verify
+		verify(summaryService).getSummary(linkId);
+		verify(summaryService).createSummary(linkId, url, format);
+		verify(summaryService).comparisonSummary(existingSummaryBody, newSummaryBody);
 	}
 
 	@Test
@@ -267,23 +282,85 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크 Entity 페이지 목록을 조회할 수 있다")
-	void shouldGetLinkList() {
+	@DisplayName("링크 카드 목록을 조회하고 Response DTO로 변환한다 (페이징 포함)")
+	void shouldGetLinkCards() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link link1 = Link.builder().member(member).title("1").build();
-		Link link2 = Link.builder().member(member).title("2").build();
-		Pageable pageable = PageRequest.of(0, 10);
-		Page<Link> expectedPage = new PageImpl<>(List.of(link1, link2));
+		Member member = mock(Member.class);
+		int size = 10;
 
-		given(linkQueryService.findAllByMember(member, pageable)).willReturn(expectedPage);
+		Link link1 = Link.builder()
+			.member(member)
+			.url("https://url1.com")
+			.title("Title1")
+			.imageUrl("img1.jpg")
+			.build();
+		Summary summary1 = Summary.builder()
+			.link(link1)
+			.content("Summary1")
+			.build();
+
+		Link link2 = Link.builder()
+			.member(member)
+			.url("https://url2.com")
+			.title("Title2")
+			.imageUrl("img2.jpg")
+			.build();
+		Summary summary2 = Summary.builder()
+			.link(link2)
+			.content("Summary2")
+			.build();
+
+		Link.builder()
+			.member(member)
+			.url("https://url3.com")
+			.title("Title3")
+			.imageUrl("img3.jpg")
+			.build();
+
+		LinkDto dto1 = new LinkDto(link1, summary1);
+		LinkDto dto2 = new LinkDto(link2, summary2);
+
+		LinksDto linksDto = new LinksDto(List.of(dto1, dto2), true);
+
+		given(linkService.getLinksWithSummary(member, null, size)).willReturn(linksDto);
 
 		// when
-		Page<Link> result = linkService.getLinkList(member, pageable);
+		LinkCardsRes result = linkFacade.getLinkCards(member, null, size);
 
 		// then
-		assertThat(result).hasSize(2);
-		assertThat(result.getContent().get(0)).isInstanceOf(Link.class);
+		assertThat(result).isNotNull();
+
+		assertThat(result.hasNext()).isTrue();
+
+		assertThat(result.links()).hasSize(2);
+
+		assertThat(result.links().get(0).title()).isEqualTo("Title1");
+		assertThat(result.links().get(0).summary()).isEqualTo("Summary1");
+
+		assertThat(result.links().get(1).title()).isEqualTo("Title2");
+		assertThat(result.links().get(1).summary()).isEqualTo("Summary2");
+	}
+
+	@Test
+	@DisplayName("링크 목록이 비어있을 경우 lastId는 null을 반환한다")
+	void shouldReturnNullLastIdWhenListIsEmpty() {
+		// given
+		Member member = mock(Member.class);
+		Long lastId = null;
+		int size = 10;
+
+		// 빈 리스트 반환 설정
+		LinksDto emptyLinksDto = new LinksDto(List.of(), false);
+
+		given(linkService.getLinksWithSummary(member, lastId, size)).willReturn(emptyLinksDto);
+
+		// when
+		LinkCardsRes result = linkFacade.getLinkCards(member, lastId, size);
+
+		// then
+		assertThat(result.links()).isEmpty();
+		assertThat(result.hasNext()).isFalse();
+		assertThat(result.lastId()).isNull();
 	}
 
 	@Test

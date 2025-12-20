@@ -28,11 +28,11 @@ public class Summary extends BaseEntity {
 	@Column(columnDefinition = "TEXT", nullable = false)
 	private String content;
 
-	@Column(name = "selected", columnDefinition = "TEXT")
-	private String selected;
+	@Column(name = "selected")
+	private boolean selected;
 
 	@Builder
-	public Summary(Link link, Format format, String content, String select) {
+	public Summary(Link link, Format format, String content, boolean select) {
 		this.link = link;
 		this.format = format;
 		this.content = content;
