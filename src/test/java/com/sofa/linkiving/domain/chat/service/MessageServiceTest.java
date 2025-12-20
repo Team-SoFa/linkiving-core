@@ -3,7 +3,7 @@ package com.sofa.linkiving.domain.chat.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -17,8 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
-import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,17 +34,16 @@ public class MessageServiceTest {
 	private MessageQueryService messageQueryService;
 
 	@Mock
+	private Chat chat;
+
+	@Mock
 	private SimpMessagingTemplate messagingTemplate;
 
 	@Mock
 	private SubscriptionManager subscriptionManager;
 
-	@Mock
-	private Chat chat;
-
 	@BeforeEach
 	void setUp() {
-		// Chat ID Mocking
 		lenient().when(chat.getId()).thenReturn(1L);
 	}
 
@@ -62,20 +61,21 @@ public class MessageServiceTest {
 	}
 
 	@Test
-	@DisplayName("MessageQueryService.findAllByChat 호출 및 결과 반환")
-	void shouldReturnMessagesWhenGetMessagesByChat() {
+	@DisplayName("메시지 조회 요청 시 QueryService를 호출하여 결과를 반환함")
+	void shouldDelegateToQueryServiceWhenGetMessages() {
 		// given
-		Chat chat = mock(Chat.class);
-		List<Message> messages = List.of(mock(Message.class));
+		Long lastId = 1L;
+		int size = 20;
+		MessagesDto expectedDto = new MessagesDto(Collections.emptyList(), false);
 
-		given(messageQueryService.findAllByChat(chat)).willReturn(messages);
+		given(messageQueryService.findAllByChatAndCursor(chat, lastId, size)).willReturn(expectedDto);
 
 		// when
-		List<Message> result = messageService.getMessagesByChat(chat);
+		MessagesDto result = messageService.getMessages(chat, lastId, size);
 
 		// then
-		assertThat(result).isEqualTo(messages);
-		verify(messageQueryService).findAllByChat(chat);
+		assertThat(result).isEqualTo(expectedDto);
+		verify(messageQueryService).findAllByChatAndCursor(chat, lastId, size);
 	}
 
 	@Test
