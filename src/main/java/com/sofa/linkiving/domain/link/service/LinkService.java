@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.link.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -21,6 +23,7 @@ public class LinkService {
 
 	private final LinkCommandService linkCommandService;
 	private final LinkQueryService linkQueryService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
 		if (linkQueryService.existsByUrl(member, url)) {
@@ -29,6 +32,9 @@ public class LinkService {
 
 		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl);
 		log.info("Link created - id: {}, memberId: {}, url: {}", link.getId(), member.getId(), url);
+
+		// 트랜잭션 커밋 후 요약 대기 큐에 추가되도록 이벤트 발행
+		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
 
 		return LinkRes.from(link);
 	}

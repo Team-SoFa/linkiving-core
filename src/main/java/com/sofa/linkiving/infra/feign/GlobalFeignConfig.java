@@ -22,6 +22,6 @@ public class GlobalFeignConfig {
 
 	@Bean
 	public Request.Options feignRequestOptions() {
-		return new Request.Options(3000, 5000);
+		return new Request.Options(5000, 60000);
 	}
 }
