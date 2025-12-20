@@ -170,7 +170,7 @@ public class LinkApiIntegrationTest {
 			.link(link)
 			.content("이것은 요약 내용입니다.")
 			.format(Format.CONCISE)
-			.select(true)
+			.selected(true)
 			.build());
 
 		// when & then
@@ -335,7 +335,7 @@ public class LinkApiIntegrationTest {
 			.link(link2)
 			.content("링크 2 요약")
 			.format(Format.CONCISE)
-			.select(true)
+			.selected(true)
 			.build());
 
 		// when & then
@@ -628,6 +628,7 @@ public class LinkApiIntegrationTest {
 		summaryRepository.save(Summary.builder()
 			.link(savedLink)
 			.content("기존 요약입니다.")
+			.selected(true)
 			.build());
 
 		String newSummaryText = "새로 생성된 상세 요약입니다.";

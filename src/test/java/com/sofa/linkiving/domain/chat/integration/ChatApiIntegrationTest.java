@@ -113,7 +113,7 @@ public class ChatApiIntegrationTest {
 		summaryRepository.save(Summary.builder()
 			.link(link1)
 			.content("링크1의 핵심 요약입니다.")
-			.select(true)
+			.selected(true)
 			.build());
 
 		Chat chat = chatRepository.save(com.sofa.linkiving.domain.chat.entity.Chat.builder()
