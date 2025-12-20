@@ -15,6 +15,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
+import com.sofa.linkiving.domain.link.repository.LinkRepository;
+import com.sofa.linkiving.domain.link.repository.SummaryRepository;
+import com.sofa.linkiving.infra.feign.AiServerClient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SummaryWorker 단위 테스트")
@@ -23,13 +26,23 @@ class SummaryWorkerTest {
 	@Mock
 	private SummaryQueue summaryQueue;
 
+	@Mock
+	private LinkRepository linkRepository;
+
+	@Mock
+	private SummaryRepository summaryRepository;
+
+	@Mock
+	private AiServerClient aiServerClient;
+
 	private SummaryWorker summaryWorker;
 	private SummaryWorkerProperties properties;
 
 	@BeforeEach
 	void setUp() {
 		properties = new SummaryWorkerProperties(Duration.ofMillis(100)); // 테스트용 짧은 sleep 시간
-		summaryWorker = new SummaryWorker(summaryQueue, properties);
+		summaryWorker = new SummaryWorker(summaryQueue, properties, linkRepository, summaryRepository,
+			aiServerClient);
 	}
 
 	@AfterEach

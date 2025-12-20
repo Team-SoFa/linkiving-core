@@ -26,7 +26,7 @@ public class LinkEventListener {
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
-		log.debug("Link created event received - linkId: {}", event.linkId());
+		log.info("Link created event received (after commit) - linkId: {}", event.linkId());
 
 		int maxRetries = 3;
 		int retryCount = 0;
