@@ -1,8 +1,6 @@
 package com.sofa.linkiving.domain.link.controller;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,6 +17,8 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
+import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
@@ -102,21 +102,22 @@ public class LinkController implements LinkApi {
 
 	@Override
 	@GetMapping("/{id}")
-	public BaseResponse<LinkRes> getLink(
+	public BaseResponse<LinkDetailRes> getLink(
 		@PathVariable Long id,
 		@AuthMember Member member
 	) {
-		LinkRes response = linkFacade.getLink(id, member);
+		LinkDetailRes response = linkFacade.getLinkDetail(id, member);
 		return BaseResponse.success(response, "링크 조회 완료");
 	}
 
 	@Override
 	@GetMapping
-	public BaseResponse<Page<LinkRes>> getLinkList(
-		@PageableDefault(size = 20) Pageable pageable,
-		@AuthMember Member member
+	public BaseResponse<LinkCardsRes> getLinkList(
+		@AuthMember Member member,
+		@RequestParam(required = false) Long lastId,
+		@RequestParam(defaultValue = "20") int size
 	) {
-		Page<LinkRes> response = linkFacade.getLinkList(member, pageable);
+		LinkCardsRes response = linkFacade.getLinkCards(member, lastId, size);
 		return BaseResponse.success(response, "링크 목록 조회 완료");
 	}
 

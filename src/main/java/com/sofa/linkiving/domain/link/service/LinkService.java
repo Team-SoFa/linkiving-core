@@ -3,10 +3,10 @@ package com.sofa.linkiving.domain.link.service;
 import java.util.Optional;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
@@ -76,8 +76,12 @@ public class LinkService {
 		return linkQueryService.findById(linkId, member);
 	}
 
-	public Page<Link> getLinkList(Member member, Pageable pageable) {
-		return linkQueryService.findAllByMember(member, pageable);
+	public LinkDto getLinkWithSummary(Long linkId, Member member) {
+		return linkQueryService.findByIdWithSummary(linkId, member);
+	}
+
+	public LinksDto getLinksWithSummary(Member member, Long lastId, int size) {
+		return linkQueryService.findAllByMemberWithSummaryAndCursor(member, lastId, size);
 	}
 
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
