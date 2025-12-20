@@ -31,7 +31,7 @@ public class SummaryQueryServiceTest {
 		// given
 		Long linkId = 1L;
 		Summary mockSummary = mock(Summary.class); // Summary 엔티티 Mock
-		given(summaryRepository.findById(linkId)).willReturn(Optional.of(mockSummary));
+		given(summaryRepository.findByLinkIdAndSelectedTrue(linkId)).willReturn(Optional.of(mockSummary));
 
 		// when
 		Summary result = summaryQueryService.getSummary(linkId);
@@ -39,7 +39,7 @@ public class SummaryQueryServiceTest {
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result).isEqualTo(mockSummary);
-		verify(summaryRepository).findById(linkId);
+		verify(summaryRepository).findByLinkIdAndSelectedTrue(linkId);
 	}
 
 	@Test
@@ -47,13 +47,13 @@ public class SummaryQueryServiceTest {
 	void shouldThrowBusinessExceptionWhenSummaryNotFound() {
 		// given
 		Long linkId = 999L;
-		given(summaryRepository.findById(linkId)).willReturn(Optional.empty());
+		given(summaryRepository.findByLinkIdAndSelectedTrue(linkId)).willReturn(Optional.empty());
 
 		// when & then
 		assertThatThrownBy(() -> summaryQueryService.getSummary(linkId))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.SUMMARY_NOT_FOUND);
 
-		verify(summaryRepository).findById(linkId);
+		verify(summaryRepository).findByLinkIdAndSelectedTrue(linkId);
 	}
 }

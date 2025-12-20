@@ -116,10 +116,12 @@ public class SummaryWorker {
 		log.info("Summary generated for linkId: {}", linkId);
 
 		// 3. Summary 엔티티 생성 및 저장
+		boolean isFirstSummary = !summaryRepository.existsByLinkIdAndSelectedTrue(linkId);
 		Summary summary = Summary.builder()
 			.link(link)
 			.format(Format.CONCISE)
 			.content(response.summary())
+			.selected(isFirstSummary)
 			.build();
 
 		summaryRepository.save(summary);

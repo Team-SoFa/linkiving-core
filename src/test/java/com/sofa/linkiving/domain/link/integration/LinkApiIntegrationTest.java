@@ -590,6 +590,7 @@ public class LinkApiIntegrationTest {
 		summaryRepository.save(Summary.builder()
 			.link(savedLink)
 			.content("기존 요약입니다.")
+			.selected(true)
 			.build());
 
 		String newSummaryText = "새로 생성된 상세 요약입니다.";
