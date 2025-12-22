@@ -15,10 +15,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
 import com.sofa.linkiving.domain.link.entity.Link;
@@ -49,17 +51,20 @@ public class LinkFacadeTest {
 	private LinkQueryService linkQueryService;
 
 	@Mock
-	private ApplicationEventPublisher eventPublisher;
-
-	@Mock
 	private SummaryService summaryService;
 
 	@Mock
 	private OgTagCrawler ogTagCrawler;
 
+	@Mock
+	private ImageUploader imageUploader;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	@BeforeEach
 	void setUp() {
-		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService);
+		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader);
 	}
 
 	@Test
@@ -93,7 +98,7 @@ public class LinkFacadeTest {
 	void shouldReturnRecreateSummaryResponseWhenRecreateSummary() {
 		// given
 		Long linkId = 1L;
-		Member member = mock(Member.class); // Member 객체 Mock
+		Member member = mock(Member.class);
 		Format format = Format.DETAILED;
 		String url = "https://example.com";
 		String existingSummaryBody = "기존 요약 내용입니다.";
@@ -149,31 +154,40 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크를 생성하고 Entity를 반환한다")
+	@DisplayName("이미지 URL을 업로드하고 반환된 저장 경로로 링크를 생성한다")
 	void shouldCreateLink() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link link = Link.builder()
-			.member(member)
-			.url("https://example.com")
-			.title("테스트 링크")
+		Member member = mock(Member.class);
+		String url = "https://example.com";
+		String title = "테스트 제목";
+		String memo = "테스트 메모";
+		String originalImageUrl = "https://original.com/image.jpg";
+		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
+
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
+
+		Link savedLink = Link.builder()
+			.url(url)
+			.title(title)
+			.memo(memo)
+			.imageUrl(storedImageUrl)
 			.build();
 
-		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(false);
-		given(linkCommandService.saveLink(any(), any(), any(), any(), any())).willReturn(link);
+		given(linkCommandService.saveLink(member, url, title, memo, storedImageUrl))
+			.willReturn(savedLink);
 
 		// when
-		Link createdLink = linkService.createLink(
-			member, "https://example.com", "테스트 링크", "메모", null
-		);
+		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
 
 		// then
-		assertThat(createdLink).isNotNull();
-		assertThat(createdLink).isInstanceOf(Link.class); // Entity 반환 확인
-		assertThat(createdLink.getUrl()).isEqualTo("https://example.com");
+		assertThat(result).isNotNull();
+		assertThat(result.url()).isEqualTo(url);
+		assertThat(result.imageUrl()).isEqualTo(storedImageUrl);
 
-		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
-		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
+		// Verify
+		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
+		verify(linkQueryService, times(1)).existsByUrl(member, url);
+		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
 	}
 
 	@Test

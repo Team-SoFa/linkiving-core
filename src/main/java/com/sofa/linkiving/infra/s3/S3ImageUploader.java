@@ -2,6 +2,7 @@ package com.sofa.linkiving.infra.s3;
 
 import java.io.InputStream;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -20,9 +21,6 @@ public class S3ImageUploader implements ImageUploader {
 
 	private final S3Template s3Template;
 	private final UrlConnectionFactory urlConnectionFactory;
-
-	@Value("${linkiving.default-image.url}")
-	private String defaultImageUrl;
 
 	@Value("${spring.cloud.aws.s3.bucket}")
 	private String bucketName;
@@ -53,7 +51,7 @@ public class S3ImageUploader implements ImageUploader {
 			String contentType = connection.getContentType();
 			if (contentType == null || !contentType.startsWith("image/")) {
 				log.warn("Not Image: {}", originalUrl);
-				return defaultImageUrl;
+				return null;
 			}
 
 			try (InputStream inputStream = connection.getInputStream()) {
@@ -64,7 +62,7 @@ public class S3ImageUploader implements ImageUploader {
 
 		} catch (Exception e) {
 			log.warn("Upload failed, falling back to original URL: {}", e.getMessage());
-			return defaultImageUrl;
+			return null;
 		}
 	}
 
@@ -85,7 +83,7 @@ public class S3ImageUploader implements ImageUploader {
 					extension = ext;
 				}
 			}
-			UUID uuid = UUID.nameUUIDFromBytes(url.getBytes());
+			UUID uuid = UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8));
 			return "links/" + uuid + "." + extension;
 		} catch (Exception e) {
 			return "links/" + UUID.randomUUID() + ".jpg";
