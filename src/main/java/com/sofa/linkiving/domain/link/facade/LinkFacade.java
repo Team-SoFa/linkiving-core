@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.dto.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
@@ -26,9 +27,11 @@ public class LinkFacade {
 	private final LinkService linkService;
 	private final OgTagCrawler ogTagCrawler;
 	private final SummaryService summaryService;
+	private final ImageUploader imageUploader;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
-		return linkService.createLink(member, url, title, memo, imageUrl);
+		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		return linkService.createLink(member, url, title, memo, storedImageUrl);
 	}
 
 	public LinkRes updateLink(Long linkId, Member member, String title, String memo) {
