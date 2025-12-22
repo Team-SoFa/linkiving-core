@@ -24,8 +24,8 @@ import io.awspring.cloud.s3.S3Template;
 @DisplayName("S3ImageUploader 단위 테스트")
 public class S3ImageUploaderTest {
 
-	private final String BUCKET_NAME = "test-bucket";
-	private final String REGION = "ap-northeast-2";
+	private static final String BUCKET_NAME = "test-bucket";
+	private static final String REGION = "ap-northeast-2";
 	@InjectMocks
 	private S3ImageUploader s3ImageUploader;
 	@Mock
@@ -37,7 +37,6 @@ public class S3ImageUploaderTest {
 
 	@BeforeEach
 	void setUp() {
-		// @Value 필드 값 주입
 		ReflectionTestUtils.setField(s3ImageUploader, "bucketName", BUCKET_NAME);
 		ReflectionTestUtils.setField(s3ImageUploader, "region", REGION);
 	}
@@ -92,8 +91,8 @@ public class S3ImageUploaderTest {
 	}
 
 	@Test
-	@DisplayName("ContentType이 이미지가 아닌 경우(예: HTML, PDF) 원본 URL을 반환한다")
-	void shouldReturnOriginalUrlWhenNotImage() throws IOException {
+	@DisplayName("ContentType이 이미지가 아닌 경우(예: HTML, PDF) Null을 반환한다")
+	void shouldReturnDefaultImageUrlWhenNotImage() throws IOException {
 		// given
 		String originalUrl = "https://example.com/document.pdf";
 
@@ -106,16 +105,16 @@ public class S3ImageUploaderTest {
 		// when
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
-		// then: 원본 URL 반환
-		assertThat(result).isEqualTo(originalUrl);
+		// then
+		assertThat(result).isNull();
 
 		// Upload 호출 안 됨
 		verify(s3Template, never()).upload(anyString(), anyString(), any(InputStream.class), any());
 	}
 
 	@Test
-	@DisplayName("연결 실패나 업로드 중 예외 발생 시 원본 URL을 반환한다 (Fallback)")
-	void shouldReturnOriginalUrlWhenExceptionOccurs() throws IOException {
+	@DisplayName("연결 실패나 업로드 중 예외 발생 시 Null을 반환한다 (Fallback)")
+	void shouldReturnDefaultImageUrlWhenExceptionOccurs() throws IOException {
 		// given
 		String originalUrl = "https://example.com/image.jpg";
 
@@ -128,7 +127,7 @@ public class S3ImageUploaderTest {
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
 		// then
-		assertThat(result).isEqualTo(originalUrl);
+		assertThat(result).isNull();
 	}
 
 	@Test
