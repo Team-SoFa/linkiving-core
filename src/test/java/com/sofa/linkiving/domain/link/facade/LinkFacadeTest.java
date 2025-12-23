@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.dto.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
@@ -36,6 +37,9 @@ public class LinkFacadeTest {
 
 	@Mock
 	private OgTagCrawler ogTagCrawler;
+
+	@Mock
+	private ImageUploader imageUploader;
 
 	@Test
 	@DisplayName("메타데이터 크롤링 성공 시 정상적으로 MetaScrapeRes를 반환한다")
@@ -68,7 +72,7 @@ public class LinkFacadeTest {
 	void shouldReturnRecreateSummaryResponseWhenRecreateSummary() {
 		// given
 		Long linkId = 1L;
-		Member member = mock(Member.class); // Member 객체 Mock
+		Member member = mock(Member.class);
 		Format format = Format.DETAILED;
 		String url = "https://example.com";
 		String existingSummaryBody = "기존 요약 내용입니다.";
@@ -122,5 +126,23 @@ public class LinkFacadeTest {
 		assertThat(result.image()).isEmpty();
 		assertThat(result.url()).isEmpty();
 		verify(ogTagCrawler, times(1)).crawl(url);
+	}
+
+	@Test
+	@DisplayName("링크 생성 시 이미지 업로드 후 LinkService 호출")
+	void shouldCreateLinkWithImageUpload() {
+		// given
+		String imageUrl = "http://original.com/img.jpg";
+		String s3Url = "http://s3.com/img.jpg";
+
+		given(imageUploader.uploadFromUrl(imageUrl)).willReturn(s3Url);
+		given(linkService.createLink(any(), any(), any(), any(), eq(s3Url))).willReturn(mock(LinkRes.class));
+
+		// when
+		linkFacade.createLink(mock(Member.class), "url", "title", "memo", imageUrl);
+
+		// then
+		verify(imageUploader).uploadFromUrl(imageUrl);
+		verify(linkService).createLink(any(), any(), any(), any(), eq(s3Url));
 	}
 }

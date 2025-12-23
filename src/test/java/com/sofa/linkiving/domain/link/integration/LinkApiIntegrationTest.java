@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.ai.AiSummaryClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
@@ -64,6 +65,9 @@ public class LinkApiIntegrationTest {
 	@MockitoBean
 	private AiSummaryClient aiSummaryClient;
 
+	@MockitoBean
+	private ImageUploader imageUploader;
+
 	private Member testMember;
 	private Member otherMember;
 	private UserDetails testUserDetails;
@@ -89,7 +93,17 @@ public class LinkApiIntegrationTest {
 	@DisplayName("링크 생성 성공 시 DB에 저장되고 200 OK 응답")
 	void shouldCreateLinkSuccessfully() throws Exception {
 		// given
-		LinkCreateReq req = new LinkCreateReq("https://example.com", "테스트 링크", "테스트 메모", null);
+		String originalImageUrl = "https://original.com/image.jpg";
+		String uploadedS3Url = "https://s3.amazonaws.com/bucket/links/uuid.jpg";
+
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(uploadedS3Url);
+
+		LinkCreateReq req = new LinkCreateReq(
+			"https://example.com",
+			"테스트 링크",
+			"테스트 메모",
+			originalImageUrl
+		);
 
 		// when & then
 		mockMvc.perform(

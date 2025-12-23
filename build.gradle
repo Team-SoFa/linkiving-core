@@ -76,6 +76,11 @@ dependencies {
 
     // WebFlux
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    //s3
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.1.1")
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 }
 
 dependencyManagement {
