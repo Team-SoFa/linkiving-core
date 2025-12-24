@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,8 +19,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
-import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -61,7 +60,7 @@ class LinkServiceTest {
 			.willReturn(link);
 
 		// when
-		LinkRes createdLink = linkService.createLink(
+		Link save = linkService.createLink(
 			member,
 			"https://example.com",
 			"테스트 링크",
@@ -70,8 +69,8 @@ class LinkServiceTest {
 		);
 
 		// then
-		assertThat(createdLink).isNotNull();
-		assertThat(createdLink.url()).isEqualTo("https://example.com");
+		assertThat(save).isNotNull();
+		assertThat(save.getUrl()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
 		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
 	}
@@ -127,11 +126,11 @@ class LinkServiceTest {
 		given(linkCommandService.updateLink(any(), any(), any())).willReturn(updatedLink);
 
 		// when
-		LinkRes result = linkService.updateLink(1L, member, "수정된 제목", null);
+		Link result = linkService.updateLink(1L, member, "수정된 제목", null);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.title()).isEqualTo("수정된 제목");
+		assertThat(result.getTitle()).isEqualTo("수정된 제목");
 		verify(linkQueryService, times(1)).findById(1L, member);
 		verify(linkCommandService, times(1)).updateLink(any(), any(), any());
 	}
@@ -164,12 +163,12 @@ class LinkServiceTest {
 			.willReturn(updatedLink);
 
 		// when
-		LinkRes result = linkService.updateTitle(1L, member, "수정된 제목");
+		Link result = linkService.updateTitle(1L, member, "수정된 제목");
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.title()).isEqualTo("수정된 제목");
-		assertThat(result.memo()).isEqualTo("원본 메모");
+		assertThat(result.getTitle()).isEqualTo("수정된 제목");
+		assertThat(result.getMemo()).isEqualTo("원본 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
 		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"));
 	}
@@ -202,12 +201,12 @@ class LinkServiceTest {
 			.willReturn(updatedLink);
 
 		// when
-		LinkRes result = linkService.updateMemo(1L, member, "수정된 메모");
+		Link result = linkService.updateMemo(1L, member, "수정된 메모");
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.title()).isEqualTo("원본 제목");
-		assertThat(result.memo()).isEqualTo("수정된 메모");
+		assertThat(result.getTitle()).isEqualTo("원본 제목");
+		assertThat(result.getMemo()).isEqualTo("수정된 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
 		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"));
 	}
@@ -255,11 +254,11 @@ class LinkServiceTest {
 		given(linkQueryService.findById(1L, member)).willReturn(link);
 
 		// when
-		LinkRes result = linkService.getLink(1L, member);
+		Link result = linkService.getLink(1L, member);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.url()).isEqualTo("https://example.com");
+		assertThat(result.getUrl()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).findById(1L, member);
 	}
 
@@ -290,7 +289,7 @@ class LinkServiceTest {
 		given(linkQueryService.findAllByMember(member, pageable)).willReturn(expectedPage);
 
 		// when
-		Page<LinkRes> result = linkService.getLinkList(member, pageable);
+		Page<Link> result = linkService.getLinkList(member, pageable);
 
 		// then
 		assertThat(result).isNotNull();
@@ -310,11 +309,11 @@ class LinkServiceTest {
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.of(123L));
 
 		// when
-		LinkDuplicateCheckRes result = linkService.checkDuplicate(member, "https://example.com");
+		Optional<Long> result = linkService.findLinkIdByUrl(member, "https://example.com");
 
 		// then
-		assertThat(result.exists()).isTrue();
-		assertThat(result.linkId()).isEqualTo(123L);
+		assertThat(result).isPresent();
+		assertThat(result.get()).isEqualTo(123L);
 		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
 	}
 
@@ -330,11 +329,10 @@ class LinkServiceTest {
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.empty());
 
 		// when
-		LinkDuplicateCheckRes result = linkService.checkDuplicate(member, "https://example.com");
+		Optional<Long> result = linkService.findLinkIdByUrl(member, "https://example.com");
 
 		// then
-		assertThat(result.exists()).isFalse();
-		assertThat(result.linkId()).isNull();
+		assertThat(result).isEmpty();
 		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
 	}
 }
