@@ -19,13 +19,14 @@ import com.sofa.linkiving.global.common.BaseResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @Tag(name = "Link", description = "링크 관리 API")
 public interface LinkApi {
 
 	@Operation(summary = "메타 정보 수집", description = "URL의 OG 태그를 크롤링하여 메타 정보를 반환합니다")
 	BaseResponse<MetaScrapeRes> scrapeMetadata(
-		MetaScrapeReq request,
+		@Valid MetaScrapeReq request,
 		Member member
 	);
 
@@ -37,14 +38,14 @@ public interface LinkApi {
 
 	@Operation(summary = "링크 생성", description = "새로운 링크를 저장합니다")
 	BaseResponse<LinkRes> createLink(
-		LinkCreateReq request,
+		@Valid LinkCreateReq request,
 		Member member
 	);
 
 	@Operation(summary = "링크 수정", description = "링크 정보를 수정합니다. null이 아닌 필드만 수정됩니다.")
 	BaseResponse<LinkRes> updateLink(
 		Long id,
-		LinkUpdateReq request,
+		@Valid LinkUpdateReq request,
 		Member member
 	);
 
@@ -69,21 +70,21 @@ public interface LinkApi {
 	@Operation(summary = "링크 제목 수정", description = "링크 제목만 수정합니다")
 	BaseResponse<LinkRes> updateTitle(
 		Long id,
-		LinkTitleUpdateReq request,
+		@Valid LinkTitleUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "링크 메모 수정", description = "링크 메모만 수정합니다")
 	BaseResponse<LinkRes> updateMemo(
 		Long id,
-		LinkMemoUpdateReq request,
+		@Valid LinkMemoUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "요약 재생성", description = "요약을 재생성 하고 신규 요약 기존 요약, 기존 및 신규 요약 비교 정보을 제공합니다.")
 	BaseResponse<RecreateSummaryResponse> recreateSummary(
 		Long id,
-		@Schema(description = "요청 형식(CONCISE: 간결하게, DETAILED:자세하게)") Format format,
+		@Valid @Schema(description = "요청 형식(CONCISE: 간결하게, DETAILED:자세하게)") Format format,
 		Member member
 	);
 }

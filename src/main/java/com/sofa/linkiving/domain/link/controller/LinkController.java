@@ -29,7 +29,6 @@ import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -42,7 +41,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PostMapping("/meta-scrape")
 	public BaseResponse<MetaScrapeRes> scrapeMetadata(
-		@Valid @RequestBody MetaScrapeReq request,
+		@RequestBody MetaScrapeReq request,
 		@AuthMember Member member
 	) {
 		MetaScrapeRes response = linkFacade.scrapeMetadata(request.url());
@@ -62,7 +61,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PostMapping
 	public BaseResponse<LinkRes> createLink(
-		@Valid @RequestBody LinkCreateReq request,
+		@RequestBody LinkCreateReq request,
 		@AuthMember Member member
 	) {
 		LinkRes response = linkFacade.createLink(
@@ -79,7 +78,7 @@ public class LinkController implements LinkApi {
 	@PutMapping("/{id}")
 	public BaseResponse<LinkRes> updateLink(
 		@PathVariable Long id,
-		@Valid @RequestBody LinkUpdateReq request,
+		@RequestBody LinkUpdateReq request,
 		@AuthMember Member member
 	) {
 		LinkRes response = linkFacade.updateLink(
@@ -125,7 +124,7 @@ public class LinkController implements LinkApi {
 	@PatchMapping("/{id}/title")
 	public BaseResponse<LinkRes> updateTitle(
 		@PathVariable Long id,
-		@Valid @RequestBody LinkTitleUpdateReq request,
+		@RequestBody LinkTitleUpdateReq request,
 		@AuthMember Member member
 	) {
 		LinkRes response = linkFacade.updateTitle(id, member, request.title());
@@ -136,7 +135,7 @@ public class LinkController implements LinkApi {
 	@PatchMapping("/{id}/memo")
 	public BaseResponse<LinkRes> updateMemo(
 		@PathVariable Long id,
-		@Valid @RequestBody LinkMemoUpdateReq request,
+		@RequestBody LinkMemoUpdateReq request,
 		@AuthMember Member member
 	) {
 		LinkRes response = linkFacade.updateMemo(id, member, request.memo());
@@ -147,7 +146,7 @@ public class LinkController implements LinkApi {
 	@GetMapping("/{id}/summary")
 	public BaseResponse<RecreateSummaryResponse> recreateSummary(
 		@PathVariable Long id,
-		@Valid @RequestParam Format format,
+		@RequestParam Format format,
 		@AuthMember Member member
 	) {
 		RecreateSummaryResponse response = linkFacade.recreateSummary(member, id, format);
