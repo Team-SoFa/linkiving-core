@@ -1,6 +1,6 @@
 package com.sofa.linkiving.domain.link.dto.response;
 
-import com.sofa.linkiving.domain.link.dto.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

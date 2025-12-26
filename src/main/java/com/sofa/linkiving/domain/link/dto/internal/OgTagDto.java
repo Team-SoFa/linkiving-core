@@ -1,4 +1,4 @@
-package com.sofa.linkiving.domain.link.dto;
+package com.sofa.linkiving.domain.link.dto.internal;
 
 import lombok.Builder;
 

@@ -142,7 +142,7 @@ public class LinkApiIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("링크 조회 성공 시 200 OK 응답")
+	@DisplayName("링크 단건 조회 성공 시 요약 정보가 포함된 200 OK 응답")
 	void shouldGetLinkSuccessfully() throws Exception {
 		// given
 		Link link = linkRepository.save(Link.builder()
@@ -150,6 +150,13 @@ public class LinkApiIntegrationTest {
 			.url("https://example.com")
 			.title("테스트 링크")
 			.memo("테스트 메모")
+			.build());
+
+		summaryRepository.save(Summary.builder()
+			.link(link)
+			.content("이것은 요약 내용입니다.")
+			.format(Format.CONCISE)
+			.select(true)
 			.build());
 
 		// when & then
@@ -161,9 +168,12 @@ public class LinkApiIntegrationTest {
 			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.data.id").value(link.getId()))
 			.andExpect(jsonPath("$.data.url").value(link.getUrl()))
 			.andExpect(jsonPath("$.data.title").value(link.getTitle()))
-			.andExpect(jsonPath("$.data.memo").value(link.getMemo()));
+			.andExpect(jsonPath("$.data.memo").value(link.getMemo()))
+			.andExpect(jsonPath("$.data.summary").exists())
+			.andExpect(jsonPath("$.data.summary.content").value("이것은 요약 내용입니다."));
 	}
 
 	@Test
@@ -292,35 +302,46 @@ public class LinkApiIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("링크 목록 조회 성공 시 페이징된 결과 반환")
+	@DisplayName("링크 목록 조회 성공 시 커서 기반 페이징된 결과 반환")
 	void shouldGetLinkListSuccessfully() throws Exception {
 		// given
-		linkRepository.save(Link.builder()
+		Link link1 = linkRepository.save(Link.builder()
 			.member(testMember)
 			.url("https://example1.com")
 			.title("링크 1")
 			.build());
 
-		linkRepository.save(Link.builder()
+		Link link2 = linkRepository.save(Link.builder()
 			.member(testMember)
 			.url("https://example2.com")
 			.title("링크 2")
 			.build());
 
+		summaryRepository.save(Summary.builder()
+			.link(link2)
+			.content("링크 2 요약")
+			.format(Format.CONCISE)
+			.select(true)
+			.build());
+
 		// when & then
 		mockMvc.perform(
 				get(BASE_URL)
-					.param("page", "0")
-					.param("size", "20")
+					.param("size", "10")
 					.with(csrf())
 					.with(user(testUserDetails))
 					.accept(MediaType.APPLICATION_JSON)
 			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.content").isArray())
-			.andExpect(jsonPath("$.data.content.length()").value(2))
-			.andExpect(jsonPath("$.data.totalElements").value(2));
+			.andExpect(jsonPath("$.data.links").isArray())
+			.andExpect(jsonPath("$.data.links.length()").value(2))
+			.andExpect(jsonPath("$.data.links[0].title").value("링크 2"))
+			.andExpect(jsonPath("$.data.links[0].summary").value("링크 2 요약"))
+			.andExpect(jsonPath("$.data.links[1].title").value("링크 1"))
+			.andExpect(jsonPath("$.data.links[1].summary").isEmpty()) // 링크 1은 요약 없음
+			.andExpect(jsonPath("$.data.hasNext").value(false)) // 2개 조회, size 10이므로 다음 없음
+			.andExpect(jsonPath("$.data.lastId").value(link1.getId()));
 	}
 
 	@Test

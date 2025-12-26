@@ -1,11 +1,13 @@
 package com.sofa.linkiving.domain.link.facade;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sofa.linkiving.domain.link.dto.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
+import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
+import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
@@ -53,15 +55,15 @@ public class LinkFacade {
 	}
 
 	@Transactional(readOnly = true)
-	public LinkRes getLink(Long linkId, Member member) {
-		Link link = linkService.getLink(linkId, member);
-		return LinkRes.from(link);
+	public LinkDetailRes getLinkDetail(Long linkId, Member member) {
+		LinkDto linkDto = linkService.getLinkWithSummary(linkId, member);
+		return LinkDetailRes.from(linkDto);
 	}
 
 	@Transactional(readOnly = true)
-	public Page<LinkRes> getLinkList(Member member, Pageable pageable) {
-		Page<Link> links = linkService.getLinkList(member, pageable);
-		return links.map(LinkRes::from);
+	public LinkCardsRes getLinkCards(Member member, Long lastId, int size) {
+		LinksDto linkDtos = linkService.getLinksWithSummary(member, lastId, size);
+		return LinkCardsRes.of(linkDtos);
 	}
 
 	@Transactional(readOnly = true)

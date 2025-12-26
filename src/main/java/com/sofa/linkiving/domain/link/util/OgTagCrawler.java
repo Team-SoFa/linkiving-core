@@ -6,7 +6,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Component;
 
-import com.sofa.linkiving.domain.link.dto.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 
 import lombok.extern.slf4j.Slf4j;
 

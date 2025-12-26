@@ -2,16 +2,21 @@ package com.sofa.linkiving.domain.link.repository;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import jakarta.persistence.EntityManager;
@@ -82,32 +87,6 @@ class LinkRepositoryTest {
 	}
 
 	@Test
-	@DisplayName("멤버의 링크 목록을 페이징 조회할 수 있다")
-	void shouldFindByMemberWithPaging() {
-		// given
-		Link link1 = Link.builder()
-			.member(testMember)
-			.url("https://example1.com")
-			.title("링크 1")
-			.build();
-		Link link2 = Link.builder()
-			.member(testMember)
-			.url("https://example2.com")
-			.title("링크 2")
-			.build();
-		linkRepository.save(link1);
-		linkRepository.save(link2);
-
-		// when
-		Page<Link> links = linkRepository.findByMemberAndIsDeleteFalse(
-			testMember, PageRequest.of(0, 10));
-
-		// then
-		assertThat(links.getTotalElements()).isEqualTo(2);
-		assertThat(links.getContent()).hasSize(2);
-	}
-
-	@Test
 	@DisplayName("URL 중복을 체크할 수 있다")
 	void shouldCheckUrlDuplication() {
 		// given
@@ -130,24 +109,93 @@ class LinkRepositoryTest {
 	}
 
 	@Test
-	@DisplayName("삭제된 링크는 조회되지 않는다")
-	void shouldNotFindDeletedLink() {
+	@DisplayName("ID로 링크와 선택된 요약 정보(LinkDto)를 함께 조회할 수 있다")
+	void shouldFindByIdAndMemberWithSummary() {
 		// given
 		Link link = Link.builder()
 			.member(testMember)
-			.url("https://example.com")
-			.title("테스트 링크")
+			.url("https://summary-test.com")
+			.title("요약 테스트 링크")
 			.build();
-		Link savedLink = linkRepository.save(link);
+		entityManager.persist(link);
 
-		savedLink.markDeleted();
-		linkRepository.save(savedLink);
+		Summary selectedSummary = Summary.builder()
+			.link(link)
+			.content("선택된 요약 내용")
+			.format(Format.CONCISE)
+			.select(true)
+			.build();
+		entityManager.persist(selectedSummary);
+
+		Summary otherSummary = Summary.builder()
+			.link(link)
+			.content("다른 요약")
+			.format(Format.CONCISE)
+			.select(false)
+			.build();
+		entityManager.persist(otherSummary);
+
+		entityManager.flush();
+		entityManager.clear();
 
 		// when
-		Page<Link> links = linkRepository.findByMemberAndIsDeleteFalse(
-			testMember, PageRequest.of(0, 10));
+		Optional<LinkDto> result = linkRepository.findByIdAndMemberWithSummaryAndIsDeleteFalse(link.getId(),
+			testMember);
 
 		// then
-		assertThat(links.getTotalElements()).isEqualTo(0);
+		assertThat(result).isPresent();
+		assertThat(result.get().link().getUrl()).isEqualTo("https://summary-test.com");
+		assertThat(result.get().summary()).isNotNull();
+		assertThat(result.get().summary().getContent()).isEqualTo("선택된 요약 내용");
+	}
+
+	@Test
+	@DisplayName("링크 목록을 요약 정보와 함께 커서 기반으로 조회할 수 있다")
+	void shouldFindAllByMemberWithSummaryAndCursor() {
+		// given
+		for (int i = 1; i <= 3; i++) {
+			Link link = Link.builder()
+				.member(testMember)
+				.url("https://paging-" + i + ".com")
+				.title("링크 " + i)
+				.build();
+			entityManager.persist(link);
+
+			// 짝수 번째 링크에만 요약 추가
+			if (i % 2 == 0) {
+				Summary summary = Summary.builder()
+					.link(link)
+					.content("요약 " + i)
+					.format(Format.CONCISE)
+					.select(true)
+					.build();
+				entityManager.persist(summary);
+			}
+		}
+		entityManager.flush();
+		entityManager.clear();
+
+		// when 1
+		List<LinkDto> page1 = linkRepository.findAllByMemberWithSummaryAndCursorAndIsDeleteFalse(
+			testMember, null, PageRequest.of(0, 2));
+
+		// then 1
+		assertThat(page1).hasSize(2);
+		assertThat(page1.get(0).link().getTitle()).isEqualTo("링크 3");
+		assertThat(page1.get(0).summary()).isNull(); // 요약 없음
+
+		assertThat(page1.get(1).link().getTitle()).isEqualTo("링크 2");
+		assertThat(page1.get(1).summary()).isNotNull(); // 요약 있음
+		assertThat(page1.get(1).summary().getContent()).isEqualTo("요약 2");
+
+		Long lastId = page1.get(1).link().getId();
+
+		// when 2 - 다음 내용
+		List<LinkDto> page2 = linkRepository.findAllByMemberWithSummaryAndCursorAndIsDeleteFalse(
+			testMember, lastId, PageRequest.of(0, 2));
+
+		// then 2
+		assertThat(page2).hasSize(1);
+		assertThat(page2.get(0).link().getTitle()).isEqualTo("링크 1");
 	}
 }
