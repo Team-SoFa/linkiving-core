@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
@@ -24,6 +26,12 @@ public class ChatFacade {
 	private final MessageService messageService;
 	private final FeedbackService feedbackService;
 	private final AiTitleClient aiTitleClient;
+
+	public MessagesRes getMessages(Member member, Long chatId, Long lastId, int size) {
+		Chat chat = chatService.getChat(chatId, member);
+		MessagesDto result = messageService.getMessages(chat, lastId, size);
+		return MessagesRes.of(result.messages(), result.hasNext());
+	}
 
 	@Transactional
 	public CreateChatRes createChat(String firstChat, Member member) {

@@ -1,6 +1,5 @@
 package com.sofa.linkiving.domain.chat.service;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -8,6 +7,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
@@ -32,8 +32,8 @@ public class MessageService {
 		messageCommandService.deleteAllByChat(chat);
 	}
 
-	public List<Message> getMessagesByChat(Chat chat) {
-		return messageQueryService.findAllByChat(chat);
+	public MessagesDto getMessages(Chat chat, Long lastId, int size) {
+		return messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 	}
 
 	public void generateAnswer(Chat chat, String userMessage) {

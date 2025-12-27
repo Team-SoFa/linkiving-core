@@ -25,10 +25,9 @@ import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Type;
+import com.sofa.linkiving.domain.chat.facade.ChatFacade;
 import com.sofa.linkiving.domain.chat.repository.ChatRepository;
 import com.sofa.linkiving.domain.chat.repository.MessageRepository;
-import com.sofa.linkiving.domain.chat.service.FeedbackService;
-import com.sofa.linkiving.domain.chat.service.MessageService;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
@@ -39,7 +38,7 @@ import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
-class ChatIntegrationTest {
+public class ChatApiIntegrationTest {
 
 	private static final String BASE_URL = "/v1/chats";
 
@@ -61,14 +60,11 @@ class ChatIntegrationTest {
 	@Autowired
 	private AiTitleClient aiTitleClient;
 
+	@Autowired
+	private ChatFacade chatFacade;
+
 	@MockitoBean
 	private RedisService redisService;
-
-	@MockitoBean
-	private FeedbackService feedbackService;
-
-	@MockitoBean
-	private MessageService messageService;
 
 	private UserDetails testUserDetails;
 	private Member testMember;
@@ -81,6 +77,50 @@ class ChatIntegrationTest {
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);
+	}
+
+	@Test
+	@DisplayName("메시지 조회 성공 시 200 OK와 데이터 반환")
+	void shouldReturnMessagesWhenValidRequest() throws Exception {
+		// given
+		Chat chat = chatRepository.save(Chat.builder()
+			.member(testMember)
+			.title("테스트 채팅방")
+			.build());
+
+		messageRepository.save(Message.builder()
+			.chat(chat)
+			.content("안녕하세요")
+			.type(Type.USER)
+			.build());
+
+		messageRepository.save(Message.builder()
+			.chat(chat)
+			.content("반갑습니다")
+			.type(Type.AI)
+			.build());
+
+		// when & then
+		mockMvc.perform(get(BASE_URL + "/{chatId}", chat.getId())
+				.param("size", "20")
+				.with(user(testUserDetails)))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true));
+	}
+
+	@Test
+	@DisplayName("조회 개수(size)가 50을 초과하면 400 Bad Request 반환 (Validation)")
+	void shouldReturn400WhenSizeExceedsLimit() throws Exception {
+		// given
+		Long chatId = 1L;
+
+		// when & then
+		mockMvc.perform(get(BASE_URL + "/{chatId}", chatId)
+				.param("size", "100")
+				.with(user(testUserDetails)))
+			.andDo(print())
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -151,7 +191,6 @@ class ChatIntegrationTest {
 			.title("Chat 2")
 			.build());
 
-		// 생성 시간 차이를 두기 위해 잠시 대기 (정렬 테스트)
 		Thread.sleep(10);
 
 		Chat chat1 = chatRepository.save(Chat.builder()
