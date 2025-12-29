@@ -55,18 +55,18 @@ public class SummaryTest {
 
 		Format format = Format.DETAILED;
 		String content = "This is a detailed summary";
-		String select = "Selected text from the page";
+		boolean selected = true;
 
 		Summary summary = Summary.builder()
 			.link(link)
 			.format(format)
 			.content(content)
-			.select(select)
+			.selected(selected)
 			.build();
 
 		assertThat(summary.getLink()).isEqualTo(link);
 		assertThat(summary.getContent()).isEqualTo(content);
 		assertThat(summary.getFormat()).isEqualTo(format);
-		assertThat(summary.getSelected()).isEqualTo(select);
+		assertThat(summary.isSelected()).isTrue();
 	}
 }
