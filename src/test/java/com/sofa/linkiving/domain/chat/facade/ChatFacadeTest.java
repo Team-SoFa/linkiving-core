@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.facade;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,8 +14,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
+import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
@@ -40,6 +43,34 @@ public class ChatFacadeTest {
 
 	@Mock
 	private Member member;
+
+	@Test
+	@DisplayName("특정 채팅방의 메시지 목록을 조회한다")
+	void shouldGetMessages() {
+		// given
+		Long chatId = 1L;
+		Long lastId = 100L;
+		int size = 20;
+
+		Member member = mock(Member.class);
+		Chat chat = mock(Chat.class);
+
+		given(chatService.getChat(chatId, member)).willReturn(chat);
+
+		MessagesDto messagesDto = new MessagesDto(Collections.emptyList(), false);
+		given(messageService.getMessages(chat, lastId, size)).willReturn(messagesDto);
+
+		// when
+		MessagesRes result = chatFacade.getMessages(member, chatId, lastId, size);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.messages()).isEmpty();
+		assertThat(result.hasNext()).isFalse();
+
+		verify(chatService).getChat(chatId, member);
+		verify(messageService).getMessages(chat, lastId, size);
+	}
 
 	@Test
 	@DisplayName("ChatService.getChats 호출 및 ChatsRes 변환 반환")

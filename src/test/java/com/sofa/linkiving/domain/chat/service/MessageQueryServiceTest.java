@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
@@ -25,20 +28,52 @@ public class MessageQueryServiceTest {
 	@Mock
 	private MessageRepository messageRepository;
 
-	@Test
-	@DisplayName("MessageRepository.findAllByChat 호출 및 결과 반환")
-	void shouldReturnMessagesWhenFindAllByChat() {
-		// given
-		Chat chat = mock(Chat.class);
-		List<Message> expectedMessages = List.of(mock(Message.class));
+	@Mock
+	private Chat chat;
 
-		given(messageRepository.findAllByChat(chat)).willReturn(expectedMessages);
+	@Test
+	@DisplayName("요청 개수 초과 데이터가 존재 시 hasNext=true 반환 및 데이터를 잘라서 반환: (요청 개수 :10개 ,데이터 :11개)")
+	void shouldReturnHasNextTrueWhenMoreDataExists() {
+		// given
+		Long lastId = 100L;
+		int size = 10;
+
+		List<Message> messageDtos = new ArrayList<>();
+		for (int i = 0; i < size + 1; i++) {
+			messageDtos.add(mock(Message.class));
+		}
+
+		given(messageRepository.findAllByChatAndCursor(eq(chat), eq(lastId), any(Pageable.class)))
+			.willReturn(messageDtos);
 
 		// when
-		List<Message> result = messageQueryService.findAllByChat(chat);
+		Slice<Message> result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 
 		// then
-		assertThat(result).isEqualTo(expectedMessages);
-		verify(messageRepository).findAllByChat(chat);
+		assertThat(result.hasNext()).isTrue();
+		assertThat(result.getContent()).hasSize(size);
+	}
+
+	@Test
+	@DisplayName("요청 개수 이하로 데이터 존재 시 hasNext=false 반환 (요청 개수 :10개 ,데이터 :10개)")
+	void shouldReturnHasNextFalseWhenNoMoreData() {
+		// given
+		Long lastId = 100L;
+		int size = 10;
+
+		List<Message> messageDtos = new ArrayList<>();
+		for (int i = 0; i < size; i++) {
+			messageDtos.add(mock(Message.class));
+		}
+
+		given(messageRepository.findAllByChatAndCursor(eq(chat), eq(lastId), any(Pageable.class)))
+			.willReturn(messageDtos);
+
+		// when
+		Slice<Message> result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
+
+		// then
+		assertThat(result.hasNext()).isFalse();
+		assertThat(result.getContent()).hasSize(size);
 	}
 }

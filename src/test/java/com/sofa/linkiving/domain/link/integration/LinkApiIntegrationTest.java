@@ -355,7 +355,10 @@ public class LinkApiIntegrationTest {
 			.memo("원래 메모")
 			.build());
 
-		LinkUpdateReq req = new LinkUpdateReq("수정된 제목", "수정된 메모");
+		LinkUpdateReq req = new LinkUpdateReq(
+			"수정된 제목",
+			"수정된 메모"
+		);
 
 		// when & then
 		mockMvc.perform(

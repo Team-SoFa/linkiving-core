@@ -1,15 +1,22 @@
 package com.sofa.linkiving.domain.chat.controller;
 
+import org.springframework.validation.annotation.Validated;
+
 import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
+import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
+@Validated
 @Tag(name = "Chat", description = """
 	AI 채팅 통합 명세 (HTTP + WebSocket)
 
@@ -27,12 +34,24 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 	""")
 public interface ChatApi {
+	@Operation(summary = "채팅 기록 조회", description = "채팅 기록을 최신순으로 조회합니다. 무한 스크롤 방식으로 제공됩니다.")
+	BaseResponse<MessagesRes> getMessages(
+		Member member,
+		@Parameter(description = "채팅방 ID") Long chatId,
+		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null") Long lastId,
+
+		@Parameter(description = "페이지 크기")
+		@Min(value = 1, message = "최소 1개 이상 조회해야 합니다.")
+		@Max(value = 50, message = "한 번에 최대 50개까지만 조회할 수 있습니다.")
+		int size
+	);
+
 	@Operation(summary = "채팅방 목록 조회", description = "사용자의 채팅방 목록 정보(채팅방 Id, 제목)을 조회합니다.")
 	BaseResponse<ChatsRes> getChats(Member member);
 
 	@Operation(summary = "새로운 채팅 생성", description = "새로운 채팅을 생성합니다.")
 	BaseResponse<CreateChatRes> createChat(
-		CreateChatReq req,
+		@Valid CreateChatReq req,
 		Member member
 	);
 
