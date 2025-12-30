@@ -1,4 +1,4 @@
-package com.sofa.linkiving.domain.report.cotroller;
+package com.sofa.linkiving.domain.report.controller;
 
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.report.dto.request.ReportReq;

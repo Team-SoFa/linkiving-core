@@ -1,4 +1,4 @@
-package com.sofa.linkiving.domain.report.cotroller;
+package com.sofa.linkiving.domain.report.controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
