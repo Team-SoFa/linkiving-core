@@ -13,8 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
-import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.repository.MessageRepository;
@@ -38,20 +38,20 @@ public class MessageQueryServiceTest {
 		Long lastId = 100L;
 		int size = 10;
 
-		List<Message> messages = new ArrayList<>();
+		List<Message> messageDtos = new ArrayList<>();
 		for (int i = 0; i < size + 1; i++) {
-			messages.add(mock(Message.class));
+			messageDtos.add(mock(Message.class));
 		}
 
 		given(messageRepository.findAllByChatAndCursor(eq(chat), eq(lastId), any(Pageable.class)))
-			.willReturn(messages);
+			.willReturn(messageDtos);
 
 		// when
-		MessagesDto result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
+		Slice<Message> result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 
 		// then
 		assertThat(result.hasNext()).isTrue();
-		assertThat(result.messages()).hasSize(size);
+		assertThat(result.getContent()).hasSize(size);
 	}
 
 	@Test
@@ -61,19 +61,19 @@ public class MessageQueryServiceTest {
 		Long lastId = 100L;
 		int size = 10;
 
-		List<Message> messages = new ArrayList<>();
+		List<Message> messageDtos = new ArrayList<>();
 		for (int i = 0; i < size; i++) {
-			messages.add(mock(Message.class));
+			messageDtos.add(mock(Message.class));
 		}
 
 		given(messageRepository.findAllByChatAndCursor(eq(chat), eq(lastId), any(Pageable.class)))
-			.willReturn(messages);
+			.willReturn(messageDtos);
 
 		// when
-		MessagesDto result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
+		Slice<Message> result = messageQueryService.findAllByChatAndCursor(chat, lastId, size);
 
 		// then
 		assertThat(result.hasNext()).isFalse();
-		assertThat(result.messages()).hasSize(size);
+		assertThat(result.getContent()).hasSize(size);
 	}
 }

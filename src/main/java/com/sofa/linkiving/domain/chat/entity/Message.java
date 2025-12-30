@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.chat.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.global.common.BaseEntity;
@@ -54,5 +55,12 @@ public class Message extends BaseEntity {
 		this.type = type;
 		this.content = content;
 		this.links = (links != null) ? links : new ArrayList<>();
+	}
+
+	public Sentiment getSentimentOrDefault() {
+		if (this.type != Type.AI) {
+			return null;
+		}
+		return (this.feedback != null) ? this.feedback.getSentiment() : Sentiment.NONE;
 	}
 }

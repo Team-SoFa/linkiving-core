@@ -30,7 +30,7 @@ public class ChatFacade {
 	public MessagesRes getMessages(Member member, Long chatId, Long lastId, int size) {
 		Chat chat = chatService.getChat(chatId, member);
 		MessagesDto result = messageService.getMessages(chat, lastId, size);
-		return MessagesRes.of(result.messages(), result.hasNext());
+		return MessagesRes.of(result.messageDtos(), result.hasNext());
 	}
 
 	@Transactional
