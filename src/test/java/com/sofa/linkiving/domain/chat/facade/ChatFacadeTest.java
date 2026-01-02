@@ -74,7 +74,7 @@ public class ChatFacadeTest {
 		given(mockChat.getId()).willReturn(chatId);
 		given(mockChat.getTitle()).willReturn(generatedTitle);
 
-		given(aiTitleClient.generateSummary(firstChat)).willReturn(generatedTitle);
+		given(aiTitleClient.generateTitle(firstChat)).willReturn(generatedTitle);
 		given(chatService.createChat(generatedTitle, member)).willReturn(mockChat);
 
 		// when
