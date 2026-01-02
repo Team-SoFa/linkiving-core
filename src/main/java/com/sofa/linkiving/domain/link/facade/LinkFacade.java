@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.link.facade;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
@@ -29,9 +30,11 @@ public class LinkFacade {
 	private final LinkService linkService;
 	private final OgTagCrawler ogTagCrawler;
 	private final SummaryService summaryService;
+	private final ImageUploader imageUploader;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
-		Link link = linkService.createLink(member, url, title, memo, imageUrl);
+		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 		return LinkRes.from(link);
 	}
 
