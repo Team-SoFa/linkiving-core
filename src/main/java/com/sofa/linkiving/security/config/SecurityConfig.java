@@ -46,7 +46,7 @@ public class SecurityConfig {
 		"/ws/chat/**",
 
 		/* temp */
-		"/v1/member/**", "/mock/**",
+		"/v1/member/**", "/mock/**", "/chat.html",
 
 		/* oauth2 */
 		"/oauth2/**"
