@@ -626,7 +626,6 @@ public class LinkApiIntegrationTest {
 			.title("테스트 링크")
 			.build());
 
-		Format format = Format.DETAILED;
 		Long linkId = savedLink.getId();
 
 		summaryRepository.save(Summary.builder()
@@ -634,6 +633,8 @@ public class LinkApiIntegrationTest {
 			.content("기존 요약입니다.")
 			.selected(true)
 			.build());
+
+		Format format = Format.DETAILED;
 
 		RegenerateSummaryReq req = new RegenerateSummaryReq(format);
 
