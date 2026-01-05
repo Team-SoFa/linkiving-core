@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
+import com.sofa.linkiving.domain.chat.ai.TitleClient;
 import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
 import com.sofa.linkiving.domain.chat.dto.response.MessageRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
@@ -73,7 +73,7 @@ public class ChatApiIntegrationTest {
 	private SummaryRepository summaryRepository;
 
 	@Autowired
-	private AiTitleClient aiTitleClient;
+	private TitleClient titleClient;
 
 	@Autowired
 	private ChatFacade chatFacade;
@@ -186,7 +186,7 @@ public class ChatApiIntegrationTest {
 		// given
 		String firstChatContent = "AI 관련 최신 뉴스 알려줘";
 		CreateChatReq req = new CreateChatReq(firstChatContent);
-		String title = aiTitleClient.generateSummary(firstChatContent);
+		String title = titleClient.generateTitle(firstChatContent);
 
 		// when & then
 		mockMvc.perform(post(BASE_URL)
@@ -248,6 +248,7 @@ public class ChatApiIntegrationTest {
 			.title("Chat 2")
 			.build());
 
+		// 생성 시간 차이를 두기 위해 잠시 대기 (정렬 테스트)
 		Thread.sleep(10);
 
 		Chat chat1 = chatRepository.save(Chat.builder()

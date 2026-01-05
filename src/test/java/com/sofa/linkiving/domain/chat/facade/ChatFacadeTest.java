@@ -13,7 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sofa.linkiving.domain.chat.ai.AiTitleClient;
+import com.sofa.linkiving.domain.chat.ai.TitleClient;
 import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
@@ -39,7 +39,7 @@ public class ChatFacadeTest {
 	private FeedbackService feedbackService;
 
 	@Mock
-	private AiTitleClient aiTitleClient;
+	private TitleClient titleClient;
 
 	@Mock
 	private Member member;
@@ -105,7 +105,7 @@ public class ChatFacadeTest {
 		given(mockChat.getId()).willReturn(chatId);
 		given(mockChat.getTitle()).willReturn(generatedTitle);
 
-		given(aiTitleClient.generateSummary(firstChat)).willReturn(generatedTitle);
+		given(titleClient.generateTitle(firstChat)).willReturn(generatedTitle);
 		given(chatService.createChat(generatedTitle, member)).willReturn(mockChat);
 
 		// when
