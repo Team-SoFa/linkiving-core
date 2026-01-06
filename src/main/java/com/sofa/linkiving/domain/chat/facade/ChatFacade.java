@@ -1,30 +1,40 @@
 package com.sofa.linkiving.domain.chat.facade;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.chat.ai.TitleClient;
 import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
+import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.domain.chat.manager.TaskManager;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
 import com.sofa.linkiving.domain.chat.service.MessageService;
+import com.sofa.linkiving.domain.chat.service.RagChatService;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ChatFacade {
 	private final ChatService chatService;
 	private final MessageService messageService;
 	private final FeedbackService feedbackService;
+	private final RagChatService ragChatService;
+	private final TaskManager taskManager;
+	private final SimpMessagingTemplate messagingTemplate;
 	private final TitleClient titleClient;
 
 	public MessagesRes getMessages(Member member, Long chatId, Long lastId, int size) {
@@ -57,12 +67,37 @@ public class ChatFacade {
 
 	@Transactional
 	public void generateAnswer(Long chatId, Member member, String message) {
-		Chat chat = chatService.getChat(chatId, member);
-		messageService.generateAnswer(chat, message);
+
+		CompletableFuture<AnswerRes> task = ragChatService.generateAnswer(chatId, member, message);
+
+		taskManager.put(chatId, task);
+
+		task.whenComplete((result, ex) -> {
+			taskManager.remove(chatId);
+
+			if (task.isCancelled() || ex != null) {
+				sendNotification(chatId, member, AnswerRes.error(chatId, message));
+				return;
+			}
+
+			if (result != null) {
+				sendNotification(chatId, member, result);
+			}
+		});
+	}
+
+	private void sendNotification(Long chatId, Member member, AnswerRes res) {
+		messagingTemplate.convertAndSendToUser(
+			member.getEmail(),
+			"/queue/chat",
+			res
+		);
 	}
 
 	public void cancelAnswer(Long chatId, Member member) {
-		Chat chat = chatService.getChat(chatId, member);
-		messageService.cancelAnswer(chat);
+		if (chatService.existsChat(member, chatId)) {
+			log.info("Cancelling answer for chat {}", chatId);
+			taskManager.cancel(chatId);
+		}
 	}
 }

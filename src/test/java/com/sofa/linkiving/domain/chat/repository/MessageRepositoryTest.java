@@ -194,4 +194,53 @@ class MessageRepositoryTest {
 		assertThat(result.get(0).getFeedback()).isNotNull();
 		assertThat(result.get(0).getFeedback().getText()).isEqualTo("Good");
 	}
+
+	@Test
+	@DisplayName(" 특정 ID보다 작은 메시지 중 최신 7개를 내림차순으로 조회")
+	void shouldReturnTop7MessagesBeforeGivenIdDesc() {
+		// given
+		for (int i = 1; i <= 15; i++) {
+			messageRepository.save(Message.builder()
+				.chat(chat)
+				.content("Message " + i)
+				.type(Type.USER)
+				.build());
+		}
+
+		List<Message> allMessages = messageRepository.findAll();
+		Long targetId = allMessages.get(10).getId();
+
+		// when
+		List<Message> result = messageRepository.findTop7ByChatAndIdLessThanOrderByIdDesc(chat, targetId);
+
+		// then
+		assertThat(result).hasSize(7);
+		assertThat(result).allMatch(msg -> msg.getId() < targetId);
+		assertThat(result.get(0).getId()).isGreaterThan(result.get(1).getId());
+		assertThat(result.get(0).getContent()).isEqualTo(allMessages.get(9).getContent()); // ID 10
+		assertThat(result.get(6).getContent()).isEqualTo(allMessages.get(3).getContent()); // ID 4
+	}
+
+	@Test
+	@DisplayName(" 조건에 맞는 메시지가 7개 미만이면 전체 반환")
+	void shouldReturnAllMessages_WhenLessThan7() {
+		// given
+		for (int i = 1; i <= 5; i++) {
+			messageRepository.save(Message.builder()
+				.chat(chat)
+				.content("Message " + i)
+				.type(Type.USER)
+				.build());
+		}
+
+		List<Message> allMessages = messageRepository.findAll();
+		Long targetId = allMessages.get(4).getId() + 100L;
+
+		// when
+		List<Message> result = messageRepository.findTop7ByChatAndIdLessThanOrderByIdDesc(chat, targetId);
+
+		// then
+		assertThat(result).hasSize(5);
+		assertThat(result.get(0).getId()).isGreaterThan(result.get(4).getId()); // 정렬 확인
+	}
 }

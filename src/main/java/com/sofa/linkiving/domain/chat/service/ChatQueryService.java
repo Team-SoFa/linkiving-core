@@ -26,4 +26,8 @@ public class ChatQueryService {
 	public List<Chat> findAllOrderByLastMessageDesc(Member member) {
 		return chatRepository.findAllByMemberOrderByLastMessageDesc(member);
 	}
+
+	public boolean existsByIdAndMember(Member member, Long chatId) {
+		return chatRepository.existsByIdAndMember(chatId, member);
+	}
 }

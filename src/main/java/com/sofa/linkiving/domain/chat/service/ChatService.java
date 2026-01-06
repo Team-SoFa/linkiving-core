@@ -30,4 +30,8 @@ public class ChatService {
 	public Chat createChat(String title, Member member) {
 		return chatCommandService.saveChat(title, member);
 	}
+
+	public boolean existsChat(Member member, Long chatId) {
+		return chatQueryService.existsByIdAndMember(member, chatId);
+	}
 }

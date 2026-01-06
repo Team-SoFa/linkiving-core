@@ -39,4 +39,8 @@ public class MessageQueryService {
 
 		return new SliceImpl<>(messages, pageRequest, hasNext);
 	}
+
+	public List<Message> findTop7ByChatIdAndIdLessThanOrderByIdDesc(Long id, Chat chat) {
+		return messageRepository.findTop7ByChatAndIdLessThanOrderByIdDesc(chat, id);
+	}
 }

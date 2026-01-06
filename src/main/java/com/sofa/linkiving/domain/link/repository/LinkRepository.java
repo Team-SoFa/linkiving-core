@@ -52,4 +52,17 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable
 	);
+
+	@Query("""
+		SELECT new com.sofa.linkiving.domain.link.dto.internal.LinkDto(l, s)
+		FROM Link l
+		LEFT JOIN Summary s ON s.link = l AND s.selected = true
+		WHERE l.id IN :linkIds
+		AND l.member = :member
+		AND l.isDelete = false
+		""")
+	List<LinkDto> findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(
+		@Param("linkIds") List<Long> linkIds,
+		@Param("member") Member member
+	);
 }
