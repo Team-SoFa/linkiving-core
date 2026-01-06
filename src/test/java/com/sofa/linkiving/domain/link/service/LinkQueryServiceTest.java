@@ -187,4 +187,23 @@ class LinkQueryServiceTest {
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.LINK_NOT_FOUND);
 	}
+
+	@Test
+	@DisplayName("리포지토리를 호출하여 링크 목록을 반환한다")
+	void shouldReturnLinks_WhenCalled() {
+		// given
+		Member member = mock(Member.class);
+		List<Long> linkIds = List.of(1L, 2L, 3L);
+		List<LinkDto> expectedDtos = List.of(mock(LinkDto.class));
+
+		given(linkRepository.findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(linkIds, member))
+			.willReturn(expectedDtos);
+
+		// when
+		List<LinkDto> result = linkQueryService.findAllByIdInWithSummary(linkIds, member);
+
+		// then
+		assertThat(result).isEqualTo(expectedDtos);
+		verify(linkRepository).findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(linkIds, member);
+	}
 }

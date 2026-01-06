@@ -1,6 +1,5 @@
 package com.sofa.linkiving.domain.chat.controller;
 
-import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sofa.linkiving.domain.chat.dto.request.AnswerCancelReq;
+import com.sofa.linkiving.domain.chat.dto.request.AnswerReq;
 import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
@@ -51,15 +52,15 @@ public class ChatController implements ChatApi {
 	}
 
 	@Override
-	@MessageMapping("/send/{chatId}")
-	public void sendMessage(@DestinationVariable Long chatId, @Payload String message, @AuthMember Member member) {
-		chatFacade.generateAnswer(chatId, member, message);
+	@MessageMapping("/send")
+	public void sendMessage(@Payload AnswerReq req, @AuthMember Member member) {
+		chatFacade.generateAnswer(req.chatId(), member, req.message());
 	}
 
 	@Override
-	@MessageMapping("/cancel/{chatId}")
-	public void cancelMessage(@DestinationVariable Long chatId, @AuthMember Member member) {
-		chatFacade.cancelAnswer(chatId, member);
+	@MessageMapping("/cancel")
+	public void cancelMessage(@Payload AnswerCancelReq req, @AuthMember Member member) {
+		chatFacade.cancelAnswer(req.chatId(), member);
 	}
 
 	@Override
