@@ -26,15 +26,18 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 @ExtendWith(MockitoExtension.class)
 public class MessageQueryServiceTest {
 
-	@Mock
-	Member member;
 	@InjectMocks
 	private MessageQueryService messageQueryService;
+
 	@Mock
 	private MessageRepository messageRepository;
 
 	@Mock
+	private Member member;
+
+	@Mock
 	private Chat chat;
+
 
 	@Test
 	@DisplayName("요청 개수 초과 데이터가 존재 시 hasNext=true 반환 및 데이터를 잘라서 반환: (요청 개수 :10개 ,데이터 :11개)")
@@ -112,5 +115,24 @@ public class MessageQueryServiceTest {
 			.extracting("errorCode")
 			.isEqualTo(MessageErrorCode.MESSAGE_NOT_FOUND);
 	}
-}
 
+	@Test
+	@DisplayName("리포지토리를 호출하여 조건에 맞는 메시지 목록을 반환한다")
+	void shouldReturnMessages_WhenFound() {
+		// given
+		Long lastId = 100L;
+		Chat chat = mock(Chat.class);
+		Message message = mock(Message.class);
+		List<Message> expectedMessages = List.of(message);
+
+		given(messageRepository.findTop7ByChatAndIdLessThanOrderByIdDesc(chat, lastId))
+			.willReturn(expectedMessages);
+
+		// when
+		List<Message> result = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(lastId, chat);
+
+		// then
+		assertThat(result).isEqualTo(expectedMessages);
+		verify(messageRepository).findTop7ByChatAndIdLessThanOrderByIdDesc(chat, lastId);
+	}
+}

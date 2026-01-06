@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,16 +13,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import com.sofa.linkiving.domain.chat.ai.TitleClient;
 import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
+import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.ChatsRes;
 import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.domain.chat.manager.TaskManager;
 import com.sofa.linkiving.domain.chat.service.ChatService;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
 import com.sofa.linkiving.domain.chat.service.MessageService;
+import com.sofa.linkiving.domain.chat.service.RagChatService;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +45,15 @@ public class ChatFacadeTest {
 
 	@Mock
 	private TitleClient titleClient;
+
+	@Mock
+	private RagChatService ragChatService;
+
+	@Mock
+	private TaskManager taskManager;
+
+	@Mock
+	private SimpMessagingTemplate messagingTemplate;
 
 	@Mock
 	private Member member;
@@ -139,5 +153,129 @@ public class ChatFacadeTest {
 		verify(messageService).deleteAll(chat);
 		// 3. 채팅방 삭제 호출 확인
 		verify(chatService).delete(chat);
+	}
+
+	@Test
+	@DisplayName("답변 생성이 성공하면 TaskManager에서 제거하고 성공 알림 전송")
+	void shouldSendNotificationWhenAnswerGeneratedSuccessfully() {
+		// given
+		Long chatId = 1L;
+		String userMessage = "질문입니다";
+		member = mock(Member.class);
+		given(member.getEmail()).willReturn("test@test.com");
+
+		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
+
+		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+
+		// when
+		chatFacade.generateAnswer(chatId, member, userMessage);
+
+		// then
+		verify(taskManager).put(chatId, future);
+
+		AnswerRes successRes = mock(AnswerRes.class);
+		future.complete(successRes);
+
+		verify(taskManager).remove(chatId);
+
+		verify(messagingTemplate).convertAndSendToUser(
+			eq(member.getEmail()),
+			eq("/queue/chat"),
+			eq(successRes)
+		);
+	}
+
+	@Test
+	@DisplayName("답변 생성 중 예외가 발생하면 에러 알림 전송")
+	void shouldSendErrorNotificationWhenExceptionOccurs() {
+		// given
+		Long chatId = 1L;
+		String userMessage = "질문입니다";
+		member = mock(Member.class);
+		given(member.getEmail()).willReturn("test@test.com");
+
+		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
+		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+
+		// when
+		chatFacade.generateAnswer(chatId, member, userMessage);
+
+		// then
+		verify(taskManager).put(chatId, future);
+
+		// 2. 비동기 작업 완료 시뮬레이션 (예외 발생)
+		future.completeExceptionally(new RuntimeException("AI Server Error"));
+
+		// 3. 콜백 실행 후 TaskManager 제거 및 에러 전송 확인
+		verify(taskManager).remove(chatId);
+
+		// 에러 발생 시 AnswerRes.error(...)가 전송되어야 함
+		verify(messagingTemplate).convertAndSendToUser(
+			eq(member.getEmail()),
+			eq("/queue/chat"),
+			any(AnswerRes.class) // AnswerRes.error() 결과
+		);
+	}
+
+	@Test
+	@DisplayName("작업이 취소되면 에러 알림 전송")
+	void shouldSendErrorNotificationWhenTaskIsCancelled() {
+		// given
+		Long chatId = 1L;
+		String userMessage = "질문입니다";
+		member = mock(Member.class);
+		given(member.getEmail()).willReturn("test@test.com");
+
+		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
+		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+
+		// when
+		chatFacade.generateAnswer(chatId, member, userMessage);
+
+		// 2. 작업 취소 시뮬레이션
+		future.cancel(true);
+
+		// then
+		verify(taskManager).remove(chatId);
+
+		// 취소 상태일 때도 에러 메시지 전송 로직을 타는지 확인
+		verify(messagingTemplate).convertAndSendToUser(
+			eq(member.getEmail()),
+			eq("/queue/chat"),
+			any(AnswerRes.class)
+		);
+	}
+
+	@Test
+	@DisplayName("존재하는 채팅방인 경우 TaskManager에 취소 요청")
+	void shouldCancelTaskWhenChatExists() {
+		// given
+		Long chatId = 1L;
+		member = mock(Member.class);
+
+		given(chatService.existsChat(member, chatId)).willReturn(true);
+
+		// when
+		chatFacade.cancelAnswer(chatId, member);
+
+		// then
+		verify(taskManager).cancel(chatId);
+	}
+
+	@Test
+	@DisplayName("존재하지 않는 채팅방인 경우 아무 작업도 하지 않음")
+	void shouldNotCancelTaskWhenChatDoesNotExist() {
+		// given
+		Long chatId = 1L;
+		member = mock(Member.class);
+
+		given(chatService.existsChat(member, chatId)).willReturn(false);
+
+		// when
+		chatFacade.cancelAnswer(chatId, member);
+
+		// then
+		verify(taskManager, never()).cancel(anyLong());
 	}
 }

@@ -145,4 +145,69 @@ public class ChatRepositoryTest {
 		// then
 		assertThat(result).isEmpty(); // 조회되면 안 됨 (보안 검증)
 	}
+
+	@Test
+	@DisplayName("내 채팅방인 경우 true 반환")
+	void shouldReturnTrue_WhenChatExistsAndBelongsToMember() {
+		// given
+		Member me = memberRepository.save(Member.builder()
+			.email("me@test.com")
+			.password("password")
+			.build());
+
+		Chat myChat = chatRepository.save(Chat.builder()
+			.member(me)
+			.title("My Chat")
+			.build());
+
+		// when
+		boolean exists = chatRepository.existsByIdAndMember(myChat.getId(), me);
+
+		// then
+		assertThat(exists).isTrue();
+	}
+
+	@Test
+	@DisplayName("다른 사람의 채팅방인 경우 false 반환")
+	void shouldReturnFalse_WhenChatBelongsToOtherMember() {
+		// given
+		Member me = memberRepository.save(Member.builder()
+			.email("me@test.com")
+			.password("password")
+			.build());
+
+		Member other = memberRepository.save(Member.builder()
+			.email("other@test.com")
+			.password("password")
+			.build());
+
+		Chat othersChat = chatRepository.save(Chat.builder()
+			.member(other)
+			.title("Other's Chat")
+			.build());
+
+		// when
+		boolean exists = chatRepository.existsByIdAndMember(othersChat.getId(), me);
+
+		// then
+		assertThat(exists).isFalse();
+	}
+
+	@Test
+	@DisplayName(" 존재하지 않는 채팅방 ID인 경우 false 반환")
+	void shouldReturnFalse_WhenChatDoesNotExist() {
+		// given
+		Member me = memberRepository.save(Member.builder()
+			.email("me@test.com")
+			.password("password")
+			.build());
+
+		Long nonExistentChatId = 9999L;
+
+		// when
+		boolean exists = chatRepository.existsByIdAndMember(nonExistentChatId, me);
+
+		// then
+		assertThat(exists).isFalse();
+	}
 }

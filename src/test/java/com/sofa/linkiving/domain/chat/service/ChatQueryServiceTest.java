@@ -89,4 +89,20 @@ public class ChatQueryServiceTest {
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", ChatErrorCode.CHAT_NOT_FOUND);
 	}
+
+	@Test
+	@DisplayName("리포지토리를 호출하여 존재 여부를 반환한다")
+	void shouldDelegateToRepository() {
+		// given
+		Member member = mock(Member.class);
+		Long chatId = 1L;
+		given(chatRepository.existsByIdAndMember(chatId, member)).willReturn(false);
+
+		// when
+		boolean result = chatQueryService.existsByIdAndMember(member, chatId);
+
+		// then
+		assertThat(result).isFalse();
+		verify(chatRepository).existsByIdAndMember(chatId, member);
+	}
 }

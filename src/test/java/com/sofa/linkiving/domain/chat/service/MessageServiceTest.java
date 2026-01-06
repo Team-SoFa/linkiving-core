@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,16 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
-import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.service.SummaryQueryService;
-import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
 public class MessageServiceTest {
@@ -49,9 +45,6 @@ public class MessageServiceTest {
 
 	@Mock
 	private SimpMessagingTemplate messagingTemplate;
-
-	@Mock
-	private SubscriptionManager subscriptionManager;
 
 	@BeforeEach
 	void setUp() {
@@ -168,54 +161,5 @@ public class MessageServiceTest {
 
 		// then
 		verify(summaryQueryService).getSelectedSummariesByLinks(argThat(list -> list.size() == 1));
-	}
-
-	@Test
-	@DisplayName("답변 취소 요청 시 구독 취소 및 취소 메시지 전송")
-	void shouldCancelSubscriptionAndSendMessageWhenCancelAnswer() {
-		// given
-		String roomId = "1";
-
-		// when
-		messageService.cancelAnswer(chat);
-
-		// then
-		verify(subscriptionManager).cancel(roomId);
-		verify(messagingTemplate).convertAndSend(eq("/topic/chat/" + roomId), eq("GENERATION_CANCELLED"));
-	}
-
-	@Test
-	@DisplayName("이미 답변 생성 중일 경우 중복 요청 무시")
-	void shouldIgnoreRequestWhenAlreadyGenerating() {
-		// given
-		@SuppressWarnings("unchecked")
-		Map<String, StringBuilder> buffers = (Map<String, StringBuilder>)ReflectionTestUtils.getField(messageService,
-			"messageBuffers");
-		Assertions.assertNotNull(buffers);
-		buffers.put("1", new StringBuilder());
-
-		// when
-		messageService.generateAnswer(chat, "질문");
-
-		// then
-		verify(subscriptionManager, never()).add(anyString(), any());
-	}
-
-	@Test
-	@DisplayName("단일 메시지 조회 요청 시 QueryService를 호출하여 결과를 반환함")
-	void shouldCallFindByIdWhenGet() {
-		// given
-		Long messageId = 1L;
-		Message message = mock(Message.class);
-		Member member = mock(Member.class);
-
-		given(messageQueryService.findByIdAndMember(messageId, member)).willReturn(message);
-
-		// when
-		Message result = messageService.get(messageId, member);
-
-		// then
-		assertThat(result).isEqualTo(message);
-		verify(messageQueryService).findByIdAndMember(messageId, member);
 	}
 }

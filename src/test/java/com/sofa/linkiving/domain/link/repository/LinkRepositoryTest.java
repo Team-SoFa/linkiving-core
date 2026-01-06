@@ -198,4 +198,76 @@ class LinkRepositoryTest {
 		assertThat(page2).hasSize(1);
 		assertThat(page2.get(0).link().getTitle()).isEqualTo("링크 1");
 	}
+
+	@Test
+	@DisplayName("조건에 맞는 링크와 선택된 요약을 조회한다")
+	void shouldReturnLinksWithSelectedSummary() {
+		// given
+		Member otherMember = Member.builder()
+			.email("other@test.com")
+			.password("password")
+			.build();
+		entityManager.persist(otherMember);
+
+		Link link1 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link1")
+			.url("http://url1.com")
+			.build());
+		Summary summary1 = Summary.builder()
+			.link(link1)
+			.content("요약1")
+			.selected(true)
+			.build();
+		entityManager.persist(summary1);
+
+		Link link2 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link2")
+			.url("http://url2.com")
+			.build());
+		Summary summary2 = Summary.builder()
+			.link(link2)
+			.content("요약2")
+			.selected(false)
+			.build();
+		entityManager.persist(summary2);
+
+		Link link3 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link3")
+			.url("http://url3.com")
+			.build());
+
+		Link link4 = linkRepository.save(Link.builder()
+			.member(otherMember)
+			.title("link4")
+			.url("http://url4.com")
+			.build());
+
+		List<Long> linkIds = List.of(link1.getId(), link2.getId(), link3.getId(), link4.getId());
+
+		// when
+		List<LinkDto> result = linkRepository.findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(linkIds, testMember);
+
+		// then
+		assertThat(result).hasSize(3);
+
+		List<Long> resultIds = result.stream().map(dto -> dto.link().getId()).toList();
+		assertThat(resultIds).containsExactlyInAnyOrder(link1.getId(), link2.getId(), link3.getId());
+	}
+
+	@Test
+	@DisplayName("요청한 ID 목록에 해당하는 링크가 없으면 빈 리스트를 반환한다")
+	void shouldReturnEmptyList_WhenNoMatch() {
+		// given
+		List<Long> nonExistentIds = List.of(999L, 1000L);
+
+		// when
+		List<LinkDto> result = linkRepository.findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(nonExistentIds,
+			testMember);
+
+		// then
+		assertThat(result).isEmpty();
+	}
 }
