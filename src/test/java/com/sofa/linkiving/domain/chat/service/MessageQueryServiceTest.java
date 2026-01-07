@@ -76,4 +76,24 @@ public class MessageQueryServiceTest {
 		assertThat(result.hasNext()).isFalse();
 		assertThat(result.getContent()).hasSize(size);
 	}
+
+	@Test
+	@DisplayName("리포지토리를 호출하여 조건에 맞는 메시지 목록을 반환한다")
+	void shouldReturnMessages_WhenFound() {
+		// given
+		Long lastId = 100L;
+		Chat chat = mock(Chat.class);
+		Message message = mock(Message.class);
+		List<Message> expectedMessages = List.of(message);
+
+		given(messageRepository.findTop7ByChatAndIdLessThanOrderByIdDesc(chat, lastId))
+			.willReturn(expectedMessages);
+
+		// when
+		List<Message> result = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(lastId, chat);
+
+		// then
+		assertThat(result).isEqualTo(expectedMessages);
+		verify(messageRepository).findTop7ByChatAndIdLessThanOrderByIdDesc(chat, lastId);
+	}
 }

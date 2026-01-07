@@ -77,4 +77,20 @@ public class ChatServiceTest {
 		assertThat(result).isEqualTo(chat);
 		verify(chatQueryService).findChat(chatId, member);
 	}
+
+	@Test
+	@DisplayName("QueryService를 호출하여 채팅방 존재 여부 반환")
+	void shouldDelegateToQueryService() {
+		// given
+		Member member = mock(Member.class);
+		Long chatId = 1L;
+		given(chatQueryService.existsByIdAndMember(member, chatId)).willReturn(true);
+
+		// when
+		boolean result = chatService.existsChat(member, chatId);
+
+		// then
+		assertThat(result).isTrue();
+		verify(chatQueryService).existsByIdAndMember(member, chatId);
+	}
 }

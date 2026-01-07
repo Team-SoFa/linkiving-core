@@ -24,4 +24,6 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 	List<Chat> findAllByMemberOrderByLastMessageDesc(@Param("member") Member member);
 
 	Optional<Chat> findByIdAndMember(Long id, Member member);
+
+	Boolean existsByIdAndMember(Long id, Member member);
 }

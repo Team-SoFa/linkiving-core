@@ -35,6 +35,10 @@ public class LinkQueryService {
 			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
 	}
 
+	public List<LinkDto> findAllByIdInWithSummary(List<Long> linkIds, Member member) {
+		return linkRepository.findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(linkIds, member);
+	}
+
 	public LinksDto findAllByMemberWithSummaryAndCursor(Member member, Long lastId, int size) {
 		PageRequest pageRequest = PageRequest.of(0, size + 1);
 		List<LinkDto> linkDtos = linkRepository.findAllByMemberWithSummaryAndCursorAndIsDeleteFalse(member, lastId,
