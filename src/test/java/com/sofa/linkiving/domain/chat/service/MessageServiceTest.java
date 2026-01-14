@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,12 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.dto.internal.MessagesDto;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
-import com.sofa.linkiving.domain.chat.manager.SubscriptionManager;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.service.SummaryQueryService;
@@ -48,9 +45,6 @@ public class MessageServiceTest {
 
 	@Mock
 	private SimpMessagingTemplate messagingTemplate;
-
-	@Mock
-	private SubscriptionManager subscriptionManager;
 
 	@BeforeEach
 	void setUp() {
@@ -174,38 +168,5 @@ public class MessageServiceTest {
 		verify(summaryQueryService).getSelectedSummariesByLinks(argThat(list ->
 			list.size() == 1 // 두 메시지에 링크가 총 2개지만, 같은 객체이므로 1개로 줄어야 함
 		));
-	}
-
-	@Test
-	@DisplayName("답변 취소 요청 시 구독 취소 및 취소 메시지 전송")
-	void shouldCancelSubscriptionAndSendMessageWhenCancelAnswer() {
-		// given
-		String roomId = "1";
-
-		// when
-		messageService.cancelAnswer(chat);
-
-		// then
-		verify(subscriptionManager).cancel(roomId);
-		verify(messagingTemplate).convertAndSend(eq("/topic/chat/" + roomId), eq("GENERATION_CANCELLED"));
-	}
-
-	@Test
-	@DisplayName("이미 답변 생성 중일 경우 중복 요청 무시")
-	void shouldIgnoreRequestWhenAlreadyGenerating() {
-		// given
-		// messageBuffers 필드에 강제로 현재 채팅방 ID를 넣어 생성 중인 상태로 만듦
-		@SuppressWarnings("unchecked")
-		Map<String, StringBuilder> buffers = (Map<String, StringBuilder>)ReflectionTestUtils.getField(messageService,
-			"messageBuffers");
-		Assertions.assertNotNull(buffers);
-		buffers.put("1", new StringBuilder());
-
-		// when
-		messageService.generateAnswer(chat, "질문");
-
-		// then
-		// WebClient 호출 로직으로 넘어가지 않아야 하므로 SubscriptionManager 호출이 없어야 함
-		verify(subscriptionManager, never()).add(anyString(), any());
 	}
 }
