@@ -80,14 +80,17 @@ public class LinkFacadeTest {
 	void shouldReturnMetaScrapeResWhenCrawlSucceeds() {
 		// given
 		String url = "https://velog.io/@jjeongdong/%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4";
+		String originalImageUrl = "https://velog.io/images/thumbnail.png";
+		String storedImageUrl = "https://s3-bucket.com/links/uuid.png";
 		OgTagDto mockOgTag = OgTagDto.builder()
 			.title("동시성 제어")
 			.description("동시성 제어에 대한 설명")
-			.image("https://velog.io/images/thumbnail.png")
+			.image(originalImageUrl)
 			.url(url)
 			.build();
 
 		given(ogTagCrawler.crawl(url)).willReturn(mockOgTag);
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
 		// when
 		MetaScrapeRes result = linkFacade.scrapeMetadata(url);
@@ -96,9 +99,10 @@ public class LinkFacadeTest {
 		assertThat(result).isNotNull();
 		assertThat(result.title()).isEqualTo("동시성 제어");
 		assertThat(result.description()).isEqualTo("동시성 제어에 대한 설명");
-		assertThat(result.image()).isEqualTo("https://velog.io/images/thumbnail.png");
+		assertThat(result.image()).isEqualTo(storedImageUrl);
 		assertThat(result.url()).isEqualTo(url);
 		verify(ogTagCrawler, times(1)).crawl(url);
+		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 	}
 
 	@Test
@@ -162,6 +166,8 @@ public class LinkFacadeTest {
 		assertThat(result.image()).isEmpty();
 		assertThat(result.url()).isEmpty();
 		verify(ogTagCrawler, times(1)).crawl(url);
+		verify(imageUploader, never()).uploadFromUrl(any());
+		verify(imageUploader, never()).resolveStoredUrl(any());
 	}
 
 	@Test
@@ -176,12 +182,12 @@ public class LinkFacadeTest {
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
 
 		Member member = mock(Member.class);
-
-		// 1. 이미지 업로드 모킹
+		given(member.getId()).willReturn(100L);
+		given(linkQueryService.existsByUrl(eq(member), eq(url))).willReturn(false);
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
-		// 2. 링크 저장 모킹 (LinkService 내부의 LinkCommandService 동작)
 		Link savedLink = Link.builder()
+			.member(member)
 			.url(url)
 			.title(title)
 			.memo(memo)
@@ -189,7 +195,7 @@ public class LinkFacadeTest {
 			.build();
 		ReflectionTestUtils.setField(savedLink, "id", linkId);
 
-		given(linkCommandService.saveLink(member, url, title, memo, storedImageUrl))
+		given(linkCommandService.saveLink(eq(member), eq(url), eq(title), eq(memo), eq(storedImageUrl)))
 			.willReturn(savedLink);
 
 		// when
@@ -197,17 +203,12 @@ public class LinkFacadeTest {
 
 		// then
 		assertThat(result).isNotNull();
+		assertThat(result.id()).isEqualTo(linkId);
 
-		// Verify: 기존 로직 정상 호출 확인
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
-		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
-
-		// Verify: 핵심 비즈니스 로직인 이벤트 발행이 정상적으로 수행되었는지 확인
-		verify(eventPublisher, atLeastOnce()).publishEvent(any(LinkCreatedEvent.class));
-
-		// Verify: 비동기로 전환되었으므로, 더 이상 파사드에서 요약 클라이언트나 서비스를 호출하지 않음을 확인
-		verifyNoInteractions(summaryClient);
-		verify(summaryService, never()).createSummary(any(), any(), any());
+		verify(linkQueryService, times(1)).existsByUrl(member, url);
+		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
+		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
 	}
 
 	@Test

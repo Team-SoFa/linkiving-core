@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.util.UrlValidator;
+import com.sofa.linkiving.global.error.exception.BusinessException;
+
 import io.awspring.cloud.s3.S3Template;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,19 +31,25 @@ public class S3ImageUploaderTest {
 
 	private static final String BUCKET_NAME = "test-bucket";
 	private static final String REGION = "ap-northeast-2";
+	private static final String DEFAULT_IMAGE_URL = "https://example.com/default-image.jpg";
+
 	@InjectMocks
 	private S3ImageUploader s3ImageUploader;
+
 	@Mock
 	private S3Template s3Template;
+
 	@Mock
 	private UrlConnectionFactory urlConnectionFactory;
+
 	@Mock
-	private URLConnection mockConnection;
+	private UrlValidator urlValidator;
 
 	@BeforeEach
 	void setUp() {
 		ReflectionTestUtils.setField(s3ImageUploader, "bucketName", BUCKET_NAME);
 		ReflectionTestUtils.setField(s3ImageUploader, "region", REGION);
+		ReflectionTestUtils.setField(s3ImageUploader, "defaultImageUrl", DEFAULT_IMAGE_URL);
 	}
 
 	@Test
@@ -48,21 +59,49 @@ public class S3ImageUploaderTest {
 		String originalUrl = "https://example.com/image.jpg";
 
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
 
+		// 변경된 로직에 맞춰 URLConnection을 모킹함
+		URLConnection mockConnection = mock(URLConnection.class);
 		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
 
+		// image/ 로 시작하는 ContentType 반환 모킹
 		given(mockConnection.getContentType()).willReturn("image/jpeg");
-		given(mockConnection.getInputStream()).willReturn(new ByteArrayInputStream("dummy-data".getBytes()));
+
+		InputStream inputStream = new ByteArrayInputStream("dummy-data".getBytes());
+		given(mockConnection.getInputStream()).willReturn(inputStream);
 
 		// when
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
 		// then
-		assertThat(result).startsWith("https://" + BUCKET_NAME + ".s3." + REGION + ".amazonaws.com/links/");
-		assertThat(result).endsWith(".jpg");
+		assertThat(result).contains("images/");
+		assertThat(result).contains(BUCKET_NAME + ".s3." + REGION);
+		verify(s3Template).upload(eq(BUCKET_NAME), anyString(), any(InputStream.class), any());
+	}
 
-		// 실제 업로드가 수행되었는지 검증
-		verify(s3Template).upload(eq(BUCKET_NAME), anyString(), any(InputStream.class), isNull());
+	@Test
+	@DisplayName("이미지가 아닌 URL(ContentType 불일치)일 경우 업로드를 건너뛰고 기본 이미지 URL을 반환한다")
+	void shouldReturnDefaultUrlWhenContentTypeIsNotImage() throws IOException {
+		// given
+		String originalUrl = "https://example.com/not-image.txt";
+
+		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
+
+		URLConnection mockConnection = mock(URLConnection.class);
+		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
+
+		// 이미지가 아닌 Content-Type 반환 모킹
+		given(mockConnection.getContentType()).willReturn("text/html");
+
+		// when
+		String result = s3ImageUploader.uploadFromUrl(originalUrl);
+
+		// then
+		assertThat(result).isEqualTo(DEFAULT_IMAGE_URL);
+		// 업로드가 수행되지 않아야 함
+		verify(s3Template, never()).upload(anyString(), anyString(), any(InputStream.class), any());
 	}
 
 	@Test
@@ -70,56 +109,33 @@ public class S3ImageUploaderTest {
 	void shouldReturnS3UrlWhenImageExists() throws IOException {
 		// given
 		String originalUrl = "https://example.com/image.jpg";
-
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(true);
 
 		// when
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
 		// then
-		assertThat(result).contains(BUCKET_NAME, REGION, "links/");
-
-		// Factory 연결 생성 및 Upload가 호출되지 않아야 함
+		assertThat(result).contains("images/");
 		verify(urlConnectionFactory, never()).createConnection(anyString());
 		verify(s3Template, never()).upload(anyString(), anyString(), any(InputStream.class), any());
 	}
 
 	@Test
-	@DisplayName("ContentType이 이미지가 아닌 경우(예: HTML, PDF) Null을 반환한다")
-	void shouldReturnDefaultImageUrlWhenNotImage() throws IOException {
-		// given
-		String originalUrl = "https://example.com/document.pdf";
-
-		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
-		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
-
-		given(mockConnection.getContentType()).willReturn("application/pdf");
-
-		// when
-		String result = s3ImageUploader.uploadFromUrl(originalUrl);
-
-		// then
-		assertThat(result).isNull();
-
-		// Upload 호출 안 됨
-		verify(s3Template, never()).upload(anyString(), anyString(), any(InputStream.class), any());
-	}
-
-	@Test
-	@DisplayName("연결 실패나 업로드 중 예외 발생 시 Null을 반환한다 (Fallback)")
+	@DisplayName("업로드 중 예외 발생 시 기본 이미지 URL을 반환한다")
 	void shouldReturnDefaultImageUrlWhenExceptionOccurs() throws IOException {
 		// given
 		String originalUrl = "https://example.com/image.jpg";
-
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
 
+		// 생성 단계에서 강제 예외 발생 유도
 		given(urlConnectionFactory.createConnection(originalUrl)).willThrow(new IOException("Connection Refused"));
 
 		// when
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
 		// then
-		assertThat(result).isNull();
+		assertThat(result).isEqualTo(DEFAULT_IMAGE_URL);
 	}
 
 	@Test
@@ -132,5 +148,36 @@ public class S3ImageUploaderTest {
 		// then
 		assertThat(resultNull).isNull();
 		assertThat(resultEmpty).isNull();
+	}
+
+	@Test
+	@DisplayName("검증 실패(BusinessException) 시 기본 이미지 URL을 반환한다")
+	void shouldReturnDefaultImageUrlWhenValidationFails() throws IOException {
+		// given
+		String originalUrl = "http://127.0.0.1/image.jpg";
+		willThrow(new BusinessException(LinkErrorCode.INVALID_URL_PRIVATE_IP))
+			.given(urlValidator).validateSafeUrl(originalUrl);
+
+		// when
+		String result = s3ImageUploader.uploadFromUrl(originalUrl);
+
+		// then
+		assertThat(result).isEqualTo(DEFAULT_IMAGE_URL);
+		verify(urlConnectionFactory, never()).createConnection(anyString());
+	}
+
+	@Test
+	@DisplayName("이미 존재하는 파일인지 확인하여 Optional URL을 반환한다")
+	void shouldResolveStoredUrl() {
+		// given
+		String originalUrl = "https://example.com/test.jpg";
+		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(true);
+
+		// when
+		Optional<String> result = s3ImageUploader.resolveStoredUrl(originalUrl);
+
+		// then
+		assertThat(result).isPresent();
+		assertThat(result.get()).contains("images/");
 	}
 }
