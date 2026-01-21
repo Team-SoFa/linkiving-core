@@ -41,7 +41,7 @@ public class LinkFacade {
 	private final SummaryClient summaryClient;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
-		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		String storedImageUrl = processImageUpload(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
 		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
@@ -109,7 +109,16 @@ public class LinkFacade {
 	@Transactional(readOnly = true)
 	public MetaScrapeRes scrapeMetadata(String url) {
 		OgTagDto ogTag = ogTagCrawler.crawl(url);
-		return MetaScrapeRes.from(ogTag);
+		String imageUrl = ogTag.image();
+		String uploadedImageUrl = processImageUpload(ogTag.image());
+
+		String responseImageUrl = uploadedImageUrl != null ? uploadedImageUrl : imageUrl;
+		return new MetaScrapeRes(
+			ogTag.title(),
+			ogTag.description(),
+			responseImageUrl,
+			ogTag.url()
+		);
 	}
 
 	public SummaryRes updateSummary(Long id, Member member, String content, Format format) {
@@ -117,5 +126,12 @@ public class LinkFacade {
 		Summary summary = summaryService.createSummary(link, format, content);
 		summaryService.selectSummary(link.getId(), summary.getId());
 		return SummaryRes.from(summary);
+	}
+
+	private String processImageUpload(String imageUrl) {
+		if (imageUrl == null || imageUrl.isBlank()) {
+			return null;
+		}
+		return imageUploader.uploadFromUrl(imageUrl);
 	}
 }
