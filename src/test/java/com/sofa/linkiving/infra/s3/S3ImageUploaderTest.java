@@ -19,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.link.util.UrlValidator;
+import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import io.awspring.cloud.s3.S3Template;
 
@@ -28,6 +30,7 @@ public class S3ImageUploaderTest {
 
 	private static final String BUCKET_NAME = "test-bucket";
 	private static final String REGION = "ap-northeast-2";
+	private static final String DEFAULT_IMAGE_URL = "https://example.com/default-image.jpg";
 	@InjectMocks
 	private S3ImageUploader s3ImageUploader;
 	@Mock
@@ -43,6 +46,7 @@ public class S3ImageUploaderTest {
 	void setUp() {
 		ReflectionTestUtils.setField(s3ImageUploader, "bucketName", BUCKET_NAME);
 		ReflectionTestUtils.setField(s3ImageUploader, "region", REGION);
+		ReflectionTestUtils.setField(s3ImageUploader, "defaultImageUrl", DEFAULT_IMAGE_URL);
 	}
 
 	@Test
@@ -148,6 +152,24 @@ public class S3ImageUploaderTest {
 		// then
 		assertThat(resultNull).isNull();
 		assertThat(resultEmpty).isNull();
+	}
+
+	@Test
+	@DisplayName("검증 실패 시 기본 이미지 URL을 반환한다")
+	void shouldReturnDefaultImageUrlWhenValidationFails() {
+		// given
+		String originalUrl = "http://127.0.0.1/image.jpg";
+
+		given(urlValidator.validateSafeUrl(originalUrl))
+			.willThrow(new BusinessException(LinkErrorCode.INVALID_URL_PRIVATE_IP));
+
+		// when
+		String result = s3ImageUploader.uploadFromUrl(originalUrl);
+
+		// then
+		assertThat(result).isEqualTo(DEFAULT_IMAGE_URL);
+		verify(urlConnectionFactory, never()).createConnection(anyString());
+		verify(s3Template, never()).upload(anyString(), anyString(), any(InputStream.class), any());
 	}
 
 	@Test

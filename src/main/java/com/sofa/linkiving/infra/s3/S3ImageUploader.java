@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
 import com.sofa.linkiving.domain.link.util.UrlValidator;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,9 @@ public class S3ImageUploader implements ImageUploader {
 
 	@Value("${spring.cloud.aws.region.static}")
 	private String region;
+
+	@Value("${app.link.default-image-url:}")
+	private String defaultImageUrl;
 
 	@Override
 	public String uploadFromUrl(String originalUrl) {
@@ -63,6 +67,9 @@ public class S3ImageUploader implements ImageUploader {
 				return s3Url;
 			}
 
+		} catch (BusinessException e) {
+			log.warn("Unsafe image URL blocked: {}", e.getMessage());
+			return normalizedDefaultImageUrl();
 		} catch (Exception e) {
 			log.warn("Image upload failed: {}", e.getMessage());
 			return null;
@@ -108,6 +115,13 @@ public class S3ImageUploader implements ImageUploader {
 		}
 		String key = url.substring(prefix.length());
 		return key.isBlank() ? null : key;
+	}
+
+	private String normalizedDefaultImageUrl() {
+		if (defaultImageUrl == null || defaultImageUrl.isBlank()) {
+			return null;
+		}
+		return defaultImageUrl;
 	}
 
 	private String generateUniqueKeyFromUrl(String url) {
