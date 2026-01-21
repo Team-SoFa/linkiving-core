@@ -160,8 +160,8 @@ public class S3ImageUploaderTest {
 		// given
 		String originalUrl = "http://127.0.0.1/image.jpg";
 
-		given(urlValidator.validateSafeUrl(originalUrl))
-			.willThrow(new BusinessException(LinkErrorCode.INVALID_URL_PRIVATE_IP));
+		willThrow(new BusinessException(LinkErrorCode.INVALID_URL_PRIVATE_IP))
+			.given(urlValidator).validateSafeUrl(originalUrl);
 
 		// when
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
