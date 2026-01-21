@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.link.service;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,22 +14,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
-public class SummaryServiceTest {
+@DisplayName("SummaryCommandService 단위 테스트")
+public class SummaryCommandServiceTest {
+
 	@InjectMocks
-	private SummaryService summaryService;
-
-	@Mock
-	private SummaryQueryService summaryQueryService;
-
-	@Mock
 	private SummaryCommandService summaryCommandService;
 
+	@Mock
+	private SummaryRepository summaryRepository;
+
 	@Test
-	@DisplayName("요약를 생성할 수 있다")
-	void shouldCreateLink() {
+	@DisplayName("요약를 저장할 수 있다")
+	void shouldSaveLink() {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
@@ -39,6 +40,8 @@ public class SummaryServiceTest {
 			.member(member)
 			.url("https://example.com")
 			.title("테스트 링크")
+			.memo("메모")
+			.imageUrl("https://example.com/image.jpg")
 			.build();
 
 		Summary summary = Summary.builder()
@@ -47,7 +50,7 @@ public class SummaryServiceTest {
 			.content("요약")
 			.build();
 
-		given(summaryCommandService.save(any(), any(), any())).willReturn(summary);
+		given(summaryRepository.save(any(Summary.class))).willReturn(summary);
 
 		// when
 		Summary save = summaryCommandService.save(
@@ -59,23 +62,6 @@ public class SummaryServiceTest {
 		// then
 		assertThat(save).isNotNull();
 		assertThat(save.getContent()).isEqualTo("요약");
-		verify(summaryCommandService, times(1)).save(any(), any(), any());
-	}
-
-	@Test
-	@DisplayName("getSummary 호출 시 SummaryQueryService에게 위임한다")
-	void shouldCallGetSummaryWhenGetSummary() {
-		// given
-		Long linkId = 1L;
-		Summary mockSummary = mock(Summary.class);
-
-		given(summaryQueryService.getSummary(linkId)).willReturn(mockSummary);
-
-		// when
-		Summary result = summaryService.getSummary(linkId);
-
-		// then
-		assertThat(result).isEqualTo(mockSummary);
-		verify(summaryQueryService).getSummary(linkId);
+		verify(summaryRepository, times(1)).save(any(Summary.class));
 	}
 }

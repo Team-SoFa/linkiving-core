@@ -14,15 +14,19 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
+import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
-import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
-import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
@@ -60,11 +64,14 @@ public class LinkFacadeTest {
 	private ImageUploader imageUploader;
 
 	@Mock
+	private SummaryClient summaryClient;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	@BeforeEach
 	void setUp() {
-		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader);
+		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, summaryClient);
 	}
 
 	@Test
@@ -98,12 +105,16 @@ public class LinkFacadeTest {
 	void shouldReturnRecreateSummaryResponseWhenRecreateSummary() {
 		// given
 		Long linkId = 1L;
+		Long memberId = 1L;
+
 		Member member = mock(Member.class);
+		given(member.getId()).willReturn(memberId);
+
 		Format format = Format.DETAILED;
 		String url = "https://example.com";
-		String existingSummaryBody = "기존 요약 내용입니다.";
-		String newSummaryBody = "새로운 상세 요약 내용입니다.";
-		String comparisonBody = "기존 대비 상세 내용이 추가되었습니다.";
+		String existingSummary = "기존 요약 내용입니다.";
+		String newSummary = "새로운 상세 요약 내용입니다.";
+		String difference = "기존 대비 상세 내용이 추가되었습니다.";
 
 		// 1. LinkService Mocking (URL 가져오기)
 		Link mockLink = mock(Link.class);
@@ -112,26 +123,25 @@ public class LinkFacadeTest {
 
 		// 2. SummaryService (기존 요약 가져오기)
 		Summary mockSummary = mock(Summary.class);
-		given(mockSummary.getContent()).willReturn(existingSummaryBody);
+		given(mockSummary.getContent()).willReturn(existingSummary);
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
 
 		// 3. SummaryService (새 요약 생성 및 비교)
-		given(summaryService.createSummary(linkId, url, format)).willReturn(newSummaryBody);
-		given(summaryService.comparisonSummary(existingSummaryBody, newSummaryBody)).willReturn(comparisonBody);
+		RagRegenerateSummaryRes ragRes = new RagRegenerateSummaryRes(newSummary, difference);
+		given(summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary)).willReturn(ragRes);
 
 		// when
-		RecreateSummaryResponse response = linkFacade.recreateSummary(member, linkId, format);
+		RegenerateSummaryRes response = linkFacade.recreateSummary(member, linkId, format);
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.existingSummary()).isEqualTo(existingSummaryBody);
-		assertThat(response.newSummary()).isEqualTo(newSummaryBody);
-		assertThat(response.comparison()).isEqualTo(comparisonBody);
+		assertThat(response.existingSummary()).isEqualTo(existingSummary);
+		assertThat(response.newSummary()).isEqualTo(newSummary);
+		assertThat(response.difference()).isEqualTo(difference);
 
 		// verify
 		verify(summaryService).getSummary(linkId);
-		verify(summaryService).createSummary(linkId, url, format);
-		verify(summaryService).comparisonSummary(existingSummaryBody, newSummaryBody);
+		verify(summaryClient).regenerateSummary(linkId, member.getId(), url, existingSummary);
 	}
 
 	@Test
@@ -154,15 +164,20 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("이미지 URL을 업로드하고 반환된 저장 경로로 링크를 생성한다")
+	@DisplayName("링크 생성 시 이미지 업로드, 링크 저장, AI 요약 요청, 요약 저장이 순차적으로 수행된다")
 	void shouldCreateLink() {
 		// given
-		Member member = mock(Member.class);
+		Long linkId = 1L;
+		Long memberId = 1L;
 		String url = "https://example.com";
 		String title = "테스트 제목";
 		String memo = "테스트 메모";
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
+		String aiSummaryContent = "AI가 요약한 내용입니다.";
+
+		Member member = mock(Member.class);
+		when(member.getId()).thenReturn(memberId);
 
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
@@ -173,21 +188,37 @@ public class LinkFacadeTest {
 			.imageUrl(storedImageUrl)
 			.build();
 
+		ReflectionTestUtils.setField(savedLink, "id", linkId);
 		given(linkCommandService.saveLink(member, url, title, memo, storedImageUrl))
 			.willReturn(savedLink);
 
+		RagInitialSummaryRes ragRes = new RagInitialSummaryRes(aiSummaryContent);
+		given(summaryClient.initialSummary(eq(linkId), eq(memberId), eq(title), eq(url), eq(memo)))
+			.willReturn(ragRes);
+
+		Summary savedSummary = Summary.builder()
+			.link(savedLink)
+			.content(aiSummaryContent)
+			.format(Format.CONCISE)
+			.build();
+
+		given(summaryService.createSummary(savedLink, Format.CONCISE, aiSummaryContent))
+			.willReturn(savedSummary);
+
 		// when
-		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
+		LinkDetailRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
 
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.url()).isEqualTo(url);
 		assertThat(result.imageUrl()).isEqualTo(storedImageUrl);
+		assertThat(result.summary().content()).isEqualTo(aiSummaryContent);
 
 		// Verify
-		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
-		verify(linkQueryService, times(1)).existsByUrl(member, url);
-		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
+		verify(imageUploader).uploadFromUrl(originalImageUrl);
+		verify(linkCommandService).saveLink(member, url, title, memo, storedImageUrl);
+		verify(summaryClient).initialSummary(eq(linkId), eq(memberId), eq(title), eq(url), eq(memo));
+		verify(summaryService).createSummary(savedLink, Format.CONCISE, aiSummaryContent);
 	}
 
 	@Test
