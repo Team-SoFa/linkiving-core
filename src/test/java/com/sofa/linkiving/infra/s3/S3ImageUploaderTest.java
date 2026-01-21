@@ -18,6 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.sofa.linkiving.domain.link.util.UrlValidator;
+
 import io.awspring.cloud.s3.S3Template;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,8 @@ public class S3ImageUploaderTest {
 	private UrlConnectionFactory urlConnectionFactory;
 	@Mock
 	private URLConnection mockConnection;
+	@Mock
+	private UrlValidator urlValidator;
 
 	@BeforeEach
 	void setUp() {
@@ -49,6 +53,8 @@ public class S3ImageUploaderTest {
 
 		// 1. 중복 검사 통과 (S3에 파일 없음)
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
 
 		// 2. Factory가 Mock Connection 반환
 		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
@@ -97,6 +103,7 @@ public class S3ImageUploaderTest {
 		String originalUrl = "https://example.com/document.pdf";
 
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
 		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
 
 		// ContentType을 이미지가 아닌 것으로 설정
@@ -119,6 +126,7 @@ public class S3ImageUploaderTest {
 		String originalUrl = "https://example.com/image.jpg";
 
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
+		willDoNothing().given(urlValidator).validateSafeUrl(originalUrl);
 
 		// 연결 생성 시 예외 발생하도록 설정
 		given(urlConnectionFactory.createConnection(originalUrl)).willThrow(new IOException("Connection Refused"));
@@ -140,5 +148,20 @@ public class S3ImageUploaderTest {
 		// then
 		assertThat(resultNull).isNull();
 		assertThat(resultEmpty).isNull();
+	}
+
+	@Test
+	@DisplayName("저장소 URL이면 캐시 확인 후 바로 반환한다")
+	void shouldResolveStoredUrlWhenS3UrlProvided() {
+		// given
+		String s3Url = "https://" + BUCKET_NAME + ".s3." + REGION + ".amazonaws.com/links/test.jpg";
+
+		given(s3Template.objectExists(BUCKET_NAME, "links/test.jpg")).willReturn(true);
+
+		// when
+		String result = s3ImageUploader.resolveStoredUrl(s3Url);
+
+		// then
+		assertThat(result).isEqualTo(s3Url);
 	}
 }
