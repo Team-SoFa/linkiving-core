@@ -123,7 +123,7 @@ class LinkRepositoryTest {
 			.link(link)
 			.content("선택된 요약 내용")
 			.format(Format.CONCISE)
-			.select(true)
+			.selected(true)
 			.build();
 		entityManager.persist(selectedSummary);
 
@@ -131,7 +131,7 @@ class LinkRepositoryTest {
 			.link(link)
 			.content("다른 요약")
 			.format(Format.CONCISE)
-			.select(false)
+			.selected(false)
 			.build();
 		entityManager.persist(otherSummary);
 
@@ -167,7 +167,7 @@ class LinkRepositoryTest {
 					.link(link)
 					.content("요약 " + i)
 					.format(Format.CONCISE)
-					.select(true)
+					.selected(true)
 					.build();
 				entityManager.persist(summary);
 			}

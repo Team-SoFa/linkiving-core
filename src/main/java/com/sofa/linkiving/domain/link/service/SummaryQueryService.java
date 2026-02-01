@@ -21,7 +21,7 @@ public class SummaryQueryService {
 	private final SummaryRepository summaryRepository;
 
 	public Summary getSummary(Long linkId) {
-		return summaryRepository.findById(linkId).orElseThrow(
+		return summaryRepository.findByLinkIdAndSelectedTrue(linkId).orElseThrow(
 			() -> new BusinessException(LinkErrorCode.SUMMARY_NOT_FOUND)
 		);
 	}

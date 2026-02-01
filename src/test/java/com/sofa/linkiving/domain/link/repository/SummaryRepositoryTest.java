@@ -59,18 +59,18 @@ public class SummaryRepositoryTest {
 		Summary summary1 = Summary.builder()
 			.link(link1)
 			.content("s1")
-			.select(true)
+			.selected(true)
 			.build();
 		Summary summary2 = Summary.builder()
 			.link(link2)
 			.content("s2")
-			.select(false)
+			.selected(false)
 			.build();
 		Summary summary3 = Summary
 			.builder()
 			.link(link3)
 			.content("s3")
-			.select(true)
+			.selected(true)
 			.build();
 
 		em.persist(summary1);
@@ -109,7 +109,7 @@ public class SummaryRepositoryTest {
 		Summary summary = Summary.builder()
 			.link(link)
 			.content("s1")
-			.select(true)
+			.selected(true)
 			.build();
 		em.persist(summary);
 
