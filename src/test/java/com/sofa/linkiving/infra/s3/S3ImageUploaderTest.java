@@ -18,8 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.sofa.linkiving.domain.link.util.UrlValidator;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.util.UrlValidator;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import io.awspring.cloud.s3.S3Template;
@@ -156,7 +156,7 @@ public class S3ImageUploaderTest {
 
 	@Test
 	@DisplayName("검증 실패 시 기본 이미지 URL을 반환한다")
-	void shouldReturnDefaultImageUrlWhenValidationFails() {
+	void shouldReturnDefaultImageUrlWhenValidationFails() throws IOException {
 		// given
 		String originalUrl = "http://127.0.0.1/image.jpg";
 
