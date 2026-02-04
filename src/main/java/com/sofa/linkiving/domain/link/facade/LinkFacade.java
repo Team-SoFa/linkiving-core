@@ -33,7 +33,10 @@ public class LinkFacade {
 	private final ImageUploader imageUploader;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
-		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		String storedImageUrl = imageUploader.resolveStoredUrl(imageUrl);
+		if (storedImageUrl == null) {
+			storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		}
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 		return LinkRes.from(link);
 	}
@@ -96,6 +99,17 @@ public class LinkFacade {
 	@Transactional(readOnly = true)
 	public MetaScrapeRes scrapeMetadata(String url) {
 		OgTagDto ogTag = ogTagCrawler.crawl(url);
-		return MetaScrapeRes.from(ogTag);
+		String imageUrl = ogTag.image();
+		String uploadedImageUrl = imageUrl == null || imageUrl.isBlank()
+			? null
+			: imageUploader.uploadFromUrl(imageUrl);
+
+		String responseImageUrl = uploadedImageUrl != null ? uploadedImageUrl : imageUrl;
+		return new MetaScrapeRes(
+			ogTag.title(),
+			ogTag.description(),
+			responseImageUrl,
+			ogTag.url()
+		);
 	}
 }

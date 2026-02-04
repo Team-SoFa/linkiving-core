@@ -72,14 +72,17 @@ public class LinkFacadeTest {
 	void shouldReturnMetaScrapeResWhenCrawlSucceeds() {
 		// given
 		String url = "https://velog.io/@jjeongdong/%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4";
+		String originalImageUrl = "https://velog.io/images/thumbnail.png";
+		String storedImageUrl = "https://s3-bucket.com/links/uuid.png";
 		OgTagDto mockOgTag = OgTagDto.builder()
 			.title("동시성 제어")
 			.description("동시성 제어에 대한 설명")
-			.image("https://velog.io/images/thumbnail.png")
+			.image(originalImageUrl)
 			.url(url)
 			.build();
 
 		given(ogTagCrawler.crawl(url)).willReturn(mockOgTag);
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
 		// when
 		MetaScrapeRes result = linkFacade.scrapeMetadata(url);
@@ -88,9 +91,10 @@ public class LinkFacadeTest {
 		assertThat(result).isNotNull();
 		assertThat(result.title()).isEqualTo("동시성 제어");
 		assertThat(result.description()).isEqualTo("동시성 제어에 대한 설명");
-		assertThat(result.image()).isEqualTo("https://velog.io/images/thumbnail.png");
+		assertThat(result.image()).isEqualTo(storedImageUrl);
 		assertThat(result.url()).isEqualTo(url);
 		verify(ogTagCrawler, times(1)).crawl(url);
+		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 	}
 
 	@Test
@@ -151,6 +155,8 @@ public class LinkFacadeTest {
 		assertThat(result.image()).isEmpty();
 		assertThat(result.url()).isEmpty();
 		verify(ogTagCrawler, times(1)).crawl(url);
+		verify(imageUploader, never()).uploadFromUrl(any());
+		verify(imageUploader, never()).resolveStoredUrl(any());
 	}
 
 	@Test
@@ -164,6 +170,7 @@ public class LinkFacadeTest {
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
 
+		given(imageUploader.resolveStoredUrl(originalImageUrl)).willReturn(null);
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
 		Link savedLink = Link.builder()
@@ -185,6 +192,7 @@ public class LinkFacadeTest {
 		assertThat(result.imageUrl()).isEqualTo(storedImageUrl);
 
 		// Verify
+		verify(imageUploader, times(1)).resolveStoredUrl(originalImageUrl);
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 		verify(linkQueryService, times(1)).existsByUrl(member, url);
 		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
