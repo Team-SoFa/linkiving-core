@@ -2,7 +2,7 @@ package com.sofa.linkiving.domain.chat.ai;
 
 import java.util.List;
 
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-@Primary
+@Profile("test")
 public class MockAnswerClient implements AnswerClient {
 
 	@Override

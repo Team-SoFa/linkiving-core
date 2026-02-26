@@ -1,6 +1,5 @@
 package com.sofa.linkiving.domain.chat.service;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -43,15 +42,11 @@ public class RagChatService {
 		Chat chat = chatQueryService.findChat(chatId, member);
 
 		Message question = messageCommandService.saveUserMessage(chat, userMessage);
-		List<Message> pastMessages = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
+		List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
 			question.getId(), chat);
-
-		List<String> history = new ArrayList<>(pastMessages.stream()
-			.map(Message::getContent)
-			.toList());
 		Collections.reverse(history);
 
-		RagAnswerReq request = new RagAnswerReq(
+		RagAnswerReq request = RagAnswerReq.of(
 			member.getId(),
 			userMessage,
 			history,
