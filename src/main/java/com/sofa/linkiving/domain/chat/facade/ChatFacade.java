@@ -76,13 +76,24 @@ public class ChatFacade {
 			taskManager.remove(chatId);
 
 			if (task.isCancelled() || ex != null) {
+
+				if (ex != null) {
+					log.error("AI 답변 생성 중 오류 발생 - chatId: {}, error: {}", chatId, ex.getMessage(), ex);
+				} else {
+					log.info("AI 답변 생성 작업 취소됨 - chatId: {}", chatId);
+				}
+
 				sendNotification(chatId, member, AnswerRes.error(chatId, message));
 				return;
 			}
 
 			if (result != null) {
 				sendNotification(chatId, member, result);
+				return;
 			}
+
+			log.error("AI 답변 생성 결과가 null 입니다 - chatId: {}", chatId);
+			sendNotification(chatId, member, AnswerRes.error(chatId, message));
 		});
 	}
 
