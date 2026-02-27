@@ -7,12 +7,14 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
+import com.sofa.linkiving.domain.link.dto.request.SummaryUpdateReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -96,6 +98,13 @@ public interface LinkApi {
 		Long id,
 		@Schema(description = "요청 형식(CONCISE: 간결하게, DETAILED:자세하게)")
 		@Valid Format format,
+		Member member
+	);
+
+	@Operation(summary = "새로운 요약 선택", description = "신규 요약으로 요약 내용을 수정합니다.")
+	BaseResponse<SummaryRes> updateSummary(
+		Long id,
+		@Valid SummaryUpdateReq request,
 		Member member
 	);
 }

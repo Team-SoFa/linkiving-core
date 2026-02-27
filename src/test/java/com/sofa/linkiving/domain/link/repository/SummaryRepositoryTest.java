@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.link.repository;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @DataJpaTest
@@ -118,5 +120,66 @@ public class SummaryRepositoryTest {
 
 		// then
 		assertThat(result).isEmpty();
+	}
+
+	@Test
+	@DisplayName("clearSelectedByLinkId 및 selectByIdAndLinkId 실행 시 selected 요약이 단 1개만 존재한다")
+	void shouldEnsureOnlyOneSummaryIsSelected() {
+		// given
+		Member member = Member.builder()
+			.email("test@test.com")
+			.password("pw")
+			.build();
+		em.persist(member);
+		Link link = Link.builder()
+			.member(member)
+			.url("http://test.com")
+			.title("t1")
+			.build();
+		em.persist(link);
+
+		// 1. 과거 요약 1 (기존 선택됨)
+		Summary oldSummary1 = Summary.builder()
+			.link(link)
+			.content("과거 요약 1")
+			.format(Format.CONCISE)
+			.selected(true)
+			.build();
+
+		// 2. 과거 요약 2 (선택 안됨)
+		Summary oldSummary2 = Summary.builder()
+			.link(link)
+			.content("과거 요약 2")
+			.format(Format.DETAILED)
+			.selected(false)
+			.build();
+
+		// 3. 방금 새로 수정한 요약 (아직 선택 안됨)
+		Summary newSummary = Summary.builder()
+			.link(link)
+			.content("새로 수정한 요약")
+			.format(Format.DETAILED).selected(false)
+			.build();
+
+		em.persist(oldSummary1);
+		em.persist(oldSummary2);
+		em.persist(newSummary);
+
+		// when - Service 계층에서 수행하는 두 가지 쿼리를 순서대로 실행
+
+		summaryRepository.clearSelectedByLinkId(link.getId());
+		summaryRepository.selectByIdAndLinkId(newSummary.getId(), link.getId());
+
+		// then
+		Optional<Summary> selectedSummary = summaryRepository.findByLinkIdAndSelectedTrue(link.getId());
+		assertThat(selectedSummary).isPresent();
+		assertThat(selectedSummary.get().getId()).isEqualTo(newSummary.getId());
+
+		long selectedCount = summaryRepository.findAll().stream()
+			.filter(s -> s.getLink().getId().equals(link.getId()))
+			.filter(Summary::isSelected)
+			.count();
+
+		assertThat(selectedCount).isEqualTo(1L);
 	}
 }

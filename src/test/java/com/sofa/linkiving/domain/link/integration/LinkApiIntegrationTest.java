@@ -28,6 +28,7 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
+import com.sofa.linkiving.domain.link.dto.request.SummaryUpdateReq;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
@@ -723,5 +724,30 @@ public class LinkApiIntegrationTest {
 					.content(invalidJson)
 			)
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DisplayName("updateSummary API: PATCH 요청 시 요약 정보를 수정하고 200 OK를 반환한다")
+	void updateSummaryApi_ShouldReturn200Ok() throws Exception {
+		// given
+		Link savedLink = linkRepository.save(Link.builder()
+			.member(testMember)
+			.url("https://example.com/article")
+			.title("테스트 링크")
+			.build());
+		Long linkId = savedLink.getId();
+
+		SummaryUpdateReq request = new SummaryUpdateReq("수정된 요약 텍스트", Format.DETAILED);
+
+		// when & then
+		mockMvc.perform(patch(BASE_URL + "/{id}/summary", linkId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+				.with(csrf())
+				.with(user(testUserDetails))
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("요약 수정 완료"))
+			.andExpect(jsonPath("$.data.content").value("수정된 요약 텍스트"));
 	}
 }
