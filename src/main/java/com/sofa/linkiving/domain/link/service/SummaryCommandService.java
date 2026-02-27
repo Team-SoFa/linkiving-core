@@ -37,5 +37,18 @@ public class SummaryCommandService {
 				.build()
 		);
 	}
+
+	public Summary initialSave(Link link, Format format, String content) {
+		summaryRepository.clearSelectedByLinkId(link.getId());
+
+		return summaryRepository.save(
+			Summary.builder()
+				.link(link)
+				.format(format)
+				.content(content)
+				.selected(true)
+				.build()
+		);
+	}
 }
 
