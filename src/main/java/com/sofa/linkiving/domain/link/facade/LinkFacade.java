@@ -13,7 +13,9 @@ import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
@@ -82,7 +84,7 @@ public class LinkFacade {
 		String url = linkService.getLink(linkId, member).getUrl();
 
 		String existingSummary = summaryService.getSummary(linkId).getContent();
-		String newSummary = summaryService.createSummary(linkId, url, format);
+		String newSummary = summaryService.initialSummary(linkId, url, format);
 
 		String comparison = summaryService.comparisonSummary(existingSummary, newSummary);
 
@@ -97,5 +99,12 @@ public class LinkFacade {
 	public MetaScrapeRes scrapeMetadata(String url) {
 		OgTagDto ogTag = ogTagCrawler.crawl(url);
 		return MetaScrapeRes.from(ogTag);
+	}
+
+	public SummaryRes updateSummary(Long id, Member member, String content, Format format) {
+		Link link = linkService.getLink(id, member);
+		Summary summary = summaryService.createSummary(link, format, content);
+		summaryService.selectSummary(link.getId(), summary.getId());
+		return SummaryRes.from(summary);
 	}
 }

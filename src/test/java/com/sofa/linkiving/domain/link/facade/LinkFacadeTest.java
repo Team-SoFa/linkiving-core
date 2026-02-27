@@ -116,7 +116,7 @@ public class LinkFacadeTest {
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
 
 		// 3. SummaryService (새 요약 생성 및 비교)
-		given(summaryService.createSummary(linkId, url, format)).willReturn(newSummaryBody);
+		given(summaryService.initialSummary(linkId, url, format)).willReturn(newSummaryBody);
 		given(summaryService.comparisonSummary(existingSummaryBody, newSummaryBody)).willReturn(comparisonBody);
 
 		// when
@@ -130,7 +130,7 @@ public class LinkFacadeTest {
 
 		// verify
 		verify(summaryService).getSummary(linkId);
-		verify(summaryService).createSummary(linkId, url, format);
+		verify(summaryService).initialSummary(linkId, url, format);
 		verify(summaryService).comparisonSummary(existingSummaryBody, newSummaryBody);
 	}
 
