@@ -2,14 +2,12 @@ package com.sofa.linkiving.domain.link.service;
 
 import java.util.Optional;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
-import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -23,7 +21,6 @@ public class LinkService {
 
 	private final LinkCommandService linkCommandService;
 	private final LinkQueryService linkQueryService;
-	private final ApplicationEventPublisher eventPublisher;
 
 	public Link createLink(Member member, String url, String title, String memo, String imageUrl) {
 		if (linkQueryService.existsByUrl(member, url)) {
@@ -32,8 +29,6 @@ public class LinkService {
 
 		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl);
 		log.info("Link created - id: {}, memberId: {}, url: {}", link.getId(), member.getId(), url);
-
-		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
 
 		return link;
 	}
@@ -70,6 +65,10 @@ public class LinkService {
 		linkCommandService.deleteLink(link);
 
 		log.info("Link soft deleted - id: {}, memberId: {}", linkId, member.getId());
+	}
+
+	public Link getLink(Long linkId) {
+		return linkQueryService.findById(linkId);
 	}
 
 	public Link getLink(Long linkId, Member member) {

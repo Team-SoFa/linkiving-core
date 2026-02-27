@@ -22,15 +22,15 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
-import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
-import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.link.service.LinkCommandService;
 import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.link.service.LinkService;
@@ -71,7 +71,8 @@ public class LinkFacadeTest {
 
 	@BeforeEach
 	void setUp() {
-		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, summaryClient);
+		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, eventPublisher,
+			summaryClient);
 	}
 
 	@Test
@@ -164,61 +165,49 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크 생성 시 이미지 업로드, 링크 저장, AI 요약 요청, 요약 저장이 순차적으로 수행된다")
+	@DisplayName("링크 생성 시 이미지 업로드 및 링크가 저장되고, 비동기 요약을 위한 이벤트가 발행된다")
 	void shouldCreateLink() {
 		// given
 		Long linkId = 1L;
-		Long memberId = 1L;
 		String url = "https://example.com";
 		String title = "테스트 제목";
 		String memo = "테스트 메모";
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
-		String aiSummaryContent = "AI가 요약한 내용입니다.";
 
 		Member member = mock(Member.class);
-		when(member.getId()).thenReturn(memberId);
 
+		// 1. 이미지 업로드 모킹
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
+		// 2. 링크 저장 모킹 (LinkService 내부의 LinkCommandService 동작)
 		Link savedLink = Link.builder()
 			.url(url)
 			.title(title)
 			.memo(memo)
 			.imageUrl(storedImageUrl)
 			.build();
-
 		ReflectionTestUtils.setField(savedLink, "id", linkId);
+
 		given(linkCommandService.saveLink(member, url, title, memo, storedImageUrl))
 			.willReturn(savedLink);
 
-		RagInitialSummaryRes ragRes = new RagInitialSummaryRes(aiSummaryContent);
-		given(summaryClient.initialSummary(eq(linkId), eq(memberId), eq(title), eq(url), eq(memo)))
-			.willReturn(ragRes);
-
-		Summary savedSummary = Summary.builder()
-			.link(savedLink)
-			.content(aiSummaryContent)
-			.format(Format.CONCISE)
-			.build();
-
-		given(summaryService.createSummary(savedLink, Format.CONCISE, aiSummaryContent))
-			.willReturn(savedSummary);
-
 		// when
-		LinkDetailRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
+		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.url()).isEqualTo(url);
-		assertThat(result.imageUrl()).isEqualTo(storedImageUrl);
-		assertThat(result.summary().content()).isEqualTo(aiSummaryContent);
 
-		// Verify
-		verify(imageUploader).uploadFromUrl(originalImageUrl);
-		verify(linkCommandService).saveLink(member, url, title, memo, storedImageUrl);
-		verify(summaryClient).initialSummary(eq(linkId), eq(memberId), eq(title), eq(url), eq(memo));
-		verify(summaryService).createSummary(savedLink, Format.CONCISE, aiSummaryContent);
+		// Verify: 기존 로직 정상 호출 확인
+		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
+		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
+
+		// Verify: 핵심 비즈니스 로직인 이벤트 발행이 정상적으로 수행되었는지 확인
+		verify(eventPublisher, atLeastOnce()).publishEvent(any(LinkCreatedEvent.class));
+
+		// Verify: 비동기로 전환되었으므로, 더 이상 파사드에서 요약 클라이언트나 서비스를 호출하지 않음을 확인
+		verifyNoInteractions(summaryClient);
+		verify(summaryService, never()).createSummary(any(), any(), any());
 	}
 
 	@Test

@@ -41,7 +41,7 @@ public interface LinkApi {
 	);
 
 	@Operation(summary = "링크 생성", description = "새로운 링크를 저장합니다")
-	BaseResponse<LinkDetailRes> createLink(
+	BaseResponse<LinkRes> createLink(
 		@Valid LinkCreateReq request,
 		Member member
 	);

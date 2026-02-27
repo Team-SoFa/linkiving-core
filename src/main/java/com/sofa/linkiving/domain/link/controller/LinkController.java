@@ -59,11 +59,11 @@ public class LinkController implements LinkApi {
 
 	@Override
 	@PostMapping
-	public BaseResponse<LinkDetailRes> createLink(
+	public BaseResponse<LinkRes> createLink(
 		@RequestBody LinkCreateReq request,
 		@AuthMember Member member
 	) {
-		LinkDetailRes response = linkFacade.createLink(
+		LinkRes response = linkFacade.createLink(
 			member,
 			request.url(),
 			request.title(),

@@ -4,17 +4,13 @@ import java.util.Optional;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
+import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
-import com.sofa.linkiving.domain.link.entity.Summary;
-import com.sofa.linkiving.domain.link.enums.Format;
-import com.sofa.linkiving.domain.link.repository.LinkRepository;
-import com.sofa.linkiving.domain.link.repository.SummaryRepository;
-import com.sofa.linkiving.infra.feign.AiServerClient;
-import com.sofa.linkiving.infra.feign.dto.SummaryRequest;
-import com.sofa.linkiving.infra.feign.dto.SummaryResponse;
+import com.sofa.linkiving.domain.link.service.LinkService;
+import com.sofa.linkiving.domain.link.service.SummaryService;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -29,9 +25,9 @@ public class SummaryWorker {
 
 	private final SummaryQueue summaryQueue;
 	private final SummaryWorkerProperties properties;
-	private final LinkRepository linkRepository;
-	private final SummaryRepository summaryRepository;
-	private final AiServerClient aiServerClient;
+	private final SummaryService summaryService;
+	private final LinkService linkService;
+	private final SummaryClient summaryClient;
 	private volatile boolean running = true;
 	private Thread workerThread;
 
@@ -79,52 +75,21 @@ public class SummaryWorker {
 		log.info("Processing link for summary - linkId: {}", linkId);
 
 		try {
-			generateAndSaveSummary(linkId);
+			Link link = linkService.getLink(linkId);
+
+			RagInitialSummaryRes res = summaryClient.initialSummary(
+				link.getId(),
+				link.getMember().getId(),
+				link.getTitle(),
+				link.getUrl(),
+				link.getMemo()
+			);
+
+			if (res != null) {
+				summaryService.createInitialSummary(link, res.summary());
+			}
 		} catch (Exception e) {
 			log.error("Failed to generate summary for linkId: {}", linkId, e);
 		}
-	}
-
-	@Transactional
-	public void generateAndSaveSummary(Long linkId) {
-		// 1. Link 조회
-		Link link = linkRepository.findById(linkId)
-			.orElseThrow(() -> new IllegalArgumentException("Link not found: " + linkId));
-
-		log.debug("Link found - url: {}, title: {}", link.getUrl(), link.getTitle());
-
-		// 2. RAG 서버에 요약 요청
-		SummaryRequest request = SummaryRequest.of(
-			link.getId(),
-			link.getMember().getId(),
-			link.getUrl(),
-			link.getTitle(),
-			link.getMemo()
-		);
-		log.info("Requesting summary to AI server - linkId: {}, userId: {}", request.linkId(), request.userId());
-		SummaryResponse[] responses = aiServerClient.generateSummary(request);
-		if (responses == null || responses.length == 0) {
-			log.warn("AI server returned empty summary response - linkId: {}", linkId);
-			return;
-		}
-		if (responses.length > 1) {
-			log.warn("AI server returned multiple summaries, using the first - linkId: {}, size: {}", linkId,
-				responses.length);
-		}
-		SummaryResponse response = responses[0];
-
-		log.info("Summary generated for linkId: {}", linkId);
-
-		// 3. Summary 엔티티 생성 및 저장
-		boolean isFirstSummary = !summaryRepository.existsByLinkIdAndSelectedTrue(linkId);
-		Summary summary = Summary.builder()
-			.link(link)
-			.format(Format.CONCISE)
-			.content(response.summary())
-			.selected(isFirstSummary)
-			.build();
-
-		summaryRepository.save(summary);
-		log.info("Summary saved for linkId: {}", linkId);
 	}
 }

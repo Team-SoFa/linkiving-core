@@ -24,4 +24,8 @@ public class SummaryService {
 	public Summary createSummary(Link link, Format format, String summary) {
 		return summaryCommandService.save(link, format, summary);
 	}
+
+	public Summary createInitialSummary(Link link, String summary) {
+		return summaryCommandService.initialSave(link, Format.CONCISE, summary);
+	}
 }

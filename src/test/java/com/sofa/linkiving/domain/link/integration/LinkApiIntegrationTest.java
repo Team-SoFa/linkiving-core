@@ -122,8 +122,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.url").value(req.url()))
 			.andExpect(jsonPath("$.data.title").value(req.title()))
 			.andExpect(jsonPath("$.data.memo").value(req.memo()))
-			.andExpect(jsonPath("$.data.imageUrl").value(uploadedS3Url))
-			.andExpect(jsonPath("$.data.summary.content").value("최초 요약"));
+			.andExpect(jsonPath("$.data.imageUrl").value(uploadedS3Url));
 
 		// DB 검증
 		boolean exists = linkRepository.existsByMemberAndUrlAndIsDeleteFalse(testMember, req.url());
