@@ -25,6 +25,10 @@ public class SummaryService {
 		return summaryCommandService.save(link, format, summary);
 	}
 
+	public Summary createInitialSummary(Link link, String summary) {
+		return summaryCommandService.initialSave(link, Format.CONCISE, summary);
+	}
+
 	public void selectSummary(Long linkId, Long summaryId) {
 		summaryCommandService.selectSummary(linkId, summaryId);
 	}

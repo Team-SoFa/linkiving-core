@@ -52,8 +52,8 @@ public class RagChatServiceTest {
 
 	private Member member;
 	private Chat chat;
-	private Long chatId = 1L;
-	private String userMessage = "테스트 질문";
+	private final Long chatId = 1L;
+	private final String userMessage = "테스트 질문";
 
 	@BeforeEach
 	void setUp() {

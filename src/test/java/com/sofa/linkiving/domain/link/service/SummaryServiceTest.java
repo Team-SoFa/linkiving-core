@@ -78,4 +78,22 @@ public class SummaryServiceTest {
 		assertThat(result).isEqualTo(mockSummary);
 		verify(summaryQueryService).getSummary(linkId);
 	}
+
+	@Test
+	@DisplayName("createInitialSummary: Format.CONCISE 형태로 초기 요약을 생성하고 저장한다")
+	void shouldCreateInitialSummaryWithConciseFormat() {
+		// given
+		Link link = mock(Link.class);
+		String content = "테스트 초기 요약 내용";
+		Summary expectedSummary = mock(Summary.class);
+
+		given(summaryCommandService.initialSave(link, Format.CONCISE, content)).willReturn(expectedSummary);
+
+		// when
+		Summary actualSummary = summaryService.createInitialSummary(link, content);
+
+		// then
+		assertThat(actualSummary).isEqualTo(expectedSummary);
+		verify(summaryCommandService, times(1)).initialSave(link, Format.CONCISE, content);
+	}
 }

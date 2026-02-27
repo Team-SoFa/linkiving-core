@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -100,5 +101,40 @@ public class SummaryCommandServiceTest {
 		assertThat(save).isNotNull();
 		assertThat(save.getContent()).isEqualTo("요약");
 		verify(summaryRepository, times(1)).save(any(Summary.class));
+	}
+
+	@Test
+	@DisplayName("기존 선택된 요약을 초기화하고 새 요약을 선택 상태로 저장함")
+	void shouldClearSelectedAndSaveNewSummaryAsSelected() {
+		// given
+		Long linkId = 1L;
+		Link link = mock(Link.class);
+		given(link.getId()).willReturn(linkId);
+
+		Format format = Format.DETAILED;
+		String content = "새로운 초기 요약 내용";
+
+		// Repository의 save 호출 시 전달된 객체를 그대로 반환하도록 모킹 설정함
+		given(summaryRepository.save(any(Summary.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		// when
+		Summary savedSummary = summaryCommandService.initialSave(link, format, content);
+
+		// then
+		// 1. 기존 요약 선택 상태 초기화(clearSelectedByLinkId) 메서드가 정상 호출되었는지 검증함
+		verify(summaryRepository, times(1)).clearSelectedByLinkId(linkId);
+
+		// 2. 저장 시 넘겨진 엔티티 값을 캡처하여 정확히 바인딩되었는지 검증함
+		ArgumentCaptor<Summary> captor = ArgumentCaptor.forClass(Summary.class);
+		verify(summaryRepository, times(1)).save(captor.capture());
+
+		Summary capturedSummary = captor.getValue();
+		assertThat(capturedSummary.getLink()).isEqualTo(link);
+		assertThat(capturedSummary.getFormat()).isEqualTo(format);
+		assertThat(capturedSummary.getContent()).isEqualTo(content);
+		assertThat(capturedSummary.isSelected()).isTrue(); // 반드시 selected(true) 상태여야 함
+
+		// 3. 리턴된 값이 캡처된 객체와 동일한지 확인함
+		assertThat(savedSummary).isEqualTo(capturedSummary);
 	}
 }
