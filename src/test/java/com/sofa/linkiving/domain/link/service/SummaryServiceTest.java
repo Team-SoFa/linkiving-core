@@ -27,7 +27,7 @@ public class SummaryServiceTest {
 
 	@Test
 	@DisplayName("createSummary 호출 시 AiSummaryClient에게 위임한다")
-	void shouldCallGenerateSummaryWhenCreateSummary() {
+	void shouldCallGenerateSummaryWhenInitialSummary() {
 		// given
 		Long linkId = 1L;
 		String url = "https://example.com";
@@ -37,7 +37,7 @@ public class SummaryServiceTest {
 		given(aiSummaryClient.generateSummary(linkId, url, format)).willReturn(expectedResult);
 
 		// when
-		String result = summaryService.createSummary(linkId, url, format);
+		String result = summaryService.initialSummary(linkId, url, format);
 
 		// then
 		assertThat(result).isEqualTo(expectedResult);
