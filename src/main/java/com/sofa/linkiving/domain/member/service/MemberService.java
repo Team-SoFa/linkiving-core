@@ -12,6 +12,8 @@ import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
+import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class MemberService {
 	private final MemberCommandService memberCommandService;
 	private final MemberQueryService memberQueryService;
 	private final JwtTokenProvider jwtTokenProvider;
+	private final RedisService redisService;
 
 	public TokenRes signup(SignupReq req) {
 
@@ -58,5 +61,9 @@ public class MemberService {
 		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
+	}
+
+	public void logout(Member member) {
+		redisService.delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());
 	}
 }

@@ -23,6 +23,7 @@ import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +33,8 @@ public class MemberServiceTest {
 	MemberCommandService memberCommandService;
 	@Mock
 	JwtTokenProvider jwtTokenProvider;
+	@Mock
+	RedisService redisService;
 	@InjectMocks
 	MemberService memberService;
 	@Mock
@@ -142,5 +145,18 @@ public class MemberServiceTest {
 			);
 
 		verify(memberQueryService, times(1)).getUser(email);
+	}
+
+	@Test
+	@DisplayName("로그아웃 시 Redis에 저장된 refresh token 삭제")
+	void shouldDeleteRefreshTokenOnLogout() {
+		// given
+		Member member = Member.builder().email("test@test.com").password("pw").build();
+
+		// when
+		memberService.logout(member);
+
+		// then
+		verify(redisService, times(1)).delete(any(), eq(member.getEmail()));
 	}
 }
