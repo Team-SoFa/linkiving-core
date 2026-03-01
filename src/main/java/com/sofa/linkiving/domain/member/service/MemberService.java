@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
@@ -65,5 +66,10 @@ public class MemberService {
 
 	public void logout(Member member) {
 		redisService.delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());
+	}
+
+	@Transactional(readOnly = true)
+	public MemberProfileRes getProfile(Member member) {
+		return MemberProfileRes.from(member);
 	}
 }
