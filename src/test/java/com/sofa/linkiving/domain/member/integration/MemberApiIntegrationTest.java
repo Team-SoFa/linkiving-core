@@ -1,31 +1,39 @@
 package com.sofa.linkiving.domain.member.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
+import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -179,5 +187,97 @@ public class MemberApiIntegrationTest {
 			.andExpect(jsonPath("$.status").value(MemberErrorCode.INCORRECT_PASSWORD.getStatus().name()))
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.INCORRECT_PASSWORD.getMessage()))
 			.andExpect(jsonPath("$.data").value(MemberErrorCode.INCORRECT_PASSWORD.getCode()));
+	}
+
+	@Test
+	@DisplayName("로그아웃 시 로컬 환경에서는 HttpOnly/Secure 없이 쿠키가 만료된다")
+	void shouldExpireCookiesWithoutSecureFlagsOnLocalhost() throws Exception {
+		// given
+		Member member = memberRepository.save(Member.builder()
+			.email("logout-local@test.com")
+			.password("password")
+			.build());
+		CustomMemberDetail userDetails = new CustomMemberDetail(member, Role.USER);
+
+		// when
+		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
+					.with(csrf())
+					.with(user(userDetails))
+					.with(request -> {
+						request.setServerName("localhost");
+						return request;
+					})
+					.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
+			.andReturn();
+
+		// then
+		verify(redisService).delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());
+
+		List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+		assertThat(setCookies).hasSize(2);
+
+		String accessTokenCookie = setCookies.stream()
+			.filter(cookie -> cookie.startsWith("accessToken="))
+			.findFirst()
+			.orElseThrow();
+		String refreshTokenCookie = setCookies.stream()
+			.filter(cookie -> cookie.startsWith("refreshToken="))
+			.findFirst()
+			.orElseThrow();
+
+		assertThat(accessTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
+		assertThat(refreshTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
+		assertThat(accessTokenCookie).doesNotContain("HttpOnly");
+		assertThat(accessTokenCookie).doesNotContain("Secure");
+		assertThat(refreshTokenCookie).doesNotContain("HttpOnly");
+		assertThat(refreshTokenCookie).doesNotContain("Secure");
+	}
+
+	@Test
+	@DisplayName("로그아웃 시 운영 환경에서는 HttpOnly/Secure 쿠키로 만료된다")
+	void shouldExpireCookiesWithSecureFlagsOnNonLocalhost() throws Exception {
+		// given
+		Member member = memberRepository.save(Member.builder()
+			.email("logout-prod@test.com")
+			.password("password")
+			.build());
+		CustomMemberDetail userDetails = new CustomMemberDetail(member, Role.USER);
+
+		// when
+		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
+					.with(csrf())
+					.with(user(userDetails))
+					.with(request -> {
+						request.setServerName("example.com");
+						return request;
+					})
+					.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
+			.andReturn();
+
+		// then
+		verify(redisService).delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());
+
+		List<String> setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+		assertThat(setCookies).hasSize(2);
+
+		String accessTokenCookie = setCookies.stream()
+			.filter(cookie -> cookie.startsWith("accessToken="))
+			.findFirst()
+			.orElseThrow();
+		String refreshTokenCookie = setCookies.stream()
+			.filter(cookie -> cookie.startsWith("refreshToken="))
+			.findFirst()
+			.orElseThrow();
+
+		assertThat(accessTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
+		assertThat(refreshTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
+		assertThat(accessTokenCookie).contains("HttpOnly");
+		assertThat(accessTokenCookie).contains("Secure");
+		assertThat(refreshTokenCookie).contains("HttpOnly");
+		assertThat(refreshTokenCookie).contains("Secure");
 	}
 }
