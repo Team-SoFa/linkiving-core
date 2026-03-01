@@ -1,9 +1,11 @@
 package com.sofa.linkiving.domain.link.facade;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
+import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
@@ -12,9 +14,11 @@ import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
-import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
@@ -31,10 +35,15 @@ public class LinkFacade {
 	private final OgTagCrawler ogTagCrawler;
 	private final SummaryService summaryService;
 	private final ImageUploader imageUploader;
+	private final ApplicationEventPublisher eventPublisher;
+	private final SummaryClient summaryClient;
 
 	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
 		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
+
+		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
+
 		return LinkRes.from(link);
 	}
 
@@ -77,19 +86,17 @@ public class LinkFacade {
 	}
 
 	@Transactional(readOnly = true)
-	public RecreateSummaryResponse recreateSummary(Member member, Long linkId, Format format) {
+	public RegenerateSummaryRes recreateSummary(Member member, Long linkId, Format format) {
 
 		String url = linkService.getLink(linkId, member).getUrl();
-
 		String existingSummary = summaryService.getSummary(linkId).getContent();
-		String newSummary = summaryService.createSummary(linkId, url, format);
 
-		String comparison = summaryService.comparisonSummary(existingSummary, newSummary);
+		RagRegenerateSummaryRes res = summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary);
 
-		return RecreateSummaryResponse.builder()
+		return RegenerateSummaryRes.builder()
 			.existingSummary(existingSummary)
-			.newSummary(newSummary)
-			.comparison(comparison)
+			.newSummary(res.summary())
+			.difference(res.difference())
 			.build();
 	}
 

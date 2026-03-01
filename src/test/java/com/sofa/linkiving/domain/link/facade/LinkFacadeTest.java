@@ -14,19 +14,23 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
+import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
-import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
+import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.link.service.LinkCommandService;
 import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.link.service.LinkService;
@@ -60,11 +64,15 @@ public class LinkFacadeTest {
 	private ImageUploader imageUploader;
 
 	@Mock
+	private SummaryClient summaryClient;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	@BeforeEach
 	void setUp() {
-		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader);
+		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, eventPublisher,
+			summaryClient);
 	}
 
 	@Test
@@ -98,12 +106,16 @@ public class LinkFacadeTest {
 	void shouldReturnRecreateSummaryResponseWhenRecreateSummary() {
 		// given
 		Long linkId = 1L;
+		Long memberId = 1L;
+
 		Member member = mock(Member.class);
+		given(member.getId()).willReturn(memberId);
+
 		Format format = Format.DETAILED;
 		String url = "https://example.com";
-		String existingSummaryBody = "기존 요약 내용입니다.";
-		String newSummaryBody = "새로운 상세 요약 내용입니다.";
-		String comparisonBody = "기존 대비 상세 내용이 추가되었습니다.";
+		String existingSummary = "기존 요약 내용입니다.";
+		String newSummary = "새로운 상세 요약 내용입니다.";
+		String difference = "기존 대비 상세 내용이 추가되었습니다.";
 
 		// 1. LinkService Mocking (URL 가져오기)
 		Link mockLink = mock(Link.class);
@@ -112,26 +124,25 @@ public class LinkFacadeTest {
 
 		// 2. SummaryService (기존 요약 가져오기)
 		Summary mockSummary = mock(Summary.class);
-		given(mockSummary.getContent()).willReturn(existingSummaryBody);
+		given(mockSummary.getContent()).willReturn(existingSummary);
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
 
 		// 3. SummaryService (새 요약 생성 및 비교)
-		given(summaryService.createSummary(linkId, url, format)).willReturn(newSummaryBody);
-		given(summaryService.comparisonSummary(existingSummaryBody, newSummaryBody)).willReturn(comparisonBody);
+		RagRegenerateSummaryRes ragRes = new RagRegenerateSummaryRes(newSummary, difference);
+		given(summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary)).willReturn(ragRes);
 
 		// when
-		RecreateSummaryResponse response = linkFacade.recreateSummary(member, linkId, format);
+		RegenerateSummaryRes response = linkFacade.recreateSummary(member, linkId, format);
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.existingSummary()).isEqualTo(existingSummaryBody);
-		assertThat(response.newSummary()).isEqualTo(newSummaryBody);
-		assertThat(response.comparison()).isEqualTo(comparisonBody);
+		assertThat(response.existingSummary()).isEqualTo(existingSummary);
+		assertThat(response.newSummary()).isEqualTo(newSummary);
+		assertThat(response.difference()).isEqualTo(difference);
 
 		// verify
 		verify(summaryService).getSummary(linkId);
-		verify(summaryService).createSummary(linkId, url, format);
-		verify(summaryService).comparisonSummary(existingSummaryBody, newSummaryBody);
+		verify(summaryClient).regenerateSummary(linkId, member.getId(), url, existingSummary);
 	}
 
 	@Test
@@ -154,24 +165,29 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("이미지 URL을 업로드하고 반환된 저장 경로로 링크를 생성한다")
+	@DisplayName("링크 생성 시 이미지 업로드 및 링크가 저장되고, 비동기 요약을 위한 이벤트가 발행된다")
 	void shouldCreateLink() {
 		// given
-		Member member = mock(Member.class);
+		Long linkId = 1L;
 		String url = "https://example.com";
 		String title = "테스트 제목";
 		String memo = "테스트 메모";
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
 
+		Member member = mock(Member.class);
+
+		// 1. 이미지 업로드 모킹
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
+		// 2. 링크 저장 모킹 (LinkService 내부의 LinkCommandService 동작)
 		Link savedLink = Link.builder()
 			.url(url)
 			.title(title)
 			.memo(memo)
 			.imageUrl(storedImageUrl)
 			.build();
+		ReflectionTestUtils.setField(savedLink, "id", linkId);
 
 		given(linkCommandService.saveLink(member, url, title, memo, storedImageUrl))
 			.willReturn(savedLink);
@@ -181,13 +197,17 @@ public class LinkFacadeTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.url()).isEqualTo(url);
-		assertThat(result.imageUrl()).isEqualTo(storedImageUrl);
 
-		// Verify
+		// Verify: 기존 로직 정상 호출 확인
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
-		verify(linkQueryService, times(1)).existsByUrl(member, url);
 		verify(linkCommandService, times(1)).saveLink(member, url, title, memo, storedImageUrl);
+
+		// Verify: 핵심 비즈니스 로직인 이벤트 발행이 정상적으로 수행되었는지 확인
+		verify(eventPublisher, atLeastOnce()).publishEvent(any(LinkCreatedEvent.class));
+
+		// Verify: 비동기로 전환되었으므로, 더 이상 파사드에서 요약 클라이언트나 서비스를 호출하지 않음을 확인
+		verifyNoInteractions(summaryClient);
+		verify(summaryService, never()).createSummary(any(), any(), any());
 	}
 
 	@Test

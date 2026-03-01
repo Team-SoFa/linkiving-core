@@ -2,6 +2,9 @@ package com.sofa.linkiving.domain.link.service;
 
 import org.springframework.stereotype.Service;
 
+import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -24,5 +27,27 @@ public class SummaryCommandService {
 			throw new BusinessException(LinkErrorCode.SUMMARY_NOT_FOUND);
 		}
 	}
-}
 
+	public Summary save(Link link, Format format, String content) {
+		return summaryRepository.save(
+			Summary.builder()
+				.link(link)
+				.format(format)
+				.content(content)
+				.build()
+		);
+	}
+
+	public Summary initialSave(Link link, Format format, String content) {
+		summaryRepository.clearSelectedByLinkId(link.getId());
+
+		return summaryRepository.save(
+			Summary.builder()
+				.link(link)
+				.format(format)
+				.content(content)
+				.selected(true)
+				.build()
+		);
+	}
+}

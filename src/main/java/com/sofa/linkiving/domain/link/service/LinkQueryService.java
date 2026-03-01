@@ -30,6 +30,12 @@ public class LinkQueryService {
 			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
 	}
 
+	public Link findById(Long linkId) {
+		return linkRepository.findById(linkId)
+			.filter(link -> !link.isDeleted())
+			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
+	}
+
 	public LinkDto findByIdWithSummary(Long linkId, Member member) {
 		return linkRepository.findByIdAndMemberWithSummaryAndIsDeleteFalse(linkId, member)
 			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));

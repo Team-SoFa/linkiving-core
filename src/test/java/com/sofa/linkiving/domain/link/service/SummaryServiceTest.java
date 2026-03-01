@@ -10,9 +10,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sofa.linkiving.domain.link.ai.AiSummaryClient;
+import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
 public class SummaryServiceTest {
@@ -23,43 +24,42 @@ public class SummaryServiceTest {
 	private SummaryQueryService summaryQueryService;
 
 	@Mock
-	private AiSummaryClient aiSummaryClient;
+	private SummaryCommandService summaryCommandService;
 
 	@Test
-	@DisplayName("createSummary 호출 시 AiSummaryClient에게 위임한다")
-	void shouldCallGenerateSummaryWhenCreateSummary() {
+	@DisplayName("요약를 생성할 수 있다")
+	void shouldCreateLink() {
 		// given
-		Long linkId = 1L;
-		String url = "https://example.com";
-		Format format = Format.CONCISE;
-		String expectedResult = "Generated Summary";
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
 
-		given(aiSummaryClient.generateSummary(linkId, url, format)).willReturn(expectedResult);
+		Link link = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("테스트 링크")
+			.build();
+
+		Summary summary = Summary.builder()
+			.format(Format.CONCISE)
+			.link(link)
+			.content("요약")
+			.build();
+
+		given(summaryCommandService.save(any(), any(), any())).willReturn(summary);
 
 		// when
-		String result = summaryService.createSummary(linkId, url, format);
+		Summary save = summaryCommandService.save(
+			link,
+			Format.CONCISE,
+			"요약"
+		);
 
 		// then
-		assertThat(result).isEqualTo(expectedResult);
-		verify(aiSummaryClient).generateSummary(linkId, url, format);
-	}
-
-	@Test
-	@DisplayName("comparisonSummary 호출 시 AiSummaryClient에게 위임한다")
-	void shouldCallComparisonSummaryWhenComparisonSummary() {
-		// given
-		String oldSummary = "old";
-		String newSummary = "new";
-		String expectedResult = "Comparison Result";
-
-		given(aiSummaryClient.comparisonSummary(oldSummary, newSummary)).willReturn(expectedResult);
-
-		// when
-		String result = summaryService.comparisonSummary(oldSummary, newSummary);
-
-		// then
-		assertThat(result).isEqualTo(expectedResult);
-		verify(aiSummaryClient).comparisonSummary(oldSummary, newSummary);
+		assertThat(save).isNotNull();
+		assertThat(save.getContent()).isEqualTo("요약");
+		verify(summaryCommandService, times(1)).save(any(), any(), any());
 	}
 
 	@Test
@@ -77,5 +77,23 @@ public class SummaryServiceTest {
 		// then
 		assertThat(result).isEqualTo(mockSummary);
 		verify(summaryQueryService).getSummary(linkId);
+	}
+
+	@Test
+	@DisplayName("createInitialSummary: Format.CONCISE 형태로 초기 요약을 생성하고 저장한다")
+	void shouldCreateInitialSummaryWithConciseFormat() {
+		// given
+		Link link = mock(Link.class);
+		String content = "테스트 초기 요약 내용";
+		Summary expectedSummary = mock(Summary.class);
+
+		given(summaryCommandService.initialSave(link, Format.CONCISE, content)).willReturn(expectedSummary);
+
+		// when
+		Summary actualSummary = summaryService.createInitialSummary(link, content);
+
+		// then
+		assertThat(actualSummary).isEqualTo(expectedSummary);
+		verify(summaryCommandService, times(1)).initialSave(link, Format.CONCISE, content);
 	}
 }

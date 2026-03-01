@@ -1,5 +1,9 @@
 package com.sofa.linkiving.domain.link.event;
 
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -21,43 +25,27 @@ public class LinkEventListener {
 	private final SummaryQueue summaryQueue;
 
 	/**
-	 * 링크 생성 완료 이벤트 처리
-	 * 트랜잭션 커밋 후에만 실행되어 롤백 시 큐에 추가되지 않음
+	 * 트랜잭션 커밋 후 비동기로 큐 적재 실행
+	 * 실패 시 100ms 간격으로 최대 3회 재시도
 	 */
+	@Async
+	@Retryable(
+		value = Exception.class,
+		maxAttempts = 3,
+		backoff = @Backoff(delay = 100)
+	)
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
-		log.info("Link created event received (after commit) - linkId: {}", event.linkId());
+		summaryQueue.addToQueue(event.linkId());
+		log.info("Link created event received & queued async - linkId: {}", event.linkId());
+	}
 
-		int maxRetries = 3;
-		int retryCount = 0;
-		boolean success = false;
-
-		while (retryCount < maxRetries && !success) {
-			try {
-				summaryQueue.addToQueue(event.linkId());
-				success = true;
-			} catch (Exception e) {
-				retryCount++;
-				log.warn("Failed to add link to summary queue (attempt {}/{}): linkId={}, error={}",
-					retryCount, maxRetries, event.linkId(), e.getMessage());
-
-				if (retryCount >= maxRetries) {
-					// 최종 실패 시 에러 로그 및 모니터링 알림
-					log.error("Failed to add link to summary queue after {} retries - linkId: {}. "
-							+ "Summary generation will be skipped for this link.",
-						maxRetries, event.linkId(), e);
-					// TODO: 관리자 알림 또는 실패 큐에 저장하여 수동 처리 가능하도록 개선 필요
-				} else {
-					// 재시도 전 짧은 대기
-					try {
-						Thread.sleep(100L * retryCount); // 100ms, 200ms, 300ms
-					} catch (InterruptedException ie) {
-						Thread.currentThread().interrupt();
-						log.error("Retry interrupted for linkId: {}", event.linkId());
-						break;
-					}
-				}
-			}
-		}
+	/**
+	 * 최대 재시도 횟수 초과 시 최종 실패 처리 로직
+	 */
+	@Recover
+	public void recover(Exception exception, LinkCreatedEvent event) {
+		log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
+		// TODO: 관리자 알림, 슬랙 발송 또는 실패 큐 적재 등 후속 처리
 	}
 }

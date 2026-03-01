@@ -16,13 +16,13 @@ import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
+import com.sofa.linkiving.domain.link.dto.request.RegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
-import com.sofa.linkiving.domain.link.dto.response.RecreateSummaryResponse;
-import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -143,13 +143,13 @@ public class LinkController implements LinkApi {
 	}
 
 	@Override
-	@GetMapping("/{id}/summary")
-	public BaseResponse<RecreateSummaryResponse> recreateSummary(
+	@PostMapping("/{id}/summary")
+	public BaseResponse<RegenerateSummaryRes> recreateSummary(
 		@PathVariable Long id,
-		@RequestParam Format format,
+		@RequestBody RegenerateSummaryReq req,
 		@AuthMember Member member
 	) {
-		RecreateSummaryResponse response = linkFacade.recreateSummary(member, id, format);
+		RegenerateSummaryRes response = linkFacade.recreateSummary(member, id, req.format());
 		return BaseResponse.success(response, "요약 재성성 완료");
 	}
 }

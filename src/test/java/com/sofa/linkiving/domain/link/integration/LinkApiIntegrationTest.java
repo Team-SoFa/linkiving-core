@@ -22,12 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
-import com.sofa.linkiving.domain.link.ai.AiSummaryClient;
+import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.MetaScrapeReq;
+import com.sofa.linkiving.domain.link.dto.request.RegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
@@ -62,8 +63,8 @@ public class LinkApiIntegrationTest {
 	@Autowired
 	private SummaryRepository summaryRepository;
 
-	@MockitoBean
-	private AiSummaryClient aiSummaryClient;
+	@Autowired
+	private SummaryClient summaryClient;
 
 	@MockitoBean
 	private ImageUploader imageUploader;
@@ -120,7 +121,8 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.message").value("링크 생성 완료"))
 			.andExpect(jsonPath("$.data.url").value(req.url()))
 			.andExpect(jsonPath("$.data.title").value(req.title()))
-			.andExpect(jsonPath("$.data.memo").value(req.memo()));
+			.andExpect(jsonPath("$.data.memo").value(req.memo()))
+			.andExpect(jsonPath("$.data.imageUrl").value(uploadedS3Url));
 
 		// DB 검증
 		boolean exists = linkRepository.existsByMemberAndUrlAndIsDeleteFalse(testMember, req.url());
@@ -622,7 +624,6 @@ public class LinkApiIntegrationTest {
 			.title("테스트 링크")
 			.build());
 
-		Format format = Format.DETAILED;
 		Long linkId = savedLink.getId();
 
 		summaryRepository.save(Summary.builder()
@@ -631,28 +632,24 @@ public class LinkApiIntegrationTest {
 			.selected(true)
 			.build());
 
-		String newSummaryText = "새로 생성된 상세 요약입니다.";
-		String comparisonText = "내용이 더 보강되었습니다.";
+		Format format = Format.DETAILED;
 
-		given(aiSummaryClient.generateSummary(eq(linkId), anyString(), eq(format)))
-			.willReturn(newSummaryText);
-
-		given(aiSummaryClient.comparisonSummary(anyString(), eq(newSummaryText)))
-			.willReturn(comparisonText);
+		RegenerateSummaryReq req = new RegenerateSummaryReq(format);
 
 		// when & then
-		mockMvc.perform(get(BASE_URL + "/{id}/summary", linkId)
+		mockMvc.perform(post(BASE_URL + "/{id}/summary", linkId)
 				.param("format", "DETAILED")
 				.with(csrf())
 				.with(user(testUserDetails))
-				.contentType(MediaType.APPLICATION_JSON))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(req)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.message").value("요약 재성성 완료"))
 			.andExpect(jsonPath("$.data.existingSummary").value("기존 요약입니다."))
-			.andExpect(jsonPath("$.data.newSummary").value(newSummaryText))
-			.andExpect(jsonPath("$.data.comparison").value(comparisonText));
+			.andExpect(jsonPath("$.data.newSummary").value("신규 요약"))
+			.andExpect(jsonPath("$.data.difference").value("비교 사항"));
 	}
 
 	@Test
