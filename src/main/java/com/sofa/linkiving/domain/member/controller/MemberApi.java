@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.member.controller;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -21,4 +22,7 @@ public interface MemberApi {
 
 	@Operation(summary = "로그아웃", description = "리프레시 토큰을 무효화하고 로그아웃 처리합니다.")
 	BaseResponse<String> logout(Member member, HttpServletRequest request, HttpServletResponse response);
+
+	@Operation(summary = "내 프로필 조회", description = "로그인한 사용자의 프로필 정보를 조회합니다.")
+	BaseResponse<MemberProfileRes> getProfile(Member member);
 }

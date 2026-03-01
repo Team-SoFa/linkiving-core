@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.member.controller;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.service.MemberService;
@@ -65,5 +67,12 @@ public class MemberController implements MemberApi {
 			.sameSite("Lax")
 			.build();
 		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+	}
+
+	@Override
+	@GetMapping("/me")
+	public BaseResponse<MemberProfileRes> getProfile(@AuthMember Member member) {
+		MemberProfileRes profile = memberService.getProfile(member);
+		return BaseResponse.success(profile, "프로필 조회에 성공하였습니다.");
 	}
 }

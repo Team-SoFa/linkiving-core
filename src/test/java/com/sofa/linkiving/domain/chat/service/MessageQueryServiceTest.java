@@ -38,7 +38,6 @@ public class MessageQueryServiceTest {
 	@Mock
 	private Chat chat;
 
-
 	@Test
 	@DisplayName("요청 개수 초과 데이터가 존재 시 hasNext=true 반환 및 데이터를 잘라서 반환: (요청 개수 :10개 ,데이터 :11개)")
 	void shouldReturnHasNextTrueWhenMoreDataExists() {
