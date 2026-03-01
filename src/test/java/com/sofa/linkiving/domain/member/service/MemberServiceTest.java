@@ -5,6 +5,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.LocalDateTime;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -19,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
@@ -142,5 +144,24 @@ public class MemberServiceTest {
 			);
 
 		verify(memberQueryService, times(1)).getUser(email);
+	}
+
+	@Test
+	@DisplayName("프로필 조회 시 회원 정보를 응답으로 변환")
+	void shouldReturnProfileFromMember() {
+		// given
+		Member member = mock(Member.class);
+		LocalDateTime createdAt = LocalDateTime.of(2026, 3, 1, 12, 34, 56);
+		given(member.getId()).willReturn(1L);
+		given(member.getEmail()).willReturn("user@example.com");
+		given(member.getCreatedAt()).willReturn(createdAt);
+
+		// when
+		MemberProfileRes res = memberService.getProfile(member);
+
+		// then
+		assertThat(res.id()).isEqualTo(1L);
+		assertThat(res.email()).isEqualTo("user@example.com");
+		assertThat(res.createdAt()).isEqualTo(createdAt);
 	}
 }
