@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
+import com.sofa.linkiving.domain.link.util.UrlValidator;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +23,16 @@ public class S3ImageUploader implements ImageUploader {
 
 	private final S3Template s3Template;
 	private final UrlConnectionFactory urlConnectionFactory;
+	private final UrlValidator urlValidator;
 
 	@Value("${spring.cloud.aws.s3.bucket}")
 	private String bucketName;
 
 	@Value("${spring.cloud.aws.region.static}")
 	private String region;
+
+	@Value("${app.link.default-image-url:}")
+	private String defaultImageUrl;
 
 	@Override
 	public String uploadFromUrl(String originalUrl) {
@@ -35,14 +41,15 @@ public class S3ImageUploader implements ImageUploader {
 		}
 
 		try {
-			String s3Key = generateUniqueKeyFromUrl(originalUrl);
-
-			String s3Url = buildS3Url(s3Key);
-
-			if (s3Template.objectExists(bucketName, s3Key)) {
-				log.info("Image already exists (Cache Hit): {} -> {}", originalUrl, s3Key);
-				return s3Url;
+			String cachedUrl = resolveStoredUrl(originalUrl);
+			if (cachedUrl != null) {
+				return cachedUrl;
 			}
+
+			urlValidator.validateSafeUrl(originalUrl);
+
+			String s3Key = generateUniqueKeyFromUrl(originalUrl);
+			String s3Url = buildS3Url(s3Key);
 
 			URLConnection connection = urlConnectionFactory.createConnection(originalUrl);
 			connection.setConnectTimeout(3000);
@@ -60,14 +67,61 @@ public class S3ImageUploader implements ImageUploader {
 				return s3Url;
 			}
 
+		} catch (BusinessException e) {
+			log.warn("Unsafe image URL blocked: {}", e.getMessage());
+			return normalizedDefaultImageUrl();
 		} catch (Exception e) {
-			log.warn("Upload failed, falling back to original URL: {}", e.getMessage());
+			log.warn("Image upload failed: {}", e.getMessage());
+			return null;
+		}
+	}
+
+	@Override
+	public String resolveStoredUrl(String originalUrl) {
+		if (originalUrl == null || originalUrl.isBlank()) {
+			return null;
+		}
+
+		try {
+			String storedKey = extractStoredKey(originalUrl);
+			if (storedKey != null) {
+				if (s3Template.objectExists(bucketName, storedKey)) {
+					return originalUrl;
+				}
+				return null;
+			}
+
+			String s3Key = generateUniqueKeyFromUrl(originalUrl);
+			if (s3Template.objectExists(bucketName, s3Key)) {
+				log.info("Image already exists (Cache Hit): {} -> {}", originalUrl, s3Key);
+				return buildS3Url(s3Key);
+			}
+
+			return null;
+		} catch (Exception e) {
+			log.warn("Image cache lookup failed: {}", e.getMessage());
 			return null;
 		}
 	}
 
 	private String buildS3Url(String key) {
 		return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, key);
+	}
+
+	private String extractStoredKey(String url) {
+		String prefix = String.format("https://%s.s3.%s.amazonaws.com/", bucketName, region);
+		if (!url.startsWith(prefix)) {
+			return null;
+		}
+		String key = url.substring(prefix.length());
+		return key.isBlank() ? null : key;
+	}
+
+	private String normalizedDefaultImageUrl() {
+		if (defaultImageUrl == null || defaultImageUrl.isBlank()) {
+			return null;
+		}
+		return defaultImageUrl;
 	}
 
 	private String generateUniqueKeyFromUrl(String url) {

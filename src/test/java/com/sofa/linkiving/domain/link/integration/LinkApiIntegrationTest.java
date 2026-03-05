@@ -96,6 +96,7 @@ public class LinkApiIntegrationTest {
 		String originalImageUrl = "https://original.com/image.jpg";
 		String uploadedS3Url = "https://s3.amazonaws.com/bucket/links/uuid.jpg";
 
+		given(imageUploader.resolveStoredUrl(originalImageUrl)).willReturn(null);
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(uploadedS3Url);
 
 		LinkCreateReq req = new LinkCreateReq(
