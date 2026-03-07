@@ -26,7 +26,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void configureMessageBroker(MessageBrokerRegistry config) {
 		config.enableSimpleBroker("/queue");
-		config.setApplicationDestinationPrefixes("/ws/chat");
+		config.setApplicationDestinationPrefixes("/ws/chat", "/ws/link");
 
 		config.setUserDestinationPrefix("/user");
 	}
@@ -34,6 +34,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		registry.addEndpoint("/ws/chat")
+			.setAllowedOriginPatterns("*")
+			.withSockJS();
+
+		registry.addEndpoint("/ws/link")
 			.setAllowedOriginPatterns("*")
 			.withSockJS();
 	}
