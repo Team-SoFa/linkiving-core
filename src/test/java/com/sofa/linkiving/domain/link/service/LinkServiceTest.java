@@ -13,12 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -382,5 +382,66 @@ class LinkServiceTest {
 		// then
 		assertThat(result).isEmpty();
 		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
+	}
+
+	@Test
+	@DisplayName("요약 가능한 상태면 정상적으로 링크를 반환함")
+	void shouldReturnLinkWhenValidationPasses() {
+		// given
+		Long linkId = 1L;
+		Member member = mock(Member.class);
+		Link link = mock(Link.class);
+
+		given(linkQueryService.findById(linkId, member)).willReturn(link);
+		willDoNothing().given(link).validateSummarizable();
+
+		// when
+		Link result = linkService.getLinkForSummaryUpdate(linkId, member);
+
+		// then
+		assertThat(result).isEqualTo(link);
+		verify(linkQueryService, times(1)).findById(linkId, member);
+		verify(link, times(1)).validateSummarizable();
+	}
+
+	@Test
+	@DisplayName("요약 진행 중(PENDING/PROCESSING)인 상태면 예외가 발생함")
+	void shouldThrowExceptionWhenValidationFails() {
+		// given
+		Long linkId = 1L;
+		Member member = mock(Member.class);
+		Link link = mock(Link.class);
+
+		given(linkQueryService.findById(linkId, member)).willReturn(link);
+
+		// 상태 검증 실패 예외 강제 발생 모킹
+		willThrow(new BusinessException(SummaryErrorCode.ALREADY_PROCESSING))
+			.given(link).validateSummarizable();
+
+		// when & then
+		assertThatThrownBy(() -> linkService.getLinkForSummaryUpdate(linkId, member))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", SummaryErrorCode.ALREADY_PROCESSING);
+
+		verify(linkQueryService, times(1)).findById(linkId, member);
+		verify(link, times(1)).validateSummarizable();
+	}
+
+	@Test
+	@DisplayName("링크의 요약 상태(SummaryStatus)를 업데이트할 수 있다")
+	void shouldUpdateSummaryStatus() {
+		// given
+		Long linkId = 1L;
+		SummaryStatus newStatus = SummaryStatus.COMPLETED;
+		Link link = mock(Link.class);
+
+		given(linkQueryService.findById(linkId)).willReturn(link);
+
+		// when
+		linkService.updateSummaryStatus(linkId, newStatus);
+
+		// then
+		verify(linkQueryService, times(1)).findById(linkId);
+		verify(link, times(1)).updateSummaryStatus(newStatus);
 	}
 }
