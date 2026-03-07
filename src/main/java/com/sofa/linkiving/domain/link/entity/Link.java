@@ -1,7 +1,10 @@
 package com.sofa.linkiving.domain.link.entity;
 
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
+import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseEntity;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,6 +37,9 @@ public class Link extends BaseEntity {
 	@Column(name = "image_url", length = 2048)
 	private String imageUrl;
 
+	@Column(nullable = false, columnDefinition = "SMALLINT")
+	private SummaryStatus summaryStatus = SummaryStatus.PENDING;
+
 	@Builder
 	public Link(Member member, String url, String title, String memo, String imageUrl) {
 		this.member = member;
@@ -59,6 +65,16 @@ public class Link extends BaseEntity {
 		}
 		if (memo != null) {
 			this.memo = memo;
+		}
+	}
+
+	public void updateSummaryStatus(SummaryStatus status) {
+		this.summaryStatus = status;
+	}
+
+	public void validateSummarizable() {
+		if (this.summaryStatus == SummaryStatus.PENDING || this.summaryStatus == SummaryStatus.PROCESSING) {
+			throw new BusinessException(SummaryErrorCode.ALREADY_PROCESSING);
 		}
 	}
 }

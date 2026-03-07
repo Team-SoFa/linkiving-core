@@ -33,6 +33,7 @@ import com.sofa.linkiving.domain.link.dto.request.SummaryUpdateReq;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.repository.LinkRepository;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
@@ -624,7 +625,7 @@ public class LinkApiIntegrationTest {
 			.url("https://example.com/article")
 			.title("테스트 링크")
 			.build());
-
+		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
 		Long linkId = savedLink.getId();
 
 		summaryRepository.save(Summary.builder()
@@ -724,7 +725,7 @@ public class LinkApiIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("updateSummary API: PATCH 요청 시 요약 정보를 수정하고 200 OK를 반환한다")
+	@DisplayName("PATCH 요청 시 요약 정보를 수정하고 200 OK를 반환한다")
 	void updateSummaryApi_ShouldReturn200Ok() throws Exception {
 		// given
 		Link savedLink = linkRepository.save(Link.builder()
@@ -732,6 +733,8 @@ public class LinkApiIntegrationTest {
 			.url("https://example.com/article")
 			.title("테스트 링크")
 			.build());
+
+		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
 		Long linkId = savedLink.getId();
 
 		SummaryUpdateReq request = new SummaryUpdateReq("수정된 요약 텍스트", Format.DETAILED);
