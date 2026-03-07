@@ -22,17 +22,18 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
-import com.sofa.linkiving.domain.link.service.LinkCommandService;
-import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
@@ -43,16 +44,11 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 @DisplayName("LinkFacade 단위 테스트")
 public class LinkFacadeTest {
 
+	@InjectMocks
 	private LinkFacade linkFacade;
 
-	@InjectMocks
+	@Mock
 	private LinkService linkService;
-
-	@Mock
-	private LinkCommandService linkCommandService;
-
-	@Mock
-	private LinkQueryService linkQueryService;
 
 	@Mock
 	private SummaryService summaryService;
@@ -82,6 +78,7 @@ public class LinkFacadeTest {
 		String url = "https://velog.io/@jjeongdong/%EB%8F%99%EC%8B%9C%EC%84%B1-%EC%A0%9C%EC%96%B4";
 		String originalImageUrl = "https://velog.io/images/thumbnail.png";
 		String storedImageUrl = "https://s3-bucket.com/links/uuid.png";
+
 		OgTagDto mockOgTag = OgTagDto.builder()
 			.title("동시성 제어")
 			.description("동시성 제어에 대한 설명")
@@ -121,17 +118,14 @@ public class LinkFacadeTest {
 		String newSummary = "새로운 상세 요약 내용입니다.";
 		String difference = "기존 대비 상세 내용이 추가되었습니다.";
 
-		// 1. LinkService Mocking (URL 가져오기)
 		Link mockLink = mock(Link.class);
 		given(mockLink.getUrl()).willReturn(url);
-		given(linkService.getLink(linkId, member)).willReturn(mockLink);
+		given(linkService.getLinkForSummaryUpdate(linkId, member)).willReturn(mockLink);
 
-		// 2. SummaryService (기존 요약 가져오기)
 		Summary mockSummary = mock(Summary.class);
 		given(mockSummary.getContent()).willReturn(existingSummary);
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
 
-		// 3. SummaryService (새 요약 생성 및 비교)
 		RagRegenerateSummaryRes ragRes = new RagRegenerateSummaryRes(newSummary, difference);
 		given(summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary)).willReturn(ragRes);
 
@@ -145,8 +139,46 @@ public class LinkFacadeTest {
 		assertThat(response.difference()).isEqualTo(difference);
 
 		// verify
-		verify(summaryService).getSummary(linkId);
-		verify(summaryClient).regenerateSummary(linkId, member.getId(), url, existingSummary);
+		verify(linkService, times(1)).getLinkForSummaryUpdate(linkId, member);
+		verify(summaryService, times(1)).getSummary(linkId);
+		verify(summaryClient, times(1)).regenerateSummary(linkId, member.getId(), url, existingSummary);
+	}
+
+	@Test
+	@DisplayName("요약을 새롭게 생성하고, 해당 요약을 선택(selected=true) 상태로 변경한다")
+	void shouldUpdateSummaryAndSelectIt() {
+		// given
+		Long linkId = 1L;
+		Long summaryId = 100L;
+		Member member = mock(Member.class);
+		String content = "새롭게 수정된 요약 내용";
+		Format format = Format.CONCISE;
+
+		// Link Mocking (getLink -> getLinkForSummaryUpdate 로 변경됨)
+		Link link = mock(Link.class);
+		given(link.getId()).willReturn(linkId);
+		given(linkService.getLinkForSummaryUpdate(linkId, member)).willReturn(link);
+
+		// Summary Mocking
+		Summary summary = mock(Summary.class);
+		given(summary.getId()).willReturn(summaryId);
+		given(summary.getContent()).willReturn(content);
+
+		given(summaryService.createSummary(link, format, content)).willReturn(summary);
+		doNothing().when(summaryService).selectSummary(linkId, summaryId);
+
+		// when
+		SummaryRes result = linkFacade.updateSummary(linkId, member, content, format);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.id()).isEqualTo(summaryId);
+		assertThat(result.content()).isEqualTo(content);
+
+		// 호출 순서 및 횟수 검증 (검증 대상도 getLinkForSummaryUpdate 로 변경)
+		verify(linkService, times(1)).getLinkForSummaryUpdate(linkId, member);
+		verify(summaryService, times(1)).createSummary(link, format, content);
+		verify(summaryService, times(1)).selectSummary(linkId, summaryId);
 	}
 
 	@Test
@@ -181,9 +213,12 @@ public class LinkFacadeTest {
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
 
-		Member member = mock(Member.class);
-		given(member.getId()).willReturn(100L);
-		given(linkQueryService.existsByUrl(eq(member), eq(url))).willReturn(false);
+		Member member = Member
+			.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
 		Link savedLink = Link.builder()
@@ -195,8 +230,7 @@ public class LinkFacadeTest {
 			.build();
 		ReflectionTestUtils.setField(savedLink, "id", linkId);
 
-		given(linkCommandService.saveLink(eq(member), eq(url), eq(title), eq(memo), eq(storedImageUrl)))
-			.willReturn(savedLink);
+		given(linkService.createLink(member, url, title, memo, storedImageUrl)).willReturn(savedLink);
 
 		// when
 		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
@@ -206,8 +240,7 @@ public class LinkFacadeTest {
 		assertThat(result.id()).isEqualTo(linkId);
 
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
-		verify(linkQueryService, times(1)).existsByUrl(member, url);
-		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
+		verify(linkService, times(1)).createLink(member, url, title, memo, storedImageUrl);
 		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
 	}
 
@@ -215,113 +248,160 @@ public class LinkFacadeTest {
 	@DisplayName("중복된 URL로 링크 생성 시 예외가 발생한다")
 	void shouldThrowExceptionWhenDuplicateUrl() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(true);
+		Member member = Member
+			.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		String url = "https://example.com";
+		String originalImageUrl = "https://original.com/image.jpg";
+		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
+
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
+		given(linkService.createLink(member, url, "테스트 링크", null, storedImageUrl))
+			.willThrow(new BusinessException(LinkErrorCode.DUPLICATE_URL));
 
 		// when & then
-		assertThatThrownBy(() -> linkService.createLink(
-			member, "https://example.com", "테스트 링크", null, null
+		assertThatThrownBy(() -> linkFacade.createLink(
+			member, url, "테스트 링크", null, originalImageUrl
 		))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.DUPLICATE_URL);
 
-		verify(linkCommandService, never()).saveLink(any(), any(), any(), any(), any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
-	@DisplayName("링크를 수정하고 Entity를 반환한다")
+	@DisplayName("링크를 수정하고 LinkRes을 반환한다")
 	void shouldUpdateLink() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link originalLink = Link.builder().member(member).url("https://example.com").title("원본").build();
-		Link updatedLink = Link.builder().member(member).url("https://example.com").title("수정").build();
+		Long linkId = 1L;
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		Link updatedLink = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("수정")
+			.memo("메모수정")
+			.build();
+		ReflectionTestUtils.setField(updatedLink, "id", linkId);
 
-		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), any(), any(), any())).willReturn(updatedLink);
+		given(imageUploader.uploadFromUrl("https://example.com")).willReturn("https://example.com");
+		given(linkService.updateLink(linkId, member, "수정", "메모수정", "https://example.com")).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateLink(1L, member, "수정", null, null);
+		LinkRes result = linkFacade.updateLink(linkId, member, "수정", "메모수정", "https://example.com");
 
 		// then
-		assertThat(result).isEqualTo(updatedLink);
-		assertThat(result.getTitle()).isEqualTo("수정");
+		assertThat(result).isNotNull();
+		assertThat(result.title()).isEqualTo("수정");
+		assertThat(result.memo()).isEqualTo("메모수정");
+		verify(linkService, times(1)).updateLink(linkId, member, "수정", "메모수정", "https://example.com");
 	}
 
 	@Test
 	@DisplayName("링크 제목만 수정할 수 있다")
 	void shouldUpdateTitle() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link originalLink = Link.builder()
-			.member(member)
-			.title("원본")
-			.memo("메모")
+		Long linkId = 1L;
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
 			.build();
 		Link updatedLink = Link.builder()
 			.member(member)
 			.title("수정")
-			.memo("메모")
+			.memo("원본메모")
 			.build();
+		ReflectionTestUtils.setField(updatedLink, "id", linkId);
 
-		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("수정"), eq("메모"), isNull())).willReturn(updatedLink);
+		given(linkService.updateTitle(linkId, member, "수정")).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateTitle(1L, member, "수정");
+		LinkRes result = linkFacade.updateTitle(linkId, member, "수정");
 
 		// then
-		assertThat(result.getTitle()).isEqualTo("수정");
+		assertThat(result.title()).isEqualTo("수정");
+		verify(linkService, times(1)).updateTitle(linkId, member, "수정");
 	}
 
 	@Test
 	@DisplayName("링크 메모만 수정할 수 있다")
 	void shouldUpdateMemo() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link originalLink = Link.builder().member(member).title("제목").memo("원본").build();
-		Link updatedLink = Link.builder().member(member).title("제목").memo("수정").build();
+		Long linkId = 1L;
+		Member member = Member.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		Link updatedLink = Link.builder()
+			.member(member)
+			.title("원본제목")
+			.memo("수정")
+			.build();
+		ReflectionTestUtils.setField(updatedLink, "id", linkId);
 
-		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("제목"), eq("수정"), isNull())).willReturn(updatedLink);
+		given(linkService.updateMemo(linkId, member, "수정")).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateMemo(1L, member, "수정");
+		LinkRes result = linkFacade.updateMemo(linkId, member, "수정");
 
 		// then
-		assertThat(result.getMemo()).isEqualTo("수정");
+		assertThat(result.memo()).isEqualTo("수정");
+		verify(linkService, times(1)).updateMemo(linkId, member, "수정");
 	}
 
 	@Test
 	@DisplayName("링크를 삭제할 수 있다")
 	void shouldDeleteLink() {
 		// given
+		Long linkId = 1L;
 		Member member = Member.builder().email("test@example.com").build();
-		Link link = Link.builder().member(member).build();
 
-		given(linkQueryService.findById(1L, member)).willReturn(link);
+		doNothing().when(linkService).deleteLink(linkId, member);
 
 		// when
-		linkService.deleteLink(1L, member);
+		linkFacade.deleteLink(linkId, member);
 
 		// then
-		verify(linkCommandService, times(1)).deleteLink(link);
+		verify(linkService, times(1)).deleteLink(linkId, member);
 	}
 
 	@Test
-	@DisplayName("단일 링크 Entity를 조회할 수 있다")
-	void shouldGetLink() {
+	@DisplayName("단일 링크 상세 정보를 조회하고 LinkDetailRes로 변환한 후 반환한다")
+	void shouldGetLinkDetail() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		Link link = Link.builder().member(member).url("https://example.com").build();
+		Long linkId = 1L;
+		Member member = Member
+			.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		Link link = Link.builder()
+			.member(member)
+			.url("https://example.com")
+			.title("제목")
+			.build();
+		ReflectionTestUtils.setField(link, "id", linkId);
+		Summary summary = Summary.builder()
+			.link(link)
+			.content("요약내용")
+			.build();
 
-		given(linkQueryService.findById(1L, member)).willReturn(link);
+		LinkDto linkDto = new LinkDto(link, summary);
+
+		given(linkService.getLinkWithSummary(linkId, member)).willReturn(linkDto);
 
 		// when
-		Link result = linkService.getLink(1L, member);
+		LinkDetailRes result = linkFacade.getLinkDetail(linkId, member);
 
 		// then
-		assertThat(result).isEqualTo(link);
-		verify(linkQueryService, times(1)).findById(1L, member);
+		assertThat(result).isNotNull();
+		assertThat(result.url()).isEqualTo("https://example.com");
+		assertThat(result.summary().content()).isEqualTo("요약내용");
+		verify(linkService, times(1)).getLinkWithSummary(linkId, member);
 	}
 
 	@Test
@@ -410,15 +490,20 @@ public class LinkFacadeTest {
 	@DisplayName("URL로 링크 ID를 찾을 수 있다 (중복 체크용)")
 	void shouldFindLinkIdByUrl() {
 		// given
-		Member member = Member.builder().email("test@example.com").build();
-		given(linkQueryService.findIdByUrl(member, "https://example.com"))
-			.willReturn(Optional.of(123L));
+		Member member = Member
+			.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		String url = "https://example.com";
+
+		given(linkService.findLinkIdByUrl(member, url)).willReturn(Optional.of(123L));
 
 		// when
-		Optional<Long> result = linkService.findLinkIdByUrl(member, "https://example.com");
+		LinkDuplicateCheckRes result = linkFacade.checkDuplicate(member, url);
 
 		// then
-		assertThat(result).isPresent();
-		assertThat(result.get()).isEqualTo(123L);
+		assertThat(result).isNotNull();
+		verify(linkService, times(1)).findLinkIdByUrl(member, url);
 	}
 }
