@@ -15,8 +15,7 @@ import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
-import com.sofa.linkiving.domain.link.service.LinkService;
-import com.sofa.linkiving.domain.link.service.SummaryService;
+import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -31,8 +30,7 @@ public class SummaryWorker {
 
 	private final SummaryQueue summaryQueue;
 	private final SummaryWorkerProperties properties;
-	private final SummaryService summaryService;
-	private final LinkService linkService;
+	private final SummaryWorkerFacade summaryWorkerFacade;
 	private final SummaryClient summaryClient;
 	private final ApplicationEventPublisher eventPublisher;
 
@@ -83,8 +81,10 @@ public class SummaryWorker {
 		log.info("Processing link for summary - linkId: {}", linkId);
 
 		try {
-			Link link = linkService.getLinkWithMember(linkId);
+			Link link = summaryWorkerFacade.getLinkWithMember(linkId);
 			userEmail = link.getMember().getEmail();
+
+			summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
 
 			eventPublisher.publishEvent(new SummaryStatusEvent(
 				userEmail,
@@ -100,13 +100,15 @@ public class SummaryWorker {
 			);
 
 			if (res != null) {
-				Summary summary = summaryService.createInitialSummary(link, res.summary());
+				Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
 
-				eventPublisher.publishEvent(new SummaryStatusEvent(
-					userEmail,
-					SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
-				));
+				if (summary != null) {
+					eventPublisher.publishEvent(new SummaryStatusEvent(
+						userEmail, SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
+					));
+				}
 			} else {
+				summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.FAILED);
 				eventPublisher.publishEvent(new SummaryStatusEvent(
 					userEmail,
 					SummaryStatusRes.failed(linkId, "AI 서버 응답이 없습니다.")
@@ -114,6 +116,13 @@ public class SummaryWorker {
 			}
 		} catch (Exception e) {
 			log.error("Failed to generate summary for linkId: {}", linkId, e);
+
+			try {
+				Link linkToFail = summaryWorkerFacade.getLinkWithMember(linkId);
+				summaryWorkerFacade.updateSummaryStatus(linkToFail.getId(), SummaryStatus.FAILED);
+			} catch (Exception innerEx) {
+				log.error("Failed to update status to FAILED - linkId: {}", linkId, innerEx);
+			}
 
 			if (userEmail != null) {
 				eventPublisher.publishEvent(new SummaryStatusEvent(

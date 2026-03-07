@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -95,5 +96,10 @@ public class LinkService {
 
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
 		return linkQueryService.findIdByUrl(member, url);
+	}
+
+	public void updateSummaryStatus(Long linkId, SummaryStatus status) {
+		Link link = linkQueryService.findById(linkId);
+		link.updateSummaryStatus(status);
 	}
 }
