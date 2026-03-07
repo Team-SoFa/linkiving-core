@@ -34,6 +34,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
@@ -42,7 +43,7 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("LinkFacade 단위 테스트")
-public class LinkFacadeTest {
+class LinkFacadeTest {
 
 	@InjectMocks
 	private LinkFacade linkFacade;
@@ -100,6 +101,27 @@ public class LinkFacadeTest {
 		assertThat(result.url()).isEqualTo(url);
 		verify(ogTagCrawler, times(1)).crawl(url);
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
+	}
+
+	@Test
+	@DisplayName("메타데이터 크롤링 실패 시 빈 값으로 MetaScrapeRes를 반환한다")
+	void shouldReturnEmptyMetaScrapeResWhenCrawlFails() {
+		// given
+		String url = "https://invalid-url.com";
+		given(ogTagCrawler.crawl(url)).willReturn(OgTagDto.EMPTY);
+
+		// when
+		MetaScrapeRes result = linkFacade.scrapeMetadata(url);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.title()).isEmpty();
+		assertThat(result.description()).isEmpty();
+		assertThat(result.image()).isEmpty();
+		assertThat(result.url()).isEmpty();
+		verify(ogTagCrawler, times(1)).crawl(url);
+		verify(imageUploader, never()).uploadFromUrl(any());
+		verify(imageUploader, never()).resolveStoredUrl(any());
 	}
 
 	@Test
@@ -175,31 +197,9 @@ public class LinkFacadeTest {
 		assertThat(result.id()).isEqualTo(summaryId);
 		assertThat(result.content()).isEqualTo(content);
 
-		// 호출 순서 및 횟수 검증 (검증 대상도 getLinkForSummaryUpdate 로 변경)
 		verify(linkService, times(1)).getLinkForSummaryUpdate(linkId, member);
 		verify(summaryService, times(1)).createSummary(link, format, content);
 		verify(summaryService, times(1)).selectSummary(linkId, summaryId);
-	}
-
-	@Test
-	@DisplayName("메타데이터 크롤링 실패 시 빈 값으로 MetaScrapeRes를 반환한다")
-	void shouldReturnEmptyMetaScrapeResWhenCrawlFails() {
-		// given
-		String url = "https://invalid-url.com";
-		given(ogTagCrawler.crawl(url)).willReturn(OgTagDto.EMPTY);
-
-		// when
-		MetaScrapeRes result = linkFacade.scrapeMetadata(url);
-
-		// then
-		assertThat(result).isNotNull();
-		assertThat(result.title()).isEmpty();
-		assertThat(result.description()).isEmpty();
-		assertThat(result.image()).isEmpty();
-		assertThat(result.url()).isEmpty();
-		verify(ogTagCrawler, times(1)).crawl(url);
-		verify(imageUploader, never()).uploadFromUrl(any());
-		verify(imageUploader, never()).resolveStoredUrl(any());
 	}
 
 	@Test
@@ -272,7 +272,7 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크를 수정하고 LinkRes을 반환한다")
+	@DisplayName("링크를 수정하고 LinkSyncEvent를 발행한다")
 	void shouldUpdateLink() {
 		// given
 		Long linkId = 1L;
@@ -287,9 +287,11 @@ public class LinkFacadeTest {
 			.memo("메모수정")
 			.build();
 		ReflectionTestUtils.setField(updatedLink, "id", linkId);
+		Summary mockSummary = mock(Summary.class);
 
 		given(imageUploader.uploadFromUrl("https://example.com")).willReturn("https://example.com");
 		given(linkService.updateLink(linkId, member, "수정", "메모수정", "https://example.com")).willReturn(updatedLink);
+		given(summaryService.getSummaryOrElseNull(1L)).willReturn(mockSummary);
 
 		// when
 		LinkRes result = linkFacade.updateLink(linkId, member, "수정", "메모수정", "https://example.com");
@@ -299,10 +301,12 @@ public class LinkFacadeTest {
 		assertThat(result.title()).isEqualTo("수정");
 		assertThat(result.memo()).isEqualTo("메모수정");
 		verify(linkService, times(1)).updateLink(linkId, member, "수정", "메모수정", "https://example.com");
+		verify(summaryService).getSummaryOrElseNull(1L);
+		verify(eventPublisher).publishEvent(any(LinkSyncEvent.class));
 	}
 
 	@Test
-	@DisplayName("링크 제목만 수정할 수 있다")
+	@DisplayName("링크 제목을 수정하고 LinkSyncEvent를 발행한다")
 	void shouldUpdateTitle() {
 		// given
 		Long linkId = 1L;
@@ -325,10 +329,11 @@ public class LinkFacadeTest {
 		// then
 		assertThat(result.title()).isEqualTo("수정");
 		verify(linkService, times(1)).updateTitle(linkId, member, "수정");
+		verify(eventPublisher).publishEvent(any(LinkSyncEvent.class));
 	}
 
 	@Test
-	@DisplayName("링크 메모만 수정할 수 있다")
+	@DisplayName("링크 메모를 수정하고 LinkSyncEvent를 발행한다")
 	void shouldUpdateMemo() {
 		// given
 		Long linkId = 1L;
@@ -342,8 +347,10 @@ public class LinkFacadeTest {
 			.memo("수정")
 			.build();
 		ReflectionTestUtils.setField(updatedLink, "id", linkId);
+		Summary mockSummary = mock(Summary.class);
 
 		given(linkService.updateMemo(linkId, member, "수정")).willReturn(updatedLink);
+		given(summaryService.getSummaryOrElseNull(1L)).willReturn(mockSummary);
 
 		// when
 		LinkRes result = linkFacade.updateMemo(linkId, member, "수정");
@@ -351,10 +358,12 @@ public class LinkFacadeTest {
 		// then
 		assertThat(result.memo()).isEqualTo("수정");
 		verify(linkService, times(1)).updateMemo(linkId, member, "수정");
+		verify(summaryService).getSummaryOrElseNull(1L);
+		verify(eventPublisher).publishEvent(any(LinkSyncEvent.class));
 	}
 
 	@Test
-	@DisplayName("링크를 삭제할 수 있다")
+	@DisplayName("링크를 삭제하고 LinkSyncEvent(DELETE)를 발행한다")
 	void shouldDeleteLink() {
 		// given
 		Long linkId = 1L;
@@ -367,10 +376,11 @@ public class LinkFacadeTest {
 
 		// then
 		verify(linkService, times(1)).deleteLink(linkId, member);
+		verify(eventPublisher).publishEvent(any(LinkSyncEvent.class));
 	}
 
 	@Test
-	@DisplayName("단일 링크 상세 정보를 조회하고 LinkDetailRes로 변환한 후 반환한다")
+	@DisplayName("단일 링크 상세 조회를 수행한다")
 	void shouldGetLinkDetail() {
 		// given
 		Long linkId = 1L;
@@ -405,7 +415,7 @@ public class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크 카드 목록을 조회하고 Response DTO로 변환한다 (페이징 포함)")
+	@DisplayName("페이징된 링크 카드 목록을 조회한다")
 	void shouldGetLinkCards() {
 		// given
 		Member member = mock(Member.class);

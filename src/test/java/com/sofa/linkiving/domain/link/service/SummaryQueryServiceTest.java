@@ -105,4 +105,37 @@ public class SummaryQueryServiceTest {
 		assertThat(result.get(1L)).isEqualTo(summary1);
 		assertThat(result.get(2L)).isEqualTo(summary2);
 	}
+
+	@Test
+	@DisplayName("선택된 요약이 존재하면 해당 요약을 반환한다")
+	void shouldReturnExistingSummaryWhenSummaryExists() {
+		// given
+		Long linkId = 1L;
+		Summary expectedSummary = mock(Summary.class);
+		given(summaryRepository.findByLinkIdAndSelectedTrue(linkId))
+			.willReturn(Optional.of(expectedSummary));
+
+		// when
+		Summary result = summaryQueryService.getSummaryOrElseNull(linkId);
+
+		// then
+		assertThat(result).isEqualTo(expectedSummary);
+		verify(summaryRepository, times(1)).findByLinkIdAndSelectedTrue(linkId);
+	}
+
+	@Test
+	@DisplayName("선택된 요약이 없으면 null을 반환한다")
+	void shouldReturnDefaultSummaryWhenSummaryDoesNotExist() {
+		// given
+		Long linkId = 1L;
+		given(summaryRepository.findByLinkIdAndSelectedTrue(linkId))
+			.willReturn(Optional.empty());
+
+		// when
+		Summary result = summaryQueryService.getSummaryOrElseNull(linkId);
+
+		// then
+		assertThat(result).isNull();
+		verify(summaryRepository, times(1)).findByLinkIdAndSelectedTrue(linkId);
+	}
 }
