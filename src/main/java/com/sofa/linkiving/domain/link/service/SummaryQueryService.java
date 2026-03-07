@@ -26,6 +26,10 @@ public class SummaryQueryService {
 		);
 	}
 
+	public Summary getSummaryOrElseNull(Long linkId) {
+		return summaryRepository.findByLinkIdAndSelectedTrue(linkId).orElse(null);
+	}
+
 	public Map<Long, Summary> getSelectedSummariesByLinks(List<Link> links) {
 		if (links.isEmpty()) {
 			return Collections.emptyMap();

@@ -18,6 +18,10 @@ public class SummaryService {
 		return summaryQueryService.getSummary(linkId);
 	}
 
+	public Summary getSummaryOrElseNull(Long linkId) {
+		return summaryQueryService.getSummaryOrElseNull(linkId);
+	}
+
 	public Summary createSummary(Link link, Format format, String summary) {
 		return summaryCommandService.save(link, format, summary);
 	}

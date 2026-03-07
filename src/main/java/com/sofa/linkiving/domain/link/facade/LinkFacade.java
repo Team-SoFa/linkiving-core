@@ -21,6 +21,7 @@ import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
@@ -45,6 +46,7 @@ public class LinkFacade {
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
 		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail()));
+		eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
 
 		return LinkRes.from(link);
 	}
@@ -55,21 +57,28 @@ public class LinkFacade {
 			storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
 		}
 		Link link = linkService.updateLink(linkId, member, title, memo, storedImageUrl);
+		Summary summary = summaryService.getSummaryOrElseNull(linkId);
+		eventPublisher.publishEvent(LinkSyncEvent.updateEvent(link, summary));
 		return LinkRes.from(link);
 	}
 
 	public LinkRes updateTitle(Long linkId, Member member, String title) {
 		Link link = linkService.updateTitle(linkId, member, title);
+		Summary summary = summaryService.getSummaryOrElseNull(linkId);
+		eventPublisher.publishEvent(LinkSyncEvent.updateEvent(link, summary));
 		return LinkRes.from(link);
 	}
 
 	public LinkRes updateMemo(Long linkId, Member member, String memo) {
 		Link link = linkService.updateMemo(linkId, member, memo);
+		Summary summary = summaryService.getSummaryOrElseNull(linkId);
+		eventPublisher.publishEvent(LinkSyncEvent.updateEvent(link, summary));
 		return LinkRes.from(link);
 	}
 
 	public void deleteLink(Long linkId, Member member) {
 		linkService.deleteLink(linkId, member);
+		eventPublisher.publishEvent(LinkSyncEvent.deleteEvent(linkId));
 	}
 
 	@Transactional(readOnly = true)
@@ -94,7 +103,6 @@ public class LinkFacade {
 	@Transactional(readOnly = true)
 	public RegenerateSummaryRes recreateSummary(Member member, Long linkId, Format format) {
 		Link link = linkService.getLinkForSummaryUpdate(linkId, member);
-
 		String url = link.getUrl();
 		String existingSummary = summaryService.getSummary(linkId).getContent();
 
@@ -124,7 +132,6 @@ public class LinkFacade {
 
 	public SummaryRes updateSummary(Long id, Member member, String content, Format format) {
 		Link link = linkService.getLinkForSummaryUpdate(id, member);
-
 		Summary summary = summaryService.createSummary(link, format, content);
 		summaryService.selectSummary(link.getId(), summary.getId());
 		return SummaryRes.from(summary);
