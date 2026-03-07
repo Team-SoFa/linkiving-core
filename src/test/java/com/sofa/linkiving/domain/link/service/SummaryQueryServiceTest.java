@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
-import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -57,7 +57,7 @@ public class SummaryQueryServiceTest {
 		// when & then
 		assertThatThrownBy(() -> summaryQueryService.getSummary(linkId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.SUMMARY_NOT_FOUND);
+			.hasFieldOrPropertyWithValue("errorCode", SummaryErrorCode.SUMMARY_NOT_FOUND);
 
 		verify(summaryRepository).findByLinkIdAndSelectedTrue(linkId);
 	}
