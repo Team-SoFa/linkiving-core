@@ -80,8 +80,8 @@ public class SummaryServiceTest {
 	}
 
 	@Test
-	@DisplayName("createInitialSummary: Format.CONCISE 형태로 초기 요약을 생성하고 저장한다")
-	void shouldCreateInitialSummaryWithConciseFormat() {
+	@DisplayName("Format.CONCISE 형태로 초기 요약을 생성하고 저장한다")
+	void shouldCreateInitialSummaryAndUpdateStatusWithConciseFormat() {
 		// given
 		Link link = mock(Link.class);
 		String content = "테스트 초기 요약 내용";

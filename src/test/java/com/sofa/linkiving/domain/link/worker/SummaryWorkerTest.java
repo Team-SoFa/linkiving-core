@@ -25,8 +25,7 @@ import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
-import com.sofa.linkiving.domain.link.service.LinkService;
-import com.sofa.linkiving.domain.link.service.SummaryService;
+import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,9 +35,7 @@ class SummaryWorkerTest {
 	@Mock
 	private SummaryQueue summaryQueue;
 	@Mock
-	private SummaryService summaryService;
-	@Mock
-	private LinkService linkService;
+	private SummaryWorkerFacade summaryWorkerFacade;
 	@Mock
 	private SummaryClient summaryClient;
 	@Mock
@@ -51,8 +48,7 @@ class SummaryWorkerTest {
 	@BeforeEach
 	void setUp() {
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
-		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryService, linkService, summaryClient,
-			eventPublisher);
+		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher);
 
 		mockLink = mock(Link.class);
 		mockMember = mock(Member.class);
@@ -77,14 +73,13 @@ class SummaryWorkerTest {
 
 		given(summaryQueue.pollFromQueue()).willAnswer(invocation -> {
 			workerThreadName[0] = Thread.currentThread().getName();
-			return Optional.empty(); // 무한 루프 방지
+			return Optional.empty();
 		});
 
 		// when
 		summaryWorker.startWorker();
 
 		// then
-		// 백그라운드 쓰레드가 큐를 확인하는 로직이 호출될 때까지 대기
 		verify(summaryQueue, timeout(1000).atLeastOnce()).pollFromQueue();
 
 		assertThat(workerThreadName[0]).isNotNull();
@@ -97,8 +92,8 @@ class SummaryWorkerTest {
 	void shouldCatchExceptionAndContinueLoop_WhenUnexpectedErrorOccurs() {
 		// given
 		given(summaryQueue.pollFromQueue())
-			.willThrow(new RuntimeException("Unexpected Error")) // 첫 번째 호출 시 강제 예외 발생
-			.willReturn(Optional.empty()); // 두 번째 호출 시 정상 응답(빈 큐) 반환하여 무한 루프 방지
+			.willThrow(new RuntimeException("Unexpected Error"))
+			.willReturn(Optional.empty());
 
 		// when
 		summaryWorker.startWorker();
@@ -127,7 +122,7 @@ class SummaryWorkerTest {
 		given(link.getTitle()).willReturn("Test Title");
 		given(link.getMemo()).willReturn("Test Memo");
 
-		given(linkService.getLink(linkId)).willReturn(link);
+		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(link);
 
 		// AI 클라이언트 응답 Mocking
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
@@ -139,7 +134,7 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
-		verify(summaryService, timeout(1000).times(1)).createInitialSummary(link, "요약된 내용입니다.");
+		verify(summaryWorkerFacade, timeout(1000).times(1)).createInitialSummaryAndUpdateStatus(linkId, "요약된 내용입니다.");
 	}
 
 	@Test
@@ -157,7 +152,7 @@ class SummaryWorkerTest {
 		given(link.getMember()).willReturn(member);
 		given(member.getId()).willReturn(100L);
 
-		given(linkService.getLink(linkId)).willReturn(link);
+		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(link);
 
 		// AI 응답이 null로 반환되는 상황
 		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
@@ -168,8 +163,7 @@ class SummaryWorkerTest {
 		// then
 		// 클라이언트 호출은 일어났으나
 		verify(summaryClient, timeout(1000).times(1)).initialSummary(anyLong(), anyLong(), any(), any(), any());
-		// 저장은 호출되지 않아야 함
-		verify(summaryService, after(200).never()).createInitialSummary(any(Link.class), anyString());
+		verify(summaryWorkerFacade, after(200).never()).createInitialSummaryAndUpdateStatus(anyLong(), anyString());
 	}
 
 	@Test
@@ -182,17 +176,15 @@ class SummaryWorkerTest {
 			.willReturn(Optional.empty());
 
 		// Link 조회 중 강제로 RuntimeException 발생
-		given(linkService.getLink(linkId)).willThrow(new RuntimeException("DB Connection Error"));
+		given(summaryWorkerFacade.getLinkWithMember(linkId)).willThrow(new RuntimeException("DB Connection Error"));
 
 		// when
 		summaryWorker.startWorker();
 
 		// then
-		verify(linkService, timeout(1000).times(1)).getLink(linkId);
-
-		// 예외를 catch 블록에서 먹고 루프가 계속 도는지 검증 (최소 2번 이상 poll 호출 여부)
+		verify(summaryWorkerFacade, timeout(1000).times(2)).getLinkWithMember(linkId);
 		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
-		verify(summaryService, never()).createInitialSummary(any(), any());
+		verify(summaryWorkerFacade, never()).createInitialSummaryAndUpdateStatus(any(), any());
 	}
 
 	@Test
@@ -221,24 +213,21 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(linkId2))
 			.willReturn(Optional.empty());
 
-		// Link 1 Mocking
 		Link link1 = mock(Link.class);
 		Member member1 = mock(Member.class);
 		lenient().when(link1.getId()).thenReturn(linkId1);
 		lenient().when(link1.getMember()).thenReturn(member1);
 		lenient().when(member1.getId()).thenReturn(100L);
 
-		// Link 2 Mocking
 		Link link2 = mock(Link.class);
 		Member member2 = mock(Member.class);
 		lenient().when(link2.getId()).thenReturn(linkId2);
 		lenient().when(link2.getMember()).thenReturn(member2);
 		lenient().when(member2.getId()).thenReturn(200L);
 
-		given(linkService.getLink(linkId1)).willReturn(link1);
-		given(linkService.getLink(linkId2)).willReturn(link2);
+		given(summaryWorkerFacade.getLinkWithMember(linkId1)).willReturn(link1);
+		given(summaryWorkerFacade.getLinkWithMember(linkId2)).willReturn(link2);
 
-		// Client 응답 Mocking
 		RagInitialSummaryRes mockRes1 = mock(RagInitialSummaryRes.class);
 		given(mockRes1.summary()).willReturn("Summary 1");
 		given(summaryClient.initialSummary(eq(linkId1), anyLong(), any(), any(), any())).willReturn(mockRes1);
@@ -251,9 +240,11 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
-		InOrder inOrder = inOrder(summaryService);
-		inOrder.verify(summaryService, timeout(1000).times(1)).createInitialSummary(link1, "Summary 1");
-		inOrder.verify(summaryService, timeout(1000).times(1)).createInitialSummary(link2, "Summary 2");
+		InOrder inOrder = inOrder(summaryWorkerFacade);
+		inOrder.verify(summaryWorkerFacade, timeout(1000).times(1))
+			.createInitialSummaryAndUpdateStatus(linkId1, "Summary 1");
+		inOrder.verify(summaryWorkerFacade, timeout(1000).times(1))
+			.createInitialSummaryAndUpdateStatus(linkId2, "Summary 2");
 	}
 
 	@Test
@@ -264,7 +255,7 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(1L))
 			.willReturn(Optional.empty());
 
-		given(linkService.getLink(1L)).willReturn(mockLink);
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
 		given(mockRes.summary()).willReturn("요약 완료");
@@ -273,14 +264,13 @@ class SummaryWorkerTest {
 		Summary mockSummary = mock(Summary.class);
 		given(mockSummary.getId()).willReturn(10L);
 		given(mockSummary.getContent()).willReturn("요약 완료");
-		given(summaryService.createInitialSummary(eq(mockLink), anyString())).willReturn(mockSummary);
+		given(summaryWorkerFacade.createInitialSummaryAndUpdateStatus(eq(1L), anyString())).willReturn(mockSummary);
 
 		// when
 		summaryWorker.startWorker();
 
 		// then
 		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
-		// 이벤트를 2번 발행해야 함 (PROCESSING -> COMPLETED)
 		verify(eventPublisher, timeout(1000).times(2)).publishEvent(captor.capture());
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
@@ -295,7 +285,7 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(1L))
 			.willReturn(Optional.empty());
 
-		given(linkService.getLink(1L)).willReturn(mockLink);
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
 
 		// when
@@ -318,11 +308,87 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(1L))
 			.willReturn(Optional.empty());
 
-		given(linkService.getLink(1L)).willReturn(mockLink);
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
 		// AI 요청 단계에서 강제 예외 발생 유도
 		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
 			.willThrow(new RuntimeException("Network Error"));
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
+		verify(eventPublisher, timeout(1000).times(2)).publishEvent(captor.capture());
+
+		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("요약 처리 중 내부 오류가 발생했습니다.");
+	}
+
+	@Test
+	@DisplayName("Facade에서 요약 생성 결과가 null일 경우 COMPLETED 이벤트를 발행하지 않는다")
+	void shouldNotPublishCompletedEvent_WhenFacadeReturnsNull() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+
+		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
+		given(mockRes.summary()).willReturn("요약된 내용");
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(mockRes);
+
+		// Facade가 처리 방어 로직 등에 의해 null을 반환한다고 가정
+		given(summaryWorkerFacade.createInitialSummaryAndUpdateStatus(anyLong(), anyString())).willReturn(null);
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
+		verify(eventPublisher, timeout(1000).times(1)).publishEvent(captor.capture());
+
+		assertThat(captor.getValue().response().status()).isEqualTo(SummaryStatus.PROCESSING);
+	}
+
+	@Test
+	@DisplayName("userEmail 추출 전(조회 단계) 예외가 발생하면 웹소켓 이벤트 발행 없이 루프를 계속한다")
+	void shouldNotPublishEvent_WhenExceptionOccursBeforeEmailExtraction() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willThrow(new RuntimeException("DB Connection Error"));
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		verify(eventPublisher, after(500).never()).publishEvent(any());
+		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
+	}
+
+	@Test
+	@DisplayName("예외 복구(catch) 중 DB 상태 업데이트(inner catch)에 실패해도 FAILED 이벤트는 정상 발행된다")
+	void shouldPublishFailedEvent_EvenIfInnerStatusUpdateFails() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+			.willThrow(new RuntimeException("Network Error"));
+
+		willDoNothing().given(summaryWorkerFacade)
+			.updateSummaryStatus(anyLong(), eq(SummaryStatus.PROCESSING));
+
+		willThrow(new RuntimeException("DB Update Error"))
+			.given(summaryWorkerFacade).updateSummaryStatus(anyLong(), eq(SummaryStatus.FAILED));
 
 		// when
 		summaryWorker.startWorker();
