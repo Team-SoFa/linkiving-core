@@ -36,6 +36,11 @@ public class LinkQueryService {
 			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
 	}
 
+	public Link findByIdWithMemberFetch(Long linkId) {
+		return linkRepository.findByIdWithMemberFetch(linkId)
+			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));
+	}
+
 	public LinkDto findByIdWithSummary(Long linkId, Member member) {
 		return linkRepository.findByIdAndMemberWithSummaryAndIsDeleteFalse(linkId, member)
 			.orElseThrow(() -> new BusinessException(LinkErrorCode.LINK_NOT_FOUND));

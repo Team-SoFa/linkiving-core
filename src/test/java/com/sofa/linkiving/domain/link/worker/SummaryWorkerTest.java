@@ -12,14 +12,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
+import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -36,18 +41,70 @@ class SummaryWorkerTest {
 	private LinkService linkService;
 	@Mock
 	private SummaryClient summaryClient;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	private SummaryWorker summaryWorker;
+	private Link mockLink;
+	private Member mockMember;
 
 	@BeforeEach
 	void setUp() {
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
-		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryService, linkService, summaryClient);
+		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryService, linkService, summaryClient,
+			eventPublisher);
+
+		mockLink = mock(Link.class);
+		mockMember = mock(Member.class);
+
+		lenient().when(mockLink.getId()).thenReturn(1L);
+		lenient().when(mockLink.getMember()).thenReturn(mockMember);
+		lenient().when(mockMember.getId()).thenReturn(100L);
+		lenient().when(mockMember.getEmail()).thenReturn("test@test.com");
 	}
 
 	@AfterEach
 	void tearDown() {
 		summaryWorker.stopWorker();
+	}
+
+	@Test
+	@DisplayName("워커 실행 시 메인 쓰레드가 차단되지 않고 백그라운드 쓰레드(summary-worker)에서 동작함")
+	void shouldRunInBackgroundThread() {
+		// given
+		String mainThreadName = Thread.currentThread().getName();
+		String[] workerThreadName = new String[1];
+
+		given(summaryQueue.pollFromQueue()).willAnswer(invocation -> {
+			workerThreadName[0] = Thread.currentThread().getName();
+			return Optional.empty(); // 무한 루프 방지
+		});
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		// 백그라운드 쓰레드가 큐를 확인하는 로직이 호출될 때까지 대기
+		verify(summaryQueue, timeout(1000).atLeastOnce()).pollFromQueue();
+
+		assertThat(workerThreadName[0]).isNotNull();
+		assertThat(workerThreadName[0]).isNotEqualTo(mainThreadName);
+		assertThat(workerThreadName[0]).isEqualTo("summary-worker");
+	}
+
+	@Test
+	@DisplayName("워커 루프 내부에서 예상치 못한 예외 발생 시 에러를 로깅하고 루프를 계속 실행함")
+	void shouldCatchExceptionAndContinueLoop_WhenUnexpectedErrorOccurs() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willThrow(new RuntimeException("Unexpected Error")) // 첫 번째 호출 시 강제 예외 발생
+			.willReturn(Optional.empty()); // 두 번째 호출 시 정상 응답(빈 큐) 반환하여 무한 루프 방지
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
 	}
 
 	@Test
@@ -200,26 +257,82 @@ class SummaryWorkerTest {
 	}
 
 	@Test
-	@DisplayName("워커 실행 시 메인 쓰레드가 차단되지 않고 백그라운드 쓰레드(summary-worker)에서 동작함")
-	void shouldRunInBackgroundThread() {
+	@DisplayName("정상 처리 시 PROCESSING 및 COMPLETED 이벤트를 순차적으로 발행함")
+	void shouldPublishProcessingAndCompletedEvents_WhenSuccess() {
 		// given
-		String mainThreadName = Thread.currentThread().getName();
-		String[] workerThreadName = new String[1];
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
 
-		given(summaryQueue.pollFromQueue()).willAnswer(invocation -> {
-			workerThreadName[0] = Thread.currentThread().getName();
-			return Optional.empty(); // 무한 루프 방지
-		});
+		given(linkService.getLink(1L)).willReturn(mockLink);
+
+		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
+		given(mockRes.summary()).willReturn("요약 완료");
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(mockRes);
+
+		Summary mockSummary = mock(Summary.class);
+		given(mockSummary.getId()).willReturn(10L);
+		given(mockSummary.getContent()).willReturn("요약 완료");
+		given(summaryService.createInitialSummary(eq(mockLink), anyString())).willReturn(mockSummary);
 
 		// when
 		summaryWorker.startWorker();
 
 		// then
-		// 백그라운드 쓰레드가 큐를 확인하는 로직이 호출될 때까지 대기
-		verify(summaryQueue, timeout(1000).atLeastOnce()).pollFromQueue();
+		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
+		// 이벤트를 2번 발행해야 함 (PROCESSING -> COMPLETED)
+		verify(eventPublisher, timeout(1000).times(2)).publishEvent(captor.capture());
 
-		assertThat(workerThreadName[0]).isNotNull();
-		assertThat(workerThreadName[0]).isNotEqualTo(mainThreadName);
-		assertThat(workerThreadName[0]).isEqualTo("summary-worker");
+		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.COMPLETED);
+	}
+
+	@Test
+	@DisplayName("AI 응답이 null일 경우 FAILED(AI 서버 응답 없음) 이벤트를 발행함")
+	void shouldPublishFailedEvent_WhenAiResponseIsNull() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(linkService.getLink(1L)).willReturn(mockLink);
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
+		verify(eventPublisher, timeout(1000).times(2)).publishEvent(captor.capture());
+
+		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("AI 서버 응답이 없습니다.");
+	}
+
+	@Test
+	@DisplayName("처리 중 내부 예외 발생 시 FAILED(내부 오류) 이벤트를 발행함")
+	void shouldPublishFailedEvent_WhenExceptionOccurs() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(linkService.getLink(1L)).willReturn(mockLink);
+
+		// AI 요청 단계에서 강제 예외 발생 유도
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+			.willThrow(new RuntimeException("Network Error"));
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
+		verify(eventPublisher, timeout(1000).times(2)).publishEvent(captor.capture());
+
+		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("요약 처리 중 내부 오류가 발생했습니다.");
 	}
 }

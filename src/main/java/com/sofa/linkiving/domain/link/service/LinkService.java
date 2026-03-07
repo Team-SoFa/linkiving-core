@@ -75,6 +75,10 @@ public class LinkService {
 		return linkQueryService.findById(linkId, member);
 	}
 
+	public Link getLinkWithMember(Long linkId) {
+		return linkQueryService.findByIdWithMemberFetch(linkId);
+	}
+
 	public LinkDto getLinkWithSummary(Long linkId, Member member) {
 		return linkQueryService.findByIdWithSummary(linkId, member);
 	}
