@@ -1,8 +1,7 @@
 package com.sofa.linkiving.domain.member.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -201,13 +200,13 @@ public class MemberApiIntegrationTest {
 
 		// when
 		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
-					.with(csrf())
-					.with(user(userDetails))
-					.with(request -> {
-						request.setServerName("localhost");
-						return request;
-					})
-					.accept(MediaType.APPLICATION_JSON))
+				.with(csrf())
+				.with(user(userDetails))
+				.with(request -> {
+					request.setServerName("localhost");
+					return request;
+				})
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
 			.andReturn();
@@ -247,13 +246,13 @@ public class MemberApiIntegrationTest {
 
 		// when
 		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
-					.with(csrf())
-					.with(user(userDetails))
-					.with(request -> {
-						request.setServerName("example.com");
-						return request;
-					})
-					.accept(MediaType.APPLICATION_JSON))
+				.with(csrf())
+				.with(user(userDetails))
+				.with(request -> {
+					request.setServerName("example.com");
+					return request;
+				})
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
 			.andReturn();
