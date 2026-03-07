@@ -20,6 +20,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -36,8 +37,37 @@ class LinkServiceTest {
 	@Mock
 	private LinkQueryService linkQueryService;
 
-	@Mock
-	private ApplicationEventPublisher eventPublisher;
+	@Test
+	@DisplayName("회원 정보 없이 링크 ID만으로 링크를 단건 조회할 수 있다")
+	void shouldGetLinkByIdOnly() {
+		// given
+		Long linkId = 1L;
+		Link link = mock(Link.class);
+		given(linkQueryService.findById(linkId)).willReturn(link);
+
+		// when
+		Link result = linkService.getLink(linkId);
+
+		// then
+		assertThat(result).isEqualTo(link);
+		verify(linkQueryService, times(1)).findById(linkId);
+	}
+
+	@Test
+	@DisplayName("회원 정보를 fetch join하여 링크를 단건 조회할 수 있다")
+	void shouldGetLinkWithMember() {
+		// given
+		Long linkId = 1L;
+		Link link = mock(Link.class);
+		given(linkQueryService.findByIdWithMemberFetch(linkId)).willReturn(link);
+
+		// when
+		Link result = linkService.getLinkWithMember(linkId);
+
+		// then
+		assertThat(result).isEqualTo(link);
+		verify(linkQueryService, times(1)).findByIdWithMemberFetch(linkId);
+	}
 
 	@Test
 	@DisplayName("링크를 생성할 수 있다")

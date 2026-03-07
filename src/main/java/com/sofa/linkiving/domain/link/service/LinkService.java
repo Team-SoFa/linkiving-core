@@ -87,6 +87,12 @@ public class LinkService {
 		return linkQueryService.findAllByMemberWithSummaryAndCursor(member, lastId, size);
 	}
 
+	public Link getLinkForSummaryUpdate(Long linkId, Member member) {
+		Link link = getLink(linkId, member);
+		link.validateSummarizable();
+		return link;
+	}
+
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
 		return linkQueryService.findIdByUrl(member, url);
 	}

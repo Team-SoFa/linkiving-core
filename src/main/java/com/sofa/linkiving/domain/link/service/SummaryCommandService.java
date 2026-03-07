@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
-import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -24,7 +24,7 @@ public class SummaryCommandService {
 		summaryRepository.clearSelectedByLinkId(linkId);
 		int updated = summaryRepository.selectByIdAndLinkId(summaryId, linkId);
 		if (updated == 0) {
-			throw new BusinessException(LinkErrorCode.SUMMARY_NOT_FOUND);
+			throw new BusinessException(SummaryErrorCode.SUMMARY_NOT_FOUND);
 		}
 	}
 
