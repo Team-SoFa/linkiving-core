@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.link.event;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -8,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class LinkEventListener {
 
 	private final SummaryQueue summaryQueue;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
 	 * 트랜잭션 커밋 후 비동기로 큐 적재 실행
@@ -37,7 +41,14 @@ public class LinkEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
 		summaryQueue.addToQueue(event.linkId());
+
+		eventPublisher.publishEvent(new SummaryStatusEvent(
+			event.email(),
+			SummaryStatusRes.of(event.linkId(), SummaryStatus.PENDING)
+		));
+
 		log.info("Link created event received & queued async - linkId: {}", event.linkId());
+
 	}
 
 	/**
@@ -46,6 +57,11 @@ public class LinkEventListener {
 	@Recover
 	public void recover(Exception exception, LinkCreatedEvent event) {
 		log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
+
+		eventPublisher.publishEvent(new SummaryStatusEvent(
+			event.email(),
+			SummaryStatusRes.failed(event.linkId(), "요약 대기열 등록에 실패했습니다.")
+		));
 		// TODO: 관리자 알림, 슬랙 발송 또는 실패 큐 적재 등 후속 처리
 	}
 }
