@@ -44,7 +44,7 @@ public class LinkFacade {
 		String storedImageUrl = processImageUpload(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
-		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
+		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail()));
 
 		return LinkRes.from(link);
 	}

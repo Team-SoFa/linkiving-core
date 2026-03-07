@@ -27,7 +27,46 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 @Validated
-@Tag(name = "Link", description = "링크 관리 API")
+@Tag(name = "Link", description = """
+	링크 관리 API
+	### 🔌 비동기 요약 상태 웹소켓(STOMP) 연동 가이드
+		**Endpoint**: `ws://{domain}/ws/link` (또는 `wss://`)
+		**Subscribe Channel**: `/user/queue/summary` (개인 전용 큐)
+		**Payload**: `SummaryStatusRes`
+			**CASE A: PROCESSING (처리 중)**
+				```json
+				{
+					"linkId": 1,
+					"status": "PROCESSING",
+					"summary": null,
+					"errorMessage": null
+				}
+				```
+
+		**CASE B: COMPLETED (요약 완료)**
+				```json
+				{
+					"linkId": 1,
+					"status": "COMPLETED",
+					"summary": {
+						"id": 100,
+						"content": "생성된 AI 요약 내용입니다.",
+						"format": "CONCISE"
+					},
+					"errorMessage": null
+				}
+				```
+		**CASE C: FAILED (요약 실패)**
+				```json
+				{
+					"linkId": 1,
+					"status": "FAILED",
+					"summary": null,
+					"errorMessage": "AI 서버 응답이 없습니다."
+				}
+				```
+		**흐름**: 링크 생성/재요약 API 호출 시 PENDING 상태 부여 -> 큐 진입 시 PROCESSING 알림 -> 완료 시 COMPLETED(데이터 포함) 알림
+	""")
 public interface LinkApi {
 
 	@Operation(summary = "메타 정보 수집", description = "URL의 OG 태그를 크롤링하여 메타 정보를 반환합니다")
