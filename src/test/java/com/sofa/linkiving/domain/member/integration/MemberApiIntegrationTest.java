@@ -1,8 +1,7 @@
 package com.sofa.linkiving.domain.member.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -19,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -39,6 +39,7 @@ import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.cookie.domain=linkiving.com")
 public class MemberApiIntegrationTest {
 
 	private static final String BASE_URL = "/v1/member";
@@ -201,13 +202,13 @@ public class MemberApiIntegrationTest {
 
 		// when
 		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
-					.with(csrf())
-					.with(user(userDetails))
-					.with(request -> {
-						request.setServerName("localhost");
-						return request;
-					})
-					.accept(MediaType.APPLICATION_JSON))
+				.with(csrf())
+				.with(user(userDetails))
+				.with(request -> {
+					request.setServerName("localhost");
+					return request;
+				})
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
 			.andReturn();
@@ -247,13 +248,13 @@ public class MemberApiIntegrationTest {
 
 		// when
 		MvcResult result = mockMvc.perform(post(BASE_URL + "/logout")
-					.with(csrf())
-					.with(user(userDetails))
-					.with(request -> {
-						request.setServerName("example.com");
-						return request;
-					})
-					.accept(MediaType.APPLICATION_JSON))
+				.with(csrf())
+				.with(user(userDetails))
+				.with(request -> {
+					request.setServerName("api.linkiving.com");
+					return request;
+				})
+				.accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("로그아웃에 성공하였습니다."))
 			.andReturn();
@@ -273,8 +274,8 @@ public class MemberApiIntegrationTest {
 			.findFirst()
 			.orElseThrow();
 
-		assertThat(accessTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
-		assertThat(refreshTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=Lax");
+		assertThat(accessTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=None", "Domain=linkiving.com");
+		assertThat(refreshTokenCookie).contains("Max-Age=0", "Path=/", "SameSite=None", "Domain=linkiving.com");
 		assertThat(accessTokenCookie).contains("HttpOnly");
 		assertThat(accessTokenCookie).contains("Secure");
 		assertThat(refreshTokenCookie).contains("HttpOnly");

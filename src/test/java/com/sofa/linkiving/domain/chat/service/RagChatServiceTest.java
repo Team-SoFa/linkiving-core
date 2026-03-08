@@ -32,28 +32,22 @@ import com.sofa.linkiving.domain.member.entity.Member;
 @DisplayName("RagChatService 단위 테스트")
 public class RagChatServiceTest {
 
-	@InjectMocks
-	private RagChatService ragChatService;
-
-	@Mock
-	private AnswerClient answerClient;
-
-	@Mock
-	private MessageCommandService messageCommandService;
-
-	@Mock
-	private MessageQueryService messageQueryService;
-
-	@Mock
-	private LinkQueryService linkQueryService;
-
-	@Mock
-	private ChatQueryService chatQueryService;
-
-	private Member member;
-	private Chat chat;
 	private final Long chatId = 1L;
 	private final String userMessage = "테스트 질문";
+	@InjectMocks
+	private RagChatService ragChatService;
+	@Mock
+	private AnswerClient answerClient;
+	@Mock
+	private MessageCommandService messageCommandService;
+	@Mock
+	private MessageQueryService messageQueryService;
+	@Mock
+	private LinkQueryService linkQueryService;
+	@Mock
+	private ChatQueryService chatQueryService;
+	private Member member;
+	private Chat chat;
 
 	@BeforeEach
 	void setUp() {
