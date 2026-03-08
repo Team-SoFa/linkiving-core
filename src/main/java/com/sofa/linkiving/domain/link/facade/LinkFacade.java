@@ -49,8 +49,12 @@ public class LinkFacade {
 		return LinkRes.from(link);
 	}
 
-	public LinkRes updateLink(Long linkId, Member member, String title, String memo) {
-		Link link = linkService.updateLink(linkId, member, title, memo);
+	public LinkRes updateLink(Long linkId, Member member, String title, String memo, String imageUrl) {
+		String storedImageUrl = null;
+		if (imageUrl != null) {
+			storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
+		}
+		Link link = linkService.updateLink(linkId, member, title, memo, storedImageUrl);
 		return LinkRes.from(link);
 	}
 

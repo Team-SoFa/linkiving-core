@@ -9,6 +9,9 @@ public record LinkUpdateReq(
 	String title,
 
 	@Schema(description = "메모", example = "나중에 읽어볼 것")
-	String memo
+	String memo,
+
+	@Schema(description = "이미지 URL", example = "https://example.com/image.jpg")
+	String imageUrl
 ) {
 }

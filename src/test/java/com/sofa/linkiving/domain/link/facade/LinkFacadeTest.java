@@ -236,10 +236,10 @@ public class LinkFacadeTest {
 		Link updatedLink = Link.builder().member(member).url("https://example.com").title("수정").build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), any(), any())).willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), any(), any(), any())).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateLink(1L, member, "수정", null);
+		Link result = linkService.updateLink(1L, member, "수정", null, null);
 
 		// then
 		assertThat(result).isEqualTo(updatedLink);
@@ -251,11 +251,19 @@ public class LinkFacadeTest {
 	void shouldUpdateTitle() {
 		// given
 		Member member = Member.builder().email("test@example.com").build();
-		Link originalLink = Link.builder().member(member).title("원본").memo("메모").build();
-		Link updatedLink = Link.builder().member(member).title("수정").memo("메모").build();
+		Link originalLink = Link.builder()
+			.member(member)
+			.title("원본")
+			.memo("메모")
+			.build();
+		Link updatedLink = Link.builder()
+			.member(member)
+			.title("수정")
+			.memo("메모")
+			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("수정"), eq("메모"))).willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), eq("수정"), eq("메모"), isNull())).willReturn(updatedLink);
 
 		// when
 		Link result = linkService.updateTitle(1L, member, "수정");
@@ -273,7 +281,7 @@ public class LinkFacadeTest {
 		Link updatedLink = Link.builder().member(member).title("제목").memo("수정").build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("제목"), eq("수정"))).willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), eq("제목"), eq("수정"), isNull())).willReturn(updatedLink);
 
 		// when
 		Link result = linkService.updateMemo(1L, member, "수정");

@@ -80,13 +80,15 @@ class LinkCommandServiceTest {
 		Link result = linkCommandService.updateLink(
 			originalLink,
 			"수정된 제목",
-			"수정된 메모"
+			"수정된 메모",
+			"https://edit.com/image.jpg"
 		);
 
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.getTitle()).isEqualTo("수정된 제목");
 		assertThat(result.getMemo()).isEqualTo("수정된 메모");
+		assertThat(result.getImageUrl()).isEqualTo("https://edit.com/image.jpg");
 		verify(linkRepository, never()).save(any(Link.class));
 	}
 

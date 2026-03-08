@@ -122,16 +122,16 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), any(), any())).willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), any(), any(), any())).willReturn(updatedLink);
 
 		// when
-		Link result = linkService.updateLink(1L, member, "수정된 제목", null);
+		Link result = linkService.updateLink(1L, member, "수정된 제목", null, null);
 
 		// then
 		assertThat(result).isNotNull();
 		assertThat(result.getTitle()).isEqualTo("수정된 제목");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), any(), any());
+		verify(linkCommandService, times(1)).updateLink(any(), any(), any(), any());
 	}
 
 	@Test
@@ -158,8 +158,7 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("수정된 제목"), eq("원본 메모")))
-			.willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), eq("수정된 제목"), eq("원본 메모"), isNull())).willReturn(updatedLink);
 
 		// when
 		Link result = linkService.updateTitle(1L, member, "수정된 제목");
@@ -169,7 +168,7 @@ class LinkServiceTest {
 		assertThat(result.getTitle()).isEqualTo("수정된 제목");
 		assertThat(result.getMemo()).isEqualTo("원본 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"));
+		verify(linkCommandService, times(1)).updateLink(any(), eq("수정된 제목"), eq("원본 메모"), isNull());
 	}
 
 	@Test
@@ -196,8 +195,7 @@ class LinkServiceTest {
 			.build();
 
 		given(linkQueryService.findById(1L, member)).willReturn(originalLink);
-		given(linkCommandService.updateLink(any(), eq("원본 제목"), eq("수정된 메모")))
-			.willReturn(updatedLink);
+		given(linkCommandService.updateLink(any(), eq("원본 제목"), eq("수정된 메모"), isNull())).willReturn(updatedLink);
 
 		// when
 		Link result = linkService.updateMemo(1L, member, "수정된 메모");
@@ -207,7 +205,7 @@ class LinkServiceTest {
 		assertThat(result.getTitle()).isEqualTo("원본 제목");
 		assertThat(result.getMemo()).isEqualTo("수정된 메모");
 		verify(linkQueryService, times(1)).findById(1L, member);
-		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"));
+		verify(linkCommandService, times(1)).updateLink(any(), eq("원본 제목"), eq("수정된 메모"), isNull());
 	}
 
 	@Test
