@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -75,6 +76,10 @@ public class LinkService {
 		return linkQueryService.findById(linkId, member);
 	}
 
+	public Link getLinkWithMember(Long linkId) {
+		return linkQueryService.findByIdWithMemberFetch(linkId);
+	}
+
 	public LinkDto getLinkWithSummary(Long linkId, Member member) {
 		return linkQueryService.findByIdWithSummary(linkId, member);
 	}
@@ -83,7 +88,18 @@ public class LinkService {
 		return linkQueryService.findAllByMemberWithSummaryAndCursor(member, lastId, size);
 	}
 
+	public Link getLinkForSummaryUpdate(Long linkId, Member member) {
+		Link link = getLink(linkId, member);
+		link.validateSummarizable();
+		return link;
+	}
+
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
 		return linkQueryService.findIdByUrl(member, url);
+	}
+
+	public void updateSummaryStatus(Long linkId, SummaryStatus status) {
+		Link link = linkQueryService.findById(linkId);
+		link.updateSummaryStatus(status);
 	}
 }

@@ -43,7 +43,7 @@ public class SecurityConfig {
 		"/h2-console/**",
 
 		/* web socket */
-		"/ws/chat/**",
+		"/ws/chat/**", "/ws/link/**",
 
 		/* temp */
 		"/v1/member/signup", "/v1/member/login", "/mock/**",

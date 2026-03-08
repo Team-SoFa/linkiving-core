@@ -16,6 +16,9 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 
 	Optional<Link> findByIdAndMember(Long id, Member member);
 
+	@Query("SELECT l FROM Link l JOIN FETCH l.member WHERE l.id = :linkId")
+	Optional<Link> findByIdWithMemberFetch(@Param("linkId") Long linkId);
+
 	boolean existsByMemberAndUrlAndIsDeleteFalse(Member member, String url);
 
 	@Query("""

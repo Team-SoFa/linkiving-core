@@ -5,6 +5,7 @@ package com.sofa.linkiving.domain.link.event;
  * 트랜잭션 커밋 이후 발행되는 이벤트
  */
 public record LinkCreatedEvent(
-	Long linkId
+	Long linkId,
+	String email
 ) {
 }

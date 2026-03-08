@@ -44,7 +44,7 @@ public class LinkFacade {
 		String storedImageUrl = imageUploader.uploadFromUrl(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
-		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId()));
+		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail()));
 
 		return LinkRes.from(link);
 	}
@@ -89,8 +89,9 @@ public class LinkFacade {
 
 	@Transactional(readOnly = true)
 	public RegenerateSummaryRes recreateSummary(Member member, Long linkId, Format format) {
+		Link link = linkService.getLinkForSummaryUpdate(linkId, member);
 
-		String url = linkService.getLink(linkId, member).getUrl();
+		String url = link.getUrl();
 		String existingSummary = summaryService.getSummary(linkId).getContent();
 
 		RagRegenerateSummaryRes res = summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary);
@@ -109,7 +110,8 @@ public class LinkFacade {
 	}
 
 	public SummaryRes updateSummary(Long id, Member member, String content, Format format) {
-		Link link = linkService.getLink(id, member);
+		Link link = linkService.getLinkForSummaryUpdate(id, member);
+
 		Summary summary = summaryService.createSummary(link, format, content);
 		summaryService.selectSummary(link.getId(), summary.getId());
 		return SummaryRes.from(summary);

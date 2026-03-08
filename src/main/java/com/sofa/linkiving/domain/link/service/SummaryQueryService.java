@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
-import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -22,7 +22,7 @@ public class SummaryQueryService {
 
 	public Summary getSummary(Long linkId) {
 		return summaryRepository.findByLinkIdAndSelectedTrue(linkId).orElseThrow(
-			() -> new BusinessException(LinkErrorCode.SUMMARY_NOT_FOUND)
+			() -> new BusinessException(SummaryErrorCode.SUMMARY_NOT_FOUND)
 		);
 	}
 

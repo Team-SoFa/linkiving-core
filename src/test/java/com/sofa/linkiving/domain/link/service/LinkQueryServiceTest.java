@@ -206,4 +206,93 @@ class LinkQueryServiceTest {
 		assertThat(result).isEqualTo(expectedDtos);
 		verify(linkRepository).findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(linkIds, member);
 	}
+
+	@Test
+	@DisplayName("Member 없이 ID만으로 링크를 단건 조회할 수 있다")
+	void shouldFindByIdWithoutMember() {
+		// given
+		Long linkId = 1L;
+		Link link = mock(Link.class);
+
+		given(linkRepository.findById(linkId)).willReturn(Optional.of(link));
+		given(link.isDeleted()).willReturn(false); // 필터링 조건 통과 모킹
+
+		// when
+		Link foundLink = linkQueryService.findById(linkId);
+
+		// then
+		assertThat(foundLink).isEqualTo(link);
+		verify(linkRepository, times(1)).findById(linkId);
+	}
+
+	@Test
+	@DisplayName("Member 없이 ID로 조회 시 존재하지 않거나 삭제된 링크면 예외가 발생한다")
+	void shouldThrowExceptionWhenLinkNotFoundByIdOnly() {
+		// given
+		Long linkId = 999L;
+		Link link = mock(Link.class);
+
+		// 1. 아예 존재하지 않는 경우
+		given(linkRepository.findById(linkId)).willReturn(Optional.empty());
+
+		assertThatThrownBy(() -> linkQueryService.findById(linkId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.LINK_NOT_FOUND);
+
+		// 2. 존재하지만 삭제 처리된 경우(isDeleted = true)
+		given(linkRepository.findById(linkId)).willReturn(Optional.of(link));
+		given(link.isDeleted()).willReturn(true);
+
+		assertThatThrownBy(() -> linkQueryService.findById(linkId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.LINK_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("Member 정보를 패치 조인하여 ID로 링크를 단건 조회할 수 있다")
+	void shouldFindByIdWithMemberFetch() {
+		// given
+		Long linkId = 1L;
+		Link link = mock(Link.class);
+
+		given(linkRepository.findByIdWithMemberFetch(linkId)).willReturn(Optional.of(link));
+
+		// when
+		Link foundLink = linkQueryService.findByIdWithMemberFetch(linkId);
+
+		// then
+		assertThat(foundLink).isEqualTo(link);
+		verify(linkRepository, times(1)).findByIdWithMemberFetch(linkId);
+	}
+
+	@Test
+	@DisplayName("Member 패치 조인 조회 시 링크가 존재하지 않으면 예외가 발생한다")
+	void shouldThrowExceptionWhenLinkNotFoundWithMemberFetch() {
+		// given
+		Long linkId = 999L;
+		given(linkRepository.findByIdWithMemberFetch(linkId)).willReturn(Optional.empty());
+
+		// when & then
+		assertThatThrownBy(() -> linkQueryService.findByIdWithMemberFetch(linkId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.LINK_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("특정 회원의 URL로 삭제되지 않은 링크의 ID를 조회할 수 있다")
+	void shouldFindIdByUrl() {
+		// given
+		Member member = mock(Member.class);
+		String url = "https://example.com";
+		Long expectedId = 123L;
+
+		given(linkRepository.findIdByMemberAndUrlAndIsDeleteFalse(member, url)).willReturn(Optional.of(expectedId));
+
+		// when
+		Optional<Long> resultId = linkQueryService.findIdByUrl(member, url);
+
+		// then
+		assertThat(resultId).isPresent().contains(expectedId);
+		verify(linkRepository, times(1)).findIdByMemberAndUrlAndIsDeleteFalse(member, url);
+	}
 }
