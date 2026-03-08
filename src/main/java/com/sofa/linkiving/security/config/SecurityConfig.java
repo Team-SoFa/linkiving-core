@@ -1,5 +1,7 @@
 package com.sofa.linkiving.security.config;
 
+import java.util.List;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +13,12 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.sofa.linkiving.global.config.CookieProperties;
+import com.sofa.linkiving.global.config.CorsProperties;
 import com.sofa.linkiving.security.auth.config.OAuth2Properties;
 import com.sofa.linkiving.security.auth.handler.OAuth2FailureHandler;
 import com.sofa.linkiving.security.auth.handler.OAuth2SuccessHandler;
@@ -26,7 +33,12 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties({JwtProperties.class, OAuth2Properties.class})
+@EnableConfigurationProperties({
+	JwtProperties.class,
+	OAuth2Properties.class,
+	CorsProperties.class,
+	CookieProperties.class
+})
 public class SecurityConfig {
 
 	private static final String[] PERMIT_URLS = {
@@ -62,6 +74,7 @@ public class SecurityConfig {
 	private final CustomOAuth2UserService customOAuth2UserService;
 	private final OAuth2SuccessHandler oAuth2SuccessHandler;
 	private final OAuth2FailureHandler oAuth2FailureHandler;
+	private final CorsProperties corsProperties;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -92,5 +105,22 @@ public class SecurityConfig {
 			.addFilterBefore(jwtExceptionFilter, JwtAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration config = new CorsConfiguration();
+		List<String> allowedOrigins = corsProperties.allowedOrigins();
+		if (allowedOrigins == null || allowedOrigins.isEmpty()) {
+			allowedOrigins = List.of();
+		}
+		config.setAllowedOrigins(allowedOrigins);
+		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+		config.setAllowedHeaders(List.of("*"));
+		config.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", config);
+		return source;
 	}
 }
