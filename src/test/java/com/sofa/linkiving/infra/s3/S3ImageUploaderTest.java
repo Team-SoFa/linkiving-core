@@ -47,13 +47,10 @@ public class S3ImageUploaderTest {
 		// given
 		String originalUrl = "https://example.com/image.jpg";
 
-		// 1. 중복 검사 통과 (S3에 파일 없음)
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
 
-		// 2. Factory가 Mock Connection 반환
 		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
 
-		// 3. Connection 동작 설정 (이미지 타입, 스트림)
 		given(mockConnection.getContentType()).willReturn("image/jpeg");
 		given(mockConnection.getInputStream()).willReturn(new ByteArrayInputStream("dummy-data".getBytes()));
 
@@ -61,8 +58,6 @@ public class S3ImageUploaderTest {
 		String result = s3ImageUploader.uploadFromUrl(originalUrl);
 
 		// then
-		// 예상되는 S3 URL 포맷 확인
-		// UUID 생성이 내부 로직이라 정확한 키값 예측은 어려우나, bucket/region/경로 포함 여부 확인
 		assertThat(result).startsWith("https://" + BUCKET_NAME + ".s3." + REGION + ".amazonaws.com/links/");
 		assertThat(result).endsWith(".jpg");
 
@@ -76,7 +71,6 @@ public class S3ImageUploaderTest {
 		// given
 		String originalUrl = "https://example.com/image.jpg";
 
-		// 이미 파일이 존재한다고 설정 (Cache Hit)
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(true);
 
 		// when
@@ -99,7 +93,6 @@ public class S3ImageUploaderTest {
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
 		given(urlConnectionFactory.createConnection(originalUrl)).willReturn(mockConnection);
 
-		// ContentType을 이미지가 아닌 것으로 설정
 		given(mockConnection.getContentType()).willReturn("application/pdf");
 
 		// when
@@ -120,7 +113,6 @@ public class S3ImageUploaderTest {
 
 		given(s3Template.objectExists(eq(BUCKET_NAME), anyString())).willReturn(false);
 
-		// 연결 생성 시 예외 발생하도록 설정
 		given(urlConnectionFactory.createConnection(originalUrl)).willThrow(new IOException("Connection Refused"));
 
 		// when
