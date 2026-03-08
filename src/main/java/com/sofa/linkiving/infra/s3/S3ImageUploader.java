@@ -2,6 +2,7 @@ package com.sofa.linkiving.infra.s3;
 
 import java.io.InputStream;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -36,7 +37,6 @@ public class S3ImageUploader implements ImageUploader {
 
 		try {
 			String s3Key = generateUniqueKeyFromUrl(originalUrl);
-
 			String s3Url = buildS3Url(s3Key);
 
 			if (s3Template.objectExists(bucketName, s3Key)) {
@@ -48,9 +48,15 @@ public class S3ImageUploader implements ImageUploader {
 			connection.setConnectTimeout(3000);
 			connection.setReadTimeout(3000);
 
+			connection.setRequestProperty("User-Agent",
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+					+ "AppleWebKit/537.36 (KHTML, like Gecko) "
+					+ "Chrome/120.0.0.0 Safari/537.36");
+			connection.setRequestProperty("Accept", "image/*, */*;q=0.8");
+
 			String contentType = connection.getContentType();
 			if (contentType == null || !contentType.startsWith("image/")) {
-				log.warn("Not Image: {}", originalUrl);
+				log.warn("Not Image (ContentType: {}): {}", contentType, originalUrl);
 				return null;
 			}
 
@@ -72,10 +78,12 @@ public class S3ImageUploader implements ImageUploader {
 
 	private String generateUniqueKeyFromUrl(String url) {
 		try {
+			String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
 			String extension = "jpg";
-			int lastDotIndex = url.lastIndexOf('.');
-			if (lastDotIndex > 0 && lastDotIndex < url.length() - 1) {
-				String ext = url.substring(lastDotIndex + 1);
+
+			int lastDotIndex = decodedUrl.lastIndexOf('.');
+			if (lastDotIndex > 0 && lastDotIndex < decodedUrl.length() - 1) {
+				String ext = decodedUrl.substring(lastDotIndex + 1);
 				if (ext.contains("?")) {
 					ext = ext.substring(0, ext.indexOf("?"));
 				}
@@ -83,6 +91,7 @@ public class S3ImageUploader implements ImageUploader {
 					extension = ext;
 				}
 			}
+
 			UUID uuid = UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8));
 			return "links/" + uuid + "." + extension;
 		} catch (Exception e) {
