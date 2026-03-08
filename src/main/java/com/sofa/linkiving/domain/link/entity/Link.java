@@ -53,12 +53,15 @@ public class Link extends BaseEntity {
 			.build();
 	}
 
-	public void updateDetails(String title, String memo) {
+	public void updateDetails(String title, String memo, String imageUrl) {
 		if (title != null) {
 			this.title = title;
 		}
 		if (memo != null) {
 			this.memo = memo;
+		}
+		if (imageUrl != null) {
+			this.imageUrl = imageUrl;
 		}
 	}
 }

@@ -86,7 +86,8 @@ public class LinkController implements LinkApi {
 			id,
 			member,
 			request.title(),
-			request.memo()
+			request.memo(),
+			request.imageUrl()
 		);
 		return BaseResponse.success(response, "링크 수정 완료");
 	}

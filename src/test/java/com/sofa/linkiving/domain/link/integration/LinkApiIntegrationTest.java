@@ -365,6 +365,11 @@ public class LinkApiIntegrationTest {
 	@DisplayName("링크 전체 수정 성공 시 DB 업데이트 및 200 OK 응답")
 	void shouldUpdateLinkSuccessfully() throws Exception {
 		// given
+		String originalImageUrl = "https://original.com/image.jpg";
+		String uploadedS3Url = "https://s3.amazonaws.com/bucket/links/uuid.jpg";
+
+		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(uploadedS3Url);
+
 		Link link = linkRepository.save(Link.builder()
 			.member(testMember)
 			.url("https://example.com")
@@ -374,7 +379,8 @@ public class LinkApiIntegrationTest {
 
 		LinkUpdateReq req = new LinkUpdateReq(
 			"수정된 제목",
-			"수정된 메모"
+			"수정된 메모",
+			originalImageUrl
 		);
 
 		// when & then
@@ -390,7 +396,8 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.message").value("링크 수정 완료"))
 			.andExpect(jsonPath("$.data.title").value(req.title()))
-			.andExpect(jsonPath("$.data.memo").value(req.memo()));
+			.andExpect(jsonPath("$.data.memo").value(req.memo()))
+			.andExpect(jsonPath("$.data.imageUrl").value(uploadedS3Url));
 
 		// DB 검증
 		Link updated = linkRepository.findById(link.getId()).orElseThrow();

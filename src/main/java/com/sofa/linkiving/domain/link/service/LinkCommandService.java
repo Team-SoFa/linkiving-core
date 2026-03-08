@@ -19,8 +19,8 @@ public class LinkCommandService {
 		return linkRepository.save(link);
 	}
 
-	public Link updateLink(Link link, String title, String memo) {
-		link.updateDetails(title, memo);
+	public Link updateLink(Link link, String title, String memo, String imageUrl) {
+		link.updateDetails(title, memo, imageUrl);
 		return link;
 	}
 

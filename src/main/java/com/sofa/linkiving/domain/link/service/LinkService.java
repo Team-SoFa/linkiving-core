@@ -33,9 +33,9 @@ public class LinkService {
 		return link;
 	}
 
-	public Link updateLink(Long linkId, Member member, String title, String memo) {
+	public Link updateLink(Long linkId, Member member, String title, String memo, String imageUrl) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(link, title, memo);
+		Link updatedLink = linkCommandService.updateLink(link, title, memo, imageUrl);
 
 		log.info("Link updated - id: {}, memberId: {}", linkId, member.getId());
 
@@ -44,7 +44,7 @@ public class LinkService {
 
 	public Link updateTitle(Long linkId, Member member, String title) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(link, title, link.getMemo());
+		Link updatedLink = linkCommandService.updateLink(link, title, link.getMemo(), link.getImageUrl());
 
 		log.info("Link title updated - id: {}, memberId: {}", linkId, member.getId());
 
@@ -53,7 +53,7 @@ public class LinkService {
 
 	public Link updateMemo(Long linkId, Member member, String memo) {
 		Link link = linkQueryService.findById(linkId, member);
-		Link updatedLink = linkCommandService.updateLink(link, link.getTitle(), memo);
+		Link updatedLink = linkCommandService.updateLink(link, link.getTitle(), memo, link.getImageUrl());
 
 		log.info("Link memo updated - id: {}, memberId: {}", linkId, member.getId());
 
