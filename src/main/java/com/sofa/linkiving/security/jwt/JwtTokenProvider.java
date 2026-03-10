@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.WebUtils;
 
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
@@ -25,11 +26,14 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtTokenProvider {
 	private final JwtProperties jwtProperties;
 	private final UserDetailsService userDetailsService;
@@ -100,6 +104,13 @@ public class JwtTokenProvider {
 		if (bearer != null && bearer.startsWith(JwtKeys.Headers.BEARER_PREFIX)) {
 			return bearer.substring(JwtKeys.Headers.BEARER_PREFIX.length());
 		}
+
+		Cookie cookie = WebUtils.getCookie(request, "accessToken");
+		if (cookie != null) {
+			return cookie.getValue();
+		}
+
+		log.warn("Token not found (missing in both header and cookie)");
 		return null;
 	}
 
