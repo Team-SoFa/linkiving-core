@@ -9,6 +9,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.global.error.code.CommonErrorCode;
@@ -21,6 +22,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException exception) {
+		if (exception.getResourcePath().contains("favicon")) {
+			return ResponseEntity.notFound().build();
+		}
+		log.error("No static resource {}", exception.getResourcePath(), exception);
+		return ResponseEntity.notFound().build();
+	}
 
 	/* =========================
 	  도메인 비즈니스 예외

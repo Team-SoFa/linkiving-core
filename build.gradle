@@ -16,6 +16,10 @@ java {
 }
 
 configurations {
+    configureEach {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
     compileOnly {
         extendsFrom annotationProcessor
     }
