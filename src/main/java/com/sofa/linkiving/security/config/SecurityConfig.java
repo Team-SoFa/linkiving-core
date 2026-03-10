@@ -20,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.sofa.linkiving.global.config.CookieProperties;
 import com.sofa.linkiving.global.config.CorsProperties;
 import com.sofa.linkiving.security.auth.config.OAuth2Properties;
+import com.sofa.linkiving.security.auth.config.SecurityConstants;
 import com.sofa.linkiving.security.auth.handler.OAuth2FailureHandler;
 import com.sofa.linkiving.security.auth.handler.OAuth2SuccessHandler;
 import com.sofa.linkiving.security.auth.service.CustomOAuth2UserService;
@@ -41,32 +42,6 @@ import lombok.RequiredArgsConstructor;
 })
 public class SecurityConfig {
 
-	private static final String[] PERMIT_URLS = {
-		/* swagger */
-		"/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources", "/swagger-resources/**",
-
-		/* health check */
-		"/health-check",
-
-		/* favicon */
-		"/favicon.ico",
-
-		/* h2 */
-		"/h2-console/**",
-
-		/* web socket */
-		"/ws/chat/**",
-
-		/* temp */
-		"/v1/member/signup", "/v1/member/login", "/mock/**",
-
-		/* oauth2 */
-		"/oauth2/**"
-	};
-	private static final String[] SEMI_PERMIT_URLS = {
-		//GET만 허용해야 하는 URL
-	};
-
 	private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtExceptionFilter jwtExceptionFilter;
@@ -87,7 +62,7 @@ public class SecurityConfig {
 				sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers(PERMIT_URLS).permitAll()
+					.requestMatchers(SecurityConstants.PERMIT_URLS).permitAll()
 					.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2 -> oauth2
