@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
@@ -40,6 +41,8 @@ class SummaryWorkerTest {
 	private SummaryClient summaryClient;
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
+	@Mock
+	private ObjectProvider<SummaryWorker> selfProvider;
 
 	private SummaryWorker summaryWorker;
 	private Link mockLink;
@@ -48,15 +51,19 @@ class SummaryWorkerTest {
 	@BeforeEach
 	void setUp() {
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
-		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher);
+		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher,
+			selfProvider);
 
 		mockLink = mock(Link.class);
 		mockMember = mock(Member.class);
 
 		lenient().when(mockLink.getId()).thenReturn(1L);
 		lenient().when(mockLink.getMember()).thenReturn(mockMember);
+		lenient().when(mockLink.getSummaryStatus()).thenReturn(SummaryStatus.PENDING);
 		lenient().when(mockMember.getId()).thenReturn(100L);
 		lenient().when(mockMember.getEmail()).thenReturn("test@test.com");
+
+		lenient().when(selfProvider.getObject()).thenReturn(summaryWorker);
 	}
 
 	@AfterEach
@@ -103,6 +110,25 @@ class SummaryWorkerTest {
 	}
 
 	@Test
+	@DisplayName("PENDING 상태가 아닌 링크는 AI 요약을 건너뛴다")
+	void shouldSkipIfNotPending() {
+		// given
+		given(summaryQueue.pollFromQueue())
+			.willReturn(Optional.of(1L))
+			.willReturn(Optional.empty());
+
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+		given(mockLink.getSummaryStatus()).willReturn(SummaryStatus.PROCESSING);
+
+		// when
+		summaryWorker.startWorker();
+
+		// then
+		verify(eventPublisher, after(200).never()).publishEvent(any());
+		verify(summaryWorkerFacade, never()).updateSummaryStatus(anyLong(), any());
+	}
+
+	@Test
 	@DisplayName("큐에 링크가 있으면 정상적으로 AI 요약을 요청하고 저장")
 	void shouldProcessLinkAndSaveSummary() {
 		// given
@@ -111,20 +137,11 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(linkId))
 			.willReturn(Optional.empty());
 
-		Link link = mock(Link.class);
-		Member member = mock(Member.class);
+		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(mockLink);
+		given(mockLink.getUrl()).willReturn("http://test.com");
+		given(mockLink.getTitle()).willReturn("Test Title");
+		given(mockLink.getMemo()).willReturn("Test Memo");
 
-		// Link 엔티티 Mocking
-		given(link.getId()).willReturn(linkId);
-		given(link.getMember()).willReturn(member);
-		given(member.getId()).willReturn(100L);
-		given(link.getUrl()).willReturn("http://test.com");
-		given(link.getTitle()).willReturn("Test Title");
-		given(link.getMemo()).willReturn("Test Memo");
-
-		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(link);
-
-		// AI 클라이언트 응답 Mocking
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
 		given(mockRes.summary()).willReturn("요약된 내용입니다.");
 		given(summaryClient.initialSummary(linkId, 100L, "Test Title", "http://test.com", "Test Memo"))
@@ -138,35 +155,6 @@ class SummaryWorkerTest {
 	}
 
 	@Test
-	@DisplayName("AI 응답이 null일 경우 요약을 생성하지 않음")
-	void shouldNotSaveSummary_WhenClientReturnsNull() {
-		// given
-		Long linkId = 2L;
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(linkId))
-			.willReturn(Optional.empty());
-
-		Link link = mock(Link.class);
-		Member member = mock(Member.class);
-		given(link.getId()).willReturn(linkId);
-		given(link.getMember()).willReturn(member);
-		given(member.getId()).willReturn(100L);
-
-		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(link);
-
-		// AI 응답이 null로 반환되는 상황
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
-
-		// when
-		summaryWorker.startWorker();
-
-		// then
-		// 클라이언트 호출은 일어났으나
-		verify(summaryClient, timeout(1000).times(1)).initialSummary(anyLong(), anyLong(), any(), any(), any());
-		verify(summaryWorkerFacade, after(200).never()).createInitialSummaryAndUpdateStatus(anyLong(), anyString());
-	}
-
-	@Test
 	@DisplayName("처리 중 예외가 발생해도 워커 쓰레드는 종료되지 않고 다음 큐를 계속 확인")
 	void shouldContinueWorking_WhenExceptionOccurs() {
 		// given
@@ -175,7 +163,6 @@ class SummaryWorkerTest {
 			.willReturn(Optional.of(linkId))
 			.willReturn(Optional.empty());
 
-		// Link 조회 중 강제로 RuntimeException 발생
 		given(summaryWorkerFacade.getLinkWithMember(linkId)).willThrow(new RuntimeException("DB Connection Error"));
 
 		// when
@@ -197,7 +184,6 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
-		// 10ms 단위로 대기하므로, 짧은 시간 내에 여러 번 pollFromQueue를 호출하는지 확인
 		verify(summaryQueue, timeout(500).atLeast(3)).pollFromQueue();
 	}
 
@@ -216,12 +202,14 @@ class SummaryWorkerTest {
 		Link link1 = mock(Link.class);
 		Member member1 = mock(Member.class);
 		lenient().when(link1.getId()).thenReturn(linkId1);
+		lenient().when(link1.getSummaryStatus()).thenReturn(SummaryStatus.PENDING);
 		lenient().when(link1.getMember()).thenReturn(member1);
 		lenient().when(member1.getId()).thenReturn(100L);
 
 		Link link2 = mock(Link.class);
 		Member member2 = mock(Member.class);
 		lenient().when(link2.getId()).thenReturn(linkId2);
+		lenient().when(link2.getSummaryStatus()).thenReturn(SummaryStatus.PENDING);
 		lenient().when(link2.getMember()).thenReturn(member2);
 		lenient().when(member2.getId()).thenReturn(200L);
 
@@ -278,7 +266,7 @@ class SummaryWorkerTest {
 	}
 
 	@Test
-	@DisplayName("AI 응답이 null일 경우 FAILED(AI 서버 응답 없음) 이벤트를 발행함")
+	@DisplayName("AI 응답이 null일 경우 예외가 발생하여 FAILED 이벤트를 발행함")
 	void shouldPublishFailedEvent_WhenAiResponseIsNull() {
 		// given
 		given(summaryQueue.pollFromQueue())
@@ -286,6 +274,8 @@ class SummaryWorkerTest {
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+
+		// AI 응답이 null이면 callAiServerWithRetry 내에서 RuntimeException 발생
 		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
 
 		// when
@@ -297,11 +287,11 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("AI 서버 응답이 없습니다.");
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).contains("Retry limit exceeded");
 	}
 
 	@Test
-	@DisplayName("처리 중 내부 예외 발생 시 FAILED(내부 오류) 이벤트를 발행함")
+	@DisplayName("처리 중 내부 예외 발생 시 FAILED 이벤트를 발행함")
 	void shouldPublishFailedEvent_WhenExceptionOccurs() {
 		// given
 		given(summaryQueue.pollFromQueue())
@@ -323,7 +313,7 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("요약 처리 중 내부 오류가 발생했습니다.");
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).contains("Retry limit exceeded");
 	}
 
 	@Test
@@ -340,7 +330,6 @@ class SummaryWorkerTest {
 		given(mockRes.summary()).willReturn("요약된 내용");
 		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(mockRes);
 
-		// Facade가 처리 방어 로직 등에 의해 null을 반환한다고 가정
 		given(summaryWorkerFacade.createInitialSummaryAndUpdateStatus(anyLong(), anyString())).willReturn(null);
 
 		// when
@@ -399,6 +388,6 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().errorMessage()).isEqualTo("요약 처리 중 내부 오류가 발생했습니다.");
+		assertThat(captor.getAllValues().get(1).response().errorMessage()).contains("Retry limit exceeded");
 	}
 }

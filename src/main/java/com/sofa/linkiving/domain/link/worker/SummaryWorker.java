@@ -2,8 +2,11 @@ package com.sofa.linkiving.domain.link.worker;
 
 import java.util.Optional;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
@@ -33,6 +36,7 @@ public class SummaryWorker {
 	private final SummaryWorkerFacade summaryWorkerFacade;
 	private final SummaryClient summaryClient;
 	private final ApplicationEventPublisher eventPublisher;
+	private final ObjectProvider<SummaryWorker> selfProvider;
 
 	private volatile boolean running = true;
 	private Thread workerThread;
@@ -84,34 +88,23 @@ public class SummaryWorker {
 			Link link = summaryWorkerFacade.getLinkWithMember(linkId);
 			userEmail = link.getMember().getEmail();
 
-			summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
+			if (link.getSummaryStatus() != SummaryStatus.PENDING) {
+				log.warn("Link is not in PENDING state. Skipping summary generation - linkId: {}", linkId);
+				return;
+			}
 
+			summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
 			eventPublisher.publishEvent(new SummaryStatusEvent(
 				userEmail,
 				SummaryStatusRes.of(linkId, SummaryStatus.PROCESSING)
 			));
 
-			RagInitialSummaryRes res = summaryClient.initialSummary(
-				link.getId(),
-				link.getMember().getId(),
-				link.getTitle(),
-				link.getUrl(),
-				link.getMemo()
-			);
+			RagInitialSummaryRes res = selfProvider.getObject().callAiServerWithRetry(link);
 
-			if (res != null) {
-				Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
-
-				if (summary != null) {
-					eventPublisher.publishEvent(new SummaryStatusEvent(
-						userEmail, SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
-					));
-				}
-			} else {
-				summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.FAILED);
+			Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
+			if (summary != null) {
 				eventPublisher.publishEvent(new SummaryStatusEvent(
-					userEmail,
-					SummaryStatusRes.failed(linkId, "AI 서버 응답이 없습니다.")
+					userEmail, SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
 				));
 			}
 		} catch (Exception e) {
@@ -127,9 +120,32 @@ public class SummaryWorker {
 			if (userEmail != null) {
 				eventPublisher.publishEvent(new SummaryStatusEvent(
 					userEmail,
-					SummaryStatusRes.failed(linkId, "요약 처리 중 내부 오류가 발생했습니다.")
+					SummaryStatusRes.failed(linkId, "Failed to communicate with the AI server (Retry limit exceeded).")
 				));
 			}
 		}
+	}
+
+	@Retryable(
+		value = {Exception.class},
+		maxAttempts = 3,
+		backoff = @Backoff(delay = 2000)
+	)
+	public RagInitialSummaryRes callAiServerWithRetry(Link link) {
+		log.info("Attempting summary request to AI server - linkId: {}", link.getId());
+
+		RagInitialSummaryRes res = summaryClient.initialSummary(
+			link.getId(),
+			link.getMember().getId(),
+			link.getTitle(),
+			link.getUrl(),
+			link.getMemo()
+		);
+
+		if (res == null) {
+			throw new RuntimeException("Received a null response from the AI server.");
+		}
+
+		return res;
 	}
 }
