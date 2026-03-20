@@ -22,6 +22,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkTotalCountRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
@@ -165,5 +166,12 @@ public class LinkController implements LinkApi {
 	) {
 		SummaryRes response = linkFacade.updateSummary(id, member, request.summary(), request.format());
 		return BaseResponse.success(response, "요약 수정 완료");
+	}
+
+	@Override
+	@GetMapping("/count")
+	public BaseResponse<LinkTotalCountRes> getLinkTotalCount(@AuthMember Member member) {
+		LinkTotalCountRes res = linkFacade.getLinkTotalCount(member);
+		return BaseResponse.success(res, "링크 전체 개수 조회 완료");
 	}
 }

@@ -71,4 +71,8 @@ public class LinkQueryService {
 	public Optional<Long> findIdByUrl(Member member, String url) {
 		return linkRepository.findIdByMemberAndUrlAndIsDeleteFalse(member, url);
 	}
+
+	public int countByMemberAndIsDeleteFalse(Member member) {
+		return linkRepository.countByMemberAndIsDeleteFalse(member);
+	}
 }

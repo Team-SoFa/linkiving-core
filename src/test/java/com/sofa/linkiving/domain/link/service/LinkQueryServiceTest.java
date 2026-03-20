@@ -295,4 +295,19 @@ class LinkQueryServiceTest {
 		assertThat(resultId).isPresent().contains(expectedId);
 		verify(linkRepository, times(1)).findIdByMemberAndUrlAndIsDeleteFalse(member, url);
 	}
+
+	@Test
+	@DisplayName("사용자의 삭제되지 않은 전체 링크 개수를 조회한다")
+	void countByMemberAndIsDeleteFalse() {
+		// given
+		Member member = mock(Member.class);
+		given(linkRepository.countByMemberAndIsDeleteFalse(member)).willReturn(5);
+
+		// when
+		int result = linkQueryService.countByMemberAndIsDeleteFalse(member);
+
+		// then
+		assertThat(result).isEqualTo(5);
+		verify(linkRepository, times(1)).countByMemberAndIsDeleteFalse(member);
+	}
 }

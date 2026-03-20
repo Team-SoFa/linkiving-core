@@ -444,4 +444,19 @@ class LinkServiceTest {
 		verify(linkQueryService, times(1)).findById(linkId);
 		verify(link, times(1)).updateSummaryStatus(newStatus);
 	}
+
+	@Test
+	@DisplayName("사용자의 전체 링크 개수를 조회한다")
+	void getLinkTotalCount() {
+		// given
+		Member member = mock(Member.class);
+		given(linkQueryService.countByMemberAndIsDeleteFalse(member)).willReturn(10);
+
+		// when
+		int result = linkService.getLinkTotalCount(member);
+
+		// then
+		assertThat(result).isEqualTo(10);
+		verify(linkQueryService, times(1)).countByMemberAndIsDeleteFalse(member);
+	}
 }

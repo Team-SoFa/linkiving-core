@@ -13,6 +13,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkTotalCountRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
@@ -142,6 +143,11 @@ public interface LinkApi {
 	BaseResponse<SummaryRes> updateSummary(
 		Long id,
 		@Valid SummaryUpdateReq request,
+		Member member
+	);
+
+	@Operation(summary = "링크 전체 개수 조회", description = "저장된 전체 링크 개수를 조회합니다.")
+	BaseResponse<LinkTotalCountRes> getLinkTotalCount(
 		Member member
 	);
 }

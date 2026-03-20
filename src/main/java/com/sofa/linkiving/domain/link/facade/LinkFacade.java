@@ -13,6 +13,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkTotalCountRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
@@ -142,5 +143,10 @@ public class LinkFacade {
 			return null;
 		}
 		return imageUploader.uploadFromUrl(imageUrl);
+	}
+
+	@Transactional(readOnly = true)
+	public LinkTotalCountRes getLinkTotalCount(Member member) {
+		return new LinkTotalCountRes(linkService.getLinkTotalCount(member));
 	}
 }

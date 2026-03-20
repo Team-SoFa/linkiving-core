@@ -94,6 +94,10 @@ public class LinkService {
 		return link;
 	}
 
+	public int getLinkTotalCount(Member member) {
+		return linkQueryService.countByMemberAndIsDeleteFalse(member);
+	}
+
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
 		return linkQueryService.findIdByUrl(member, url);
 	}
