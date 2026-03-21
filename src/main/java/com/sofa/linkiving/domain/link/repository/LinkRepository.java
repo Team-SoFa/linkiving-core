@@ -5,11 +5,13 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 public interface LinkRepository extends JpaRepository<Link, Long> {
@@ -67,6 +69,19 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 	List<LinkDto> findAllByMemberAndIdInWithSummaryAndIsDeleteFalse(
 		@Param("linkIds") List<Long> linkIds,
 		@Param("member") Member member
+	);
+
+	@Modifying(clearAutomatically = true)
+	@Query("""
+		UPDATE Link l SET l.summaryStatus = :newStatus
+		WHERE l.id = :linkId AND l.member = :member
+		AND l.summaryStatus = :oldStatus AND l.isDelete = false
+		""")
+	int updateSummaryStatusAtomically(
+		@Param("linkId") Long linkId,
+		@Param("member") Member member,
+		@Param("oldStatus") SummaryStatus oldStatus,
+		@Param("newStatus") SummaryStatus newStatus
 	);
 
 	Long countByMemberAndIsDeleteFalse(Member member);

@@ -446,6 +446,22 @@ class LinkServiceTest {
 	}
 
 	@Test
+	@DisplayName("요약 실패(FAILED) 상태인 링크의 상태를 PENDING으로 초기화한다")
+	void shouldRetrySummaryWhenSummaryStatusForRetry() {
+		// given
+		Long linkId = 1L;
+		Member member = mock(Member.class);
+
+		given(linkCommandService.resetSummaryStatusForRetry(linkId, member)).willReturn(1);
+
+		// when & then
+		assertThatCode(() -> linkService.resetSummaryStatusForRetry(linkId, member))
+			.doesNotThrowAnyException();
+
+		verify(linkCommandService, times(1)).resetSummaryStatusForRetry(linkId, member);
+	}
+
+	@Test
 	@DisplayName("사용자의 전체 링크 개수를 조회한다")
 	void getLinkTotalCount() {
 		// given

@@ -146,6 +146,12 @@ public interface LinkApi {
 		Member member
 	);
 
+	@Operation(summary = "최초 요약 수동 재요청", description = "최초 요약 생성에 실패했을 경우 수동으로 최초 요약을 재요청합니다.")
+	BaseResponse<Void> retrySummary(
+		Long id,
+		Member member
+	);
+
 	@Operation(summary = "링크 전체 개수 조회", description = "저장된 전체 링크 개수를 조회합니다.")
 	BaseResponse<LinkTotalCountRes> getLinkTotalCount(
 		Member member
