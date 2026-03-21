@@ -760,6 +760,30 @@ public class LinkApiIntegrationTest {
 	}
 
 	@Test
+	@DisplayName("요약 상태 조회 API 성공 시 200 OK와 상태 데이터를 반환한다")
+	void getSummaryStatus() throws Exception {
+		// given
+		Link link = Link.builder()
+			.member(testMember)
+			.url("https://example.com/article")
+			.title("테스트 링크")
+			.build();
+		link.updateSummaryStatus(SummaryStatus.COMPLETED);
+		Link savedlink = linkRepository.save(link);
+
+		// when & then
+		mockMvc.perform(get(BASE_URL + "/{id}/summary-status", savedlink.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.with(csrf())
+				.with(user(testUserDetails))
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.linkId").value(savedlink.getId()))
+			.andExpect(jsonPath("$.data.status").value(link.getSummaryStatus().toString()))
+			.andExpect(jsonPath("$.message").value("요약 상태 조회 완료"));
+	}
+
+	@Test
 	@DisplayName("전체 링크 개수 조회 API 성공 시 200 OK와 데이터(총 개수)를 반환한다")
 	void getLinkTotalCount() throws Exception {
 		// given

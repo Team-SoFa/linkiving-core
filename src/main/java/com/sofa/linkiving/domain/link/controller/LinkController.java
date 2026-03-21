@@ -26,6 +26,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkTotalCountRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
@@ -183,5 +184,15 @@ public class LinkController implements LinkApi {
 	) {
 		linkFacade.retrySummary(id, member);
 		return BaseResponse.noContent("요약 재시도");
+	}
+
+	@Override
+	@GetMapping("/{id}/summary-status")
+	public BaseResponse<SummaryStatusRes> getSummaryStatus(
+		@PathVariable Long id,
+		@AuthMember Member member
+	) {
+		SummaryStatusRes response = linkFacade.getSummaryStatus(id, member);
+		return BaseResponse.success(response, "요약 상태 조회 완료");
 	}
 }

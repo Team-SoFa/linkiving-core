@@ -446,6 +446,22 @@ class LinkServiceTest {
 	}
 
 	@Test
+	@DisplayName("링크의 요약 상태를 정상적으로 조회한다")
+	void getSummaryStatus() {
+		// given
+		Member member = mock(Member.class);
+		Link mockLink = mock(Link.class);
+		given(linkQueryService.findById(1L, member)).willReturn(mockLink);
+		given(mockLink.getSummaryStatus()).willReturn(SummaryStatus.COMPLETED);
+
+		// when
+		SummaryStatus result = linkService.getSummaryStatus(1L, member);
+
+		// then
+		assertThat(result).isEqualTo(SummaryStatus.COMPLETED);
+	}
+
+	@Test
 	@DisplayName("요약 실패(FAILED) 상태인 링크의 상태를 PENDING으로 초기화한다")
 	void shouldRetrySummaryWhenSummaryStatusForRetry() {
 		// given

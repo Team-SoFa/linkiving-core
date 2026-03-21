@@ -18,9 +18,11 @@ import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.service.LinkService;
@@ -104,6 +106,7 @@ public class LinkFacade {
 	@Transactional(readOnly = true)
 	public RegenerateSummaryRes recreateSummary(Member member, Long linkId, Format format) {
 		Link link = linkService.getLinkForSummaryUpdate(linkId, member);
+
 		String url = link.getUrl();
 		String existingSummary = summaryService.getSummary(linkId).getContent();
 
@@ -153,5 +156,11 @@ public class LinkFacade {
 	public void retrySummary(Long id, Member member) {
 		linkService.resetSummaryStatusForRetry(id, member);
 		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getEmail()));
+	}
+
+	@Transactional(readOnly = true)
+	public SummaryStatusRes getSummaryStatus(Long id, Member member) {
+		SummaryStatus summaryStatus = linkService.getSummaryStatus(id, member);
+		return SummaryStatusRes.of(id, summaryStatus);
 	}
 }
