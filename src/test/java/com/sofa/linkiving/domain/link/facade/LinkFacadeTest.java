@@ -30,9 +30,11 @@ import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
+import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.event.LinkCreatedEvent;
 import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
@@ -553,5 +555,23 @@ class LinkFacadeTest {
 		// then
 		verify(linkService, times(1)).resetSummaryStatusForRetry(1L, member);
 		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
+	}
+
+	@Test
+	@DisplayName("특정 링크의 요약 상태를 조회한다")
+	void shouldGetSummaryStatus() {
+		// given
+		Member member = mock(Member.class);
+		Long linkId = 123L;
+		given(linkService.getSummaryStatus(linkId, member)).willReturn(SummaryStatus.COMPLETED);
+
+		// when
+		SummaryStatusRes result = linkFacade.getSummaryStatus(linkId, member);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.linkId()).isEqualTo(linkId);
+		assertThat(result.status()).isEqualTo(SummaryStatus.COMPLETED);
+		verify(linkService, times(1)).getSummaryStatus(linkId, member);
 	}
 }
