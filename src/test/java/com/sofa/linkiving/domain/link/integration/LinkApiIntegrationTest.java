@@ -803,4 +803,45 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.totalCount").value(5))
 			.andExpect(jsonPath("$.message").value("링크 전체 개수 조회 완료"));
 	}
+
+	@Test
+	@DisplayName("SummaryStatus가 Failed인 링크에 대해 최초 요약 수동 재요청 API 성공 시 200 OK를 반환한다")
+	void shouldRetrySummaryWhenSummaryStatusFailed() throws Exception {
+		Link savedLink = linkRepository.save(Link.builder()
+			.member(testMember)
+			.url("https://example.com/article")
+			.title("테스트 링크")
+			.build());
+		savedLink.updateSummaryStatus(SummaryStatus.FAILED);
+		Long linkId = savedLink.getId();
+
+		// when & then
+		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", linkId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.with(csrf())
+				.with(user(testUserDetails))
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("요약 재시도"));
+	}
+
+	@Test
+	@DisplayName("SummaryStatus가 Failed가 아닌 링크에 대해 최초 요약 수동 재요청 API 요청 409 Conflict를 반환한다")
+	void shouldRetrySummaryFailWhenSummaryStatusNotFailed() throws Exception {
+		Link savedLink = linkRepository.save(Link.builder()
+			.member(testMember)
+			.url("https://example.com/article")
+			.title("테스트 링크")
+			.build());
+		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
+		Long linkId = savedLink.getId();
+
+		// when & then
+		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", linkId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.with(csrf())
+				.with(user(testUserDetails))
+			)
+			.andExpect(status().isConflict());
+	}
 }

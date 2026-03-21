@@ -106,4 +106,17 @@ public class LinkService {
 		Link link = linkQueryService.findById(linkId);
 		link.updateSummaryStatus(status);
 	}
+
+	public void resetSummaryStatusForRetry(Long linkId, Member member) {
+		int updatedRows = linkCommandService.resetSummaryStatusForRetry(linkId, member);
+
+		if (updatedRows == 1) {
+			return;
+		}
+
+		linkQueryService.findById(linkId, member);
+
+		throw new BusinessException(LinkErrorCode.INVALID_SUMMARY_STATUS_FOR_RETRY);
+
+	}
 }

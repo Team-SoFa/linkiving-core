@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.link.service;
 import org.springframework.stereotype.Service;
 
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.repository.LinkRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 
@@ -26,5 +27,10 @@ public class LinkCommandService {
 
 	public void deleteLink(Link link) {
 		link.markDeleted();
+	}
+
+	public int resetSummaryStatusForRetry(Long linkId, Member member) {
+		return linkRepository.updateSummaryStatusAtomically(linkId, member, SummaryStatus.FAILED,
+			SummaryStatus.PENDING);
 	}
 }

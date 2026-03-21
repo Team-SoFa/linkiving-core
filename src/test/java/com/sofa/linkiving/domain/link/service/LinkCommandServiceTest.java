@@ -113,4 +113,27 @@ class LinkCommandServiceTest {
 		// then
 		assertThat(link.isDeleted()).isTrue();
 	}
+
+	@Test
+	@DisplayName("요약 실패 상태를 PENDING으로 원자적 업데이트 한다")
+	void shouldResetSummaryStatusForRetry() {
+		// given
+		Long linkId = 1L;
+		Member member = mock(Member.class);
+
+		given(linkRepository.updateSummaryStatusAtomically(
+			eq(linkId), eq(member), eq(com.sofa.linkiving.domain.link.enums.SummaryStatus.FAILED),
+			eq(com.sofa.linkiving.domain.link.enums.SummaryStatus.PENDING)
+		)).willReturn(1);
+
+		// when
+		int updatedCount = linkCommandService.resetSummaryStatusForRetry(linkId, member);
+
+		// then
+		assertThat(updatedCount).isEqualTo(1);
+		verify(linkRepository, times(1)).updateSummaryStatusAtomically(
+			linkId, member, com.sofa.linkiving.domain.link.enums.SummaryStatus.FAILED,
+			com.sofa.linkiving.domain.link.enums.SummaryStatus.PENDING
+		);
+	}
 }

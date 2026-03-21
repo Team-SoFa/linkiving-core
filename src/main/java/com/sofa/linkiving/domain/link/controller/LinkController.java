@@ -174,4 +174,14 @@ public class LinkController implements LinkApi {
 		LinkTotalCountRes res = linkFacade.getLinkTotalCount(member);
 		return BaseResponse.success(res, "링크 전체 개수 조회 완료");
 	}
+
+	@Override
+	@PostMapping("/{id}/retry-summary")
+	public BaseResponse<Void> retrySummary(
+		@PathVariable Long id,
+		@AuthMember Member member
+	) {
+		linkFacade.retrySummary(id, member);
+		return BaseResponse.noContent("요약 재시도");
+	}
 }

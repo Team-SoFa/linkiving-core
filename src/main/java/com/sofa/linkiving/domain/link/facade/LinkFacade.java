@@ -149,4 +149,9 @@ public class LinkFacade {
 	public LinkTotalCountRes getLinkTotalCount(Member member) {
 		return new LinkTotalCountRes(linkService.getLinkTotalCount(member));
 	}
+
+	public void retrySummary(Long id, Member member) {
+		linkService.resetSummaryStatusForRetry(id, member);
+		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getEmail()));
+	}
 }

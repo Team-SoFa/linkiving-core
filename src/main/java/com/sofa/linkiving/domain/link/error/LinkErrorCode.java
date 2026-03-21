@@ -15,7 +15,8 @@ public enum LinkErrorCode implements ErrorCode {
 	DUPLICATE_URL(HttpStatus.BAD_REQUEST, "L-002", "이미 저장된 URL입니다."),
 	INVALID_URL(HttpStatus.BAD_REQUEST, "L-003", "유효하지 않은 URL 형식입니다."),
 	INVALID_URL_PROTOCOL(HttpStatus.BAD_REQUEST, "L-004", "허용되지 않은 프로토콜입니다. http 또는 https만 사용 가능합니다."),
-	INVALID_URL_PRIVATE_IP(HttpStatus.BAD_REQUEST, "L-005", "내부 네트워크 주소는 접근할 수 없습니다.");
+	INVALID_URL_PRIVATE_IP(HttpStatus.BAD_REQUEST, "L-005", "내부 네트워크 주소는 접근할 수 없습니다."),
+	INVALID_SUMMARY_STATUS_FOR_RETRY(HttpStatus.CONFLICT, "L-007", "요약 재시도는 요약 실패 상태에서만 가능합니다.");
 
 	private final HttpStatus status;
 	private final String code;

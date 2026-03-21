@@ -18,6 +18,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 import jakarta.persistence.EntityManager;
@@ -312,5 +313,90 @@ class LinkRepositoryTest {
 
 		// then
 		assertThat(count).isEqualTo(4L);
+	}
+
+	@Test
+	@DisplayName("기존 상태(oldStatus)가 일치할 때 요약 상태를 원자적으로 업데이트한다 (1 반환)")
+	void updateSummaryStatusAtomically_Success() {
+		// given
+		Link testLink = Link.builder()
+			.member(testMember)
+			.url("https://example.com")
+			.title("테스트 링크")
+			.build();
+		ReflectionTestUtils.setField(testLink, "summaryStatus", SummaryStatus.FAILED);
+		entityManager.persist(testLink);
+		entityManager.flush();
+		entityManager.clear();
+
+		// when
+		int updatedCount = linkRepository.updateSummaryStatusAtomically(
+			testLink.getId(),
+			testMember,
+			SummaryStatus.FAILED,
+			SummaryStatus.PENDING
+		);
+
+		// then
+		assertThat(updatedCount).isEqualTo(1);
+
+		Link updatedLink = linkRepository.findById(testLink.getId()).get();
+		assertThat(updatedLink.getSummaryStatus()).isEqualTo(SummaryStatus.PENDING);
+	}
+
+	@Test
+	@DisplayName("기존 상태(oldStatus)가 일치하지 않으면 상태를 업데이트하지 않는다 (0 반환)")
+	void updateSummaryStatusAtomically_Fail_WhenOldStatusMismatch() {
+		// given
+		Link testLink = Link.builder()
+			.member(testMember)
+			.url("https://example.com")
+			.title("테스트 링크")
+			.build();
+		ReflectionTestUtils.setField(testLink, "summaryStatus", SummaryStatus.COMPLETED);
+		entityManager.persist(testLink);
+		entityManager.flush();
+		entityManager.clear();
+
+		// when
+		int updatedCount = linkRepository.updateSummaryStatusAtomically(
+			testLink.getId(),
+			testMember,
+			SummaryStatus.FAILED,
+			SummaryStatus.PENDING
+		);
+
+		// then
+		assertThat(updatedCount).isEqualTo(0);
+
+		Link notUpdatedLink = linkRepository.findById(testLink.getId()).orElseThrow();
+		assertThat(notUpdatedLink.getSummaryStatus()).isEqualTo(SummaryStatus.COMPLETED);
+	}
+
+	@Test
+	@DisplayName("삭제된 링크(isDelete=true)인 경우 상태를 업데이트하지 않는다 (0 반환)")
+	void updateSummaryStatusAtomically_Fail_WhenLinkIsDeleted() {
+		// given
+		Link testLink = Link.builder()
+			.member(testMember)
+			.url("https://example.com")
+			.title("테스트 링크")
+			.build();
+		ReflectionTestUtils.setField(testLink, "summaryStatus", SummaryStatus.FAILED);
+		ReflectionTestUtils.setField(testLink, "isDelete", true);
+		entityManager.persist(testLink);
+		entityManager.flush();
+		entityManager.clear();
+
+		// when
+		int updatedCount = linkRepository.updateSummaryStatusAtomically(
+			testLink.getId(),
+			testMember,
+			SummaryStatus.FAILED,
+			SummaryStatus.PENDING
+		);
+
+		// then
+		assertThat(updatedCount).isEqualTo(0);
 	}
 }

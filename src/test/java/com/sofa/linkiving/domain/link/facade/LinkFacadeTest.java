@@ -416,7 +416,7 @@ class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("링크 카드 목록을 조회한다 (페이징 포함)")
+	@DisplayName("페이징된 링크 카드 목록을 조회한다")
 	void shouldGetLinkCards() {
 		// given
 		Member member = mock(Member.class);
@@ -536,5 +536,22 @@ class LinkFacadeTest {
 		assertThat(result).isNotNull();
 		assertThat(result.totalCount()).isEqualTo(15L);
 		verify(linkService, times(1)).getLinkTotalCount(member);
+	}
+
+	@Test
+	@DisplayName("요약 실패 상태인 링크를 초기화하고 LinkCreatedEvent를 다시 발행하여 큐에 적재한다")
+	void shouldRetrySummary() {
+		// given
+		Member member = mock(Member.class);
+		given(member.getEmail()).willReturn("test@test.com");
+
+		doNothing().when(linkService).resetSummaryStatusForRetry(1L, member);
+
+		// when
+		linkFacade.retrySummary(1L, member);
+
+		// then
+		verify(linkService, times(1)).resetSummaryStatusForRetry(1L, member);
+		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
 	}
 }
