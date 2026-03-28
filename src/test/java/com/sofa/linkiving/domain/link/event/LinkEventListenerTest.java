@@ -135,7 +135,7 @@ class LinkEventListenerTest {
 		// 두 번째 이벤트 (FAILED)
 		assertThat(publishedEvents.get(1).email()).isEqualTo("fail@test.com");
 		assertThat(publishedEvents.get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(publishedEvents.get(1).response().errorMessage()).isEqualTo("요약 대기열 등록에 실패했습니다.");
+		assertThat(publishedEvents.get(1).response().data()).isEqualTo("요약 대기열 등록에 실패했습니다.");
 
 		// Facade를 통한 DB 상태 업데이트가 호출되었는지 검증
 		verify(summaryWorkerFacade, times(1)).updateSummaryStatus(2L, SummaryStatus.FAILED);
