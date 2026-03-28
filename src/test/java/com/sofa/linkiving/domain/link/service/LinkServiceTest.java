@@ -450,13 +450,13 @@ class LinkServiceTest {
 	void getLinkTotalCount() {
 		// given
 		Member member = mock(Member.class);
-		given(linkQueryService.countByMemberAndIsDeleteFalse(member)).willReturn(10);
+		given(linkQueryService.countByMemberAndIsDeleteFalse(member)).willReturn(10L);
 
 		// when
-		int result = linkService.getLinkTotalCount(member);
+		Long result = linkService.getLinkTotalCount(member);
 
 		// then
-		assertThat(result).isEqualTo(10);
+		assertThat(result).isEqualTo(10L);
 		verify(linkQueryService, times(1)).countByMemberAndIsDeleteFalse(member);
 	}
 }

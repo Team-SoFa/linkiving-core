@@ -94,7 +94,7 @@ public class LinkService {
 		return link;
 	}
 
-	public int getLinkTotalCount(Member member) {
+	public Long getLinkTotalCount(Member member) {
 		return linkQueryService.countByMemberAndIsDeleteFalse(member);
 	}
 

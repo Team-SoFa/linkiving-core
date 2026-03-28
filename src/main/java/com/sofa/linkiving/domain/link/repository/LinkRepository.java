@@ -69,5 +69,5 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 		@Param("member") Member member
 	);
 
-	int countByMemberAndIsDeleteFalse(Member member);
+	Long countByMemberAndIsDeleteFalse(Member member);
 }

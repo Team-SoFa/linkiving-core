@@ -527,14 +527,14 @@ class LinkFacadeTest {
 			.email("test@example.com")
 			.password("password")
 			.build();
-		given(linkService.getLinkTotalCount(member)).willReturn(15);
+		given(linkService.getLinkTotalCount(member)).willReturn(15L);
 
 		// when
 		LinkTotalCountRes result = linkFacade.getLinkTotalCount(member);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.totalCount()).isEqualTo(15);
+		assertThat(result.totalCount()).isEqualTo(15L);
 		verify(linkService, times(1)).getLinkTotalCount(member);
 	}
 }

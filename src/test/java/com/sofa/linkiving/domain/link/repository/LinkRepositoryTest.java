@@ -308,9 +308,9 @@ class LinkRepositoryTest {
 		ReflectionTestUtils.setField(deletedLink, "isDelete", true);
 
 		// when
-		int count = linkRepository.countByMemberAndIsDeleteFalse(testMember);
+		Long count = linkRepository.countByMemberAndIsDeleteFalse(testMember);
 
 		// then
-		assertThat(count).isEqualTo(4);
+		assertThat(count).isEqualTo(4L);
 	}
 }

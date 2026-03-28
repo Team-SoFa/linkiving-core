@@ -301,13 +301,13 @@ class LinkQueryServiceTest {
 	void countByMemberAndIsDeleteFalse() {
 		// given
 		Member member = mock(Member.class);
-		given(linkRepository.countByMemberAndIsDeleteFalse(member)).willReturn(5);
+		given(linkRepository.countByMemberAndIsDeleteFalse(member)).willReturn(5L);
 
 		// when
-		int result = linkQueryService.countByMemberAndIsDeleteFalse(member);
+		Long result = linkQueryService.countByMemberAndIsDeleteFalse(member);
 
 		// then
-		assertThat(result).isEqualTo(5);
+		assertThat(result).isEqualTo(5L);
 		verify(linkRepository, times(1)).countByMemberAndIsDeleteFalse(member);
 	}
 }

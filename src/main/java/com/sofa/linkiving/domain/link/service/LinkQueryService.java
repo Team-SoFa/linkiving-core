@@ -72,7 +72,7 @@ public class LinkQueryService {
 		return linkRepository.findIdByMemberAndUrlAndIsDeleteFalse(member, url);
 	}
 
-	public int countByMemberAndIsDeleteFalse(Member member) {
+	public Long countByMemberAndIsDeleteFalse(Member member) {
 		return linkRepository.countByMemberAndIsDeleteFalse(member);
 	}
 }
