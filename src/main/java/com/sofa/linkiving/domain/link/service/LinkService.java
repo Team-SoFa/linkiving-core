@@ -96,9 +96,6 @@ public class LinkService {
 
 	public SummaryStatus getSummaryStatus(Long linkId, Member member) {
 		Link link = getLink(linkId, member);
-		if (link.getSummaryStatus() == null) {
-			throw new BusinessException(LinkErrorCode.SUMMARY_STATUS_MISSING);
-		}
 		return link.getSummaryStatus();
 	}
 
