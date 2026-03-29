@@ -25,6 +25,7 @@ import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkRes;
+import com.sofa.linkiving.domain.link.dto.response.LinkTotalCountRes;
 import com.sofa.linkiving.domain.link.dto.response.MetaScrapeRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RegenerateSummaryRes;
@@ -415,7 +416,7 @@ class LinkFacadeTest {
 	}
 
 	@Test
-	@DisplayName("페이징된 링크 카드 목록을 조회한다")
+	@DisplayName("링크 카드 목록을 조회한다 (페이징 포함)")
 	void shouldGetLinkCards() {
 		// given
 		Member member = mock(Member.class);
@@ -515,5 +516,25 @@ class LinkFacadeTest {
 		// then
 		assertThat(result).isNotNull();
 		verify(linkService, times(1)).findLinkIdByUrl(member, url);
+	}
+
+	@Test
+	@DisplayName("사용자의 전체 링크 개수를 조회하여 응답 객체(DTO)로 반환한다")
+	void shouldGetLinkTotalCount() {
+		// given
+		Member member = Member
+			.builder()
+			.email("test@example.com")
+			.password("password")
+			.build();
+		given(linkService.getLinkTotalCount(member)).willReturn(15L);
+
+		// when
+		LinkTotalCountRes result = linkFacade.getLinkTotalCount(member);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.totalCount()).isEqualTo(15L);
+		verify(linkService, times(1)).getLinkTotalCount(member);
 	}
 }

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
@@ -269,5 +270,47 @@ class LinkRepositoryTest {
 
 		// then
 		assertThat(result).isEmpty();
+	}
+
+	@Test
+	@DisplayName("특정 사용자 기준으로 isDelete가 false인 전체 링크 개수를 조회한다")
+	void countByMemberAndIsDeleteFalse() {
+		// given
+		Link link1 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link1")
+			.url("http://url1.com")
+			.build());
+
+		Link link2 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link2")
+			.url("http://url2.com")
+			.build());
+
+		Link link3 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link3")
+			.url("http://url3.com")
+			.build());
+
+		Link link4 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link4")
+			.url("http://url4.com")
+			.build());
+
+		Link deletedLink = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link4")
+			.url("http://url4.com")
+			.build());
+		ReflectionTestUtils.setField(deletedLink, "isDelete", true);
+
+		// when
+		Long count = linkRepository.countByMemberAndIsDeleteFalse(testMember);
+
+		// then
+		assertThat(count).isEqualTo(4L);
 	}
 }

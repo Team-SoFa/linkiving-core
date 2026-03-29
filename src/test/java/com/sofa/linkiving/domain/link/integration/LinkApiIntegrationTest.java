@@ -758,4 +758,49 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.message").value("요약 수정 완료"))
 			.andExpect(jsonPath("$.data.content").value("수정된 요약 텍스트"));
 	}
+
+	@Test
+	@DisplayName("전체 링크 개수 조회 API 성공 시 200 OK와 데이터(총 개수)를 반환한다")
+	void getLinkTotalCount() throws Exception {
+		// given
+		Link link1 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link1")
+			.url("http://url1.com")
+			.build());
+
+		Link link2 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link2")
+			.url("http://url2.com")
+			.build());
+
+		Link link3 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link3")
+			.url("http://url3.com")
+			.build());
+
+		Link link4 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link4")
+			.url("http://url4.com")
+			.build());
+
+		Link link5 = linkRepository.save(Link.builder()
+			.member(testMember)
+			.title("link5")
+			.url("http://url5.com")
+			.build());
+
+		// when & then
+		mockMvc.perform(get(BASE_URL + "/count")
+				.contentType(MediaType.APPLICATION_JSON)
+				.with(csrf())
+				.with(user(testUserDetails))
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.totalCount").value(5))
+			.andExpect(jsonPath("$.message").value("링크 전체 개수 조회 완료"));
+	}
 }

@@ -9,8 +9,10 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,6 +21,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "link", indexes = {
+	@Index(name = "idx_link_member_is_delete", columnList = "member_id, is_delete")
+})
 public class Link extends BaseEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY)
