@@ -94,6 +94,11 @@ public class LinkService {
 		return link;
 	}
 
+	public SummaryStatus getSummaryStatus(Long linkId, Member member) {
+		Link link = getLink(linkId, member);
+		return link.getSummaryStatus();
+	}
+
 	public Long getLinkTotalCount(Member member) {
 		return linkQueryService.countByMemberAndIsDeleteFalse(member);
 	}
