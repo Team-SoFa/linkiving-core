@@ -25,16 +25,22 @@ public class Member extends BaseEntity {
 	private String email;
 	@Column(nullable = false)
 	private String password;
+	@Column
+	private String name;
+	@Column(length = 2048)
+	private String profileImageUrl;
 	@Column(nullable = false)
 	private Role role;
 
 	@Builder
-	public Member(String email, String password) {
+	public Member(String email, String password, String name, String profileImageUrl) {
 		if (!isValidEmail(email)) {
 			throw new BusinessException(MemberErrorCode.INVALID_EMAIL_FORMAT);
 		}
 		this.email = email;
 		this.password = password;
+		this.name = name;
+		this.profileImageUrl = profileImageUrl;
 		this.role = Role.USER;
 	}
 
@@ -44,5 +50,14 @@ public class Member extends BaseEntity {
 
 	public boolean verifyPassword(String rawPassword) {
 		return this.password.equals(rawPassword);
+	}
+
+	public void updateProfile(String name, String profileImageUrl) {
+		if (name != null) {
+			this.name = name;
+		}
+		if (profileImageUrl != null) {
+			this.profileImageUrl = profileImageUrl;
+		}
 	}
 }

@@ -169,6 +169,8 @@ public class MemberServiceTest {
 		Member member = mock(Member.class);
 		LocalDateTime createdAt = LocalDateTime.of(2026, 3, 1, 12, 34, 56);
 		given(member.getId()).willReturn(1L);
+		given(member.getName()).willReturn("Linkiving User");
+		given(member.getProfileImageUrl()).willReturn("https://lh3.googleusercontent.com/sample");
 		given(member.getEmail()).willReturn("user@example.com");
 		given(member.getCreatedAt()).willReturn(createdAt);
 
@@ -177,6 +179,8 @@ public class MemberServiceTest {
 
 		// then
 		assertThat(res.id()).isEqualTo(1L);
+		assertThat(res.name()).isEqualTo("Linkiving User");
+		assertThat(res.profileImageUrl()).isEqualTo("https://lh3.googleusercontent.com/sample");
 		assertThat(res.email()).isEqualTo("user@example.com");
 		assertThat(res.createdAt()).isEqualTo(createdAt);
 	}
