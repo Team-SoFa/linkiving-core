@@ -22,11 +22,21 @@ public class MemberCommandService {
 	}
 
 	public Member createOrUpdate(String email) {
+		return createOrUpdate(email, null, null);
+	}
+
+	public Member createOrUpdate(String email, String name, String profileImageUrl) {
 		return memberRepository.findByEmail(email)
+			.map(member -> {
+				member.updateProfile(name, profileImageUrl);
+				return member;
+			})
 			.orElseGet(() -> {
 				Member newMember = Member.builder()
 					.email(email)
 					.password(email)
+					.name(name)
+					.profileImageUrl(profileImageUrl)
 					.build();
 
 				return memberRepository.save(newMember);

@@ -32,7 +32,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
 		GoogleOAuth2User googleUser = new GoogleOAuth2User(oAuth2User.getAttributes());
 
-		Member member = memberCommandService.createOrUpdate(googleUser.email());
+		Member member = memberCommandService.createOrUpdate(
+			googleUser.email(),
+			googleUser.name(),
+			googleUser.picture()
+		);
 
 		return new DefaultOAuth2User(
 			Collections.singleton(new SimpleGrantedAuthority("ROLE_" + member.getRole().name())),
