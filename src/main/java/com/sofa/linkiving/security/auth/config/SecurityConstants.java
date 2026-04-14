@@ -16,6 +16,7 @@ public abstract class SecurityConstants {
 
 		/* web socket */
 		"/ws/chat/**",
+		"/ws/link/**",
 
 		/* temp */
 		"/v1/member/signup", "/v1/member/login", "/mock/**",
