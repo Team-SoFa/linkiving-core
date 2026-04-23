@@ -15,13 +15,19 @@ public class FeedbackService {
 	private final FeedbackQueryService feedbackQueryService;
 	private final FeedbackCommandService feedbackCommandService;
 
-	public Long create(Message message, Sentiment sentiment, String text) {
-		Feedback feedback = Feedback.builder()
-			.message(message)
-			.sentiment(sentiment)
-			.text(text)
-			.build();
-		return feedbackCommandService.save(feedback).getId();
+	public Feedback upsertFeedback(Message message, Sentiment sentiment, String text) {
+		return feedbackQueryService.findOptionalByMessage(message)
+			.map(feedback -> {
+				feedback.update(text, sentiment);
+				return feedback;
+			}).orElseGet(() -> {
+				Feedback feedback = Feedback.builder()
+					.message(message)
+					.sentiment(sentiment)
+					.text(text)
+					.build();
+				return feedbackCommandService.save(feedback);
+			});
 	}
 
 	public void deleteAll(Chat chat) {

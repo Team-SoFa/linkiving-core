@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record AddFeedbackReq(
+public record UpsertFeedbackReq(
 	@NotNull(message = "피드백 상태는 필수입니다.") // 필수 값 체크
 	@Schema(description = "피드백 상태 (LIKE, DISLIKE)", example = "LIKE")
 	Sentiment sentiment,
