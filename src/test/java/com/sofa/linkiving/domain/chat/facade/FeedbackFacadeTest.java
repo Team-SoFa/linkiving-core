@@ -10,7 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sofa.linkiving.domain.chat.dto.response.AddFeedbackRes;
+import com.sofa.linkiving.domain.chat.dto.response.UpsertFeedbackRes;
+import com.sofa.linkiving.domain.chat.entity.Feedback;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.service.FeedbackService;
@@ -18,6 +19,7 @@ import com.sofa.linkiving.domain.chat.service.MessageService;
 import com.sofa.linkiving.domain.member.entity.Member;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("FeedbackFacade 단위 테스트")
 public class FeedbackFacadeTest {
 	@InjectMocks
 	private FeedbackFacade feedbackFacade;
@@ -29,28 +31,29 @@ public class FeedbackFacadeTest {
 	private MessageService messageService;
 
 	@Test
-	@DisplayName("피드백 생성 요청 시 Message 조회 후 Feedback을 생성하고 결과를 반환함")
-	void shouldCreateFeedbackAndReturnRes() {
+	@DisplayName("피드백을 생성하거나 수정하고 피드백 ID를 반환한다")
+	void upsertFeedback() {
 		// given
+		Member member = mock(Member.class);
 		Long messageId = 1L;
-		Long feedbackId = 100L;
 		Sentiment sentiment = Sentiment.LIKE;
-		String text = "도움이 되었어요";
+		String text = "유용한 답변입니다.";
 
 		Message message = mock(Message.class);
-		Member member = mock(Member.class);
-
 		given(messageService.get(messageId, member)).willReturn(message);
-		given(feedbackService.create(message, sentiment, text)).willReturn(feedbackId);
+
+		Feedback feedback = mock(Feedback.class);
+		given(feedback.getId()).willReturn(100L);
+		given(feedbackService.upsertFeedback(message, sentiment, text)).willReturn(feedback);
 
 		// when
-		AddFeedbackRes result = feedbackFacade.createFeedback(member, messageId, sentiment, text);
+		UpsertFeedbackRes result = feedbackFacade.upsertFeedback(member, messageId, sentiment, text);
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.id()).isEqualTo(feedbackId);
+		assertThat(result.id()).isEqualTo(100L);
 
-		verify(messageService).get(messageId, member);
-		verify(feedbackService).create(message, sentiment, text);
+		verify(messageService, times(1)).get(messageId, member);
+		verify(feedbackService, times(1)).upsertFeedback(message, sentiment, text);
 	}
 }

@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sofa.linkiving.domain.chat.dto.request.AddFeedbackReq;
+import com.sofa.linkiving.domain.chat.dto.request.UpsertFeedbackReq;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Feedback;
 import com.sofa.linkiving.domain.chat.entity.Message;
@@ -41,6 +41,8 @@ import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 @ActiveProfiles("test")
 class FeedbackIntegrationTest {
 
+	private static final String BASE_URL = "/v1/messages";
+
 	@Autowired
 	private MockMvc mockMvc;
 	@Autowired
@@ -59,7 +61,7 @@ class FeedbackIntegrationTest {
 	private FeedbackRepository feedbackRepository;
 
 	@MockitoBean
-	private RedisService redisService; // 통합 테스트 환경 구성상 필요하다면 유지
+	private RedisService redisService;
 
 	private UserDetails testUserDetails;
 	private Message testMessage;
@@ -85,14 +87,14 @@ class FeedbackIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("피드백 등록 요청 시 DB에 저장되고 200 OK를 반환함")
-	void shouldSaveFeedbackAndReturnOkWhenValidRequest() throws Exception {
+	@DisplayName("새로운 피드백 등록 요청 시 DB에 새로 저장되고 200 OK를 반환함")
+	void shouldCreateNewFeedbackAndReturnOkWhenNoExistingFeedback() throws Exception {
 		// given
 		Long messageId = testMessage.getId();
-		AddFeedbackReq req = new AddFeedbackReq(Sentiment.LIKE, "매우 유용한 답변입니다.");
+		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.LIKE, "매우 유용한 답변입니다.");
 
 		// when & then
-		mockMvc.perform(post("/v1/messages/{messageId}/feedback", messageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -100,8 +102,9 @@ class FeedbackIntegrationTest {
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.id").isNumber()); // 생성된 ID 반환 확인
+			.andExpect(jsonPath("$.data.id").isNumber());
 
+		assertThat(feedbackRepository.count()).isEqualTo(1);
 		Feedback savedFeedback = feedbackRepository.findAll().get(0);
 		assertThat(savedFeedback.getMessage().getId()).isEqualTo(messageId);
 		assertThat(savedFeedback.getSentiment()).isEqualTo(Sentiment.LIKE);
@@ -109,14 +112,45 @@ class FeedbackIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("피드백 상태(Sentiment) 누락 시 400 Bad Request를 반환함")
+	@DisplayName("기존 피드백이 존재하는 상태에서 등록 요청 시 내용이 수정되고 200 OK를 반환함")
+	void shouldUpdateExistingFeedbackAndReturnOkWhenFeedbackExists() throws Exception {
+		// given
+		Feedback existingFeedback = feedbackRepository.save(Feedback.builder()
+			.message(testMessage)
+			.sentiment(Sentiment.LIKE)
+			.text("기존 피드백입니다.")
+			.build());
+
+		Long messageId = testMessage.getId();
+		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.DISLIKE, "내용이 수정되었습니다.");
+
+		// when & then
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
+				.with(csrf())
+				.with(user(testUserDetails))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(req)))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true))
+			.andExpect(jsonPath("$.data.id").value(existingFeedback.getId()));
+
+		assertThat(feedbackRepository.count()).isEqualTo(1);
+		Feedback updatedFeedback = feedbackRepository.findAll().get(0);
+		assertThat(updatedFeedback.getId()).isEqualTo(existingFeedback.getId());
+		assertThat(updatedFeedback.getSentiment()).isEqualTo(Sentiment.DISLIKE);
+		assertThat(updatedFeedback.getText()).isEqualTo("내용이 수정되었습니다.");
+	}
+
+	@Test
+	@DisplayName("피드백 상태 누락 시 400 Bad Request를 반환함")
 	void shouldReturnBadRequestWhenSentimentIsNull() throws Exception {
 		// given
 		Long messageId = testMessage.getId();
-		AddFeedbackReq req = new AddFeedbackReq(null, "내용만 있음"); // @NotNull 위반
+		UpsertFeedbackReq req = new UpsertFeedbackReq(null, "내용만 있음");
 
 		// when & then
-		mockMvc.perform(post("/v1/messages/{messageId}/feedback", messageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -126,20 +160,20 @@ class FeedbackIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("존재하지 않는 메시지에 피드백 등록 시 404 Not Found를 반환함")
+	@DisplayName("존재하지 않는 메시지에 피드백 등록/수정 시 404 Not Found를 반환함")
 	void shouldReturnNotFoundWhenMessageDoesNotExist() throws Exception {
 		// given
 		Long invalidMessageId = 99999L;
-		AddFeedbackReq req = new AddFeedbackReq(Sentiment.DISLIKE, "별로예요");
+		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.DISLIKE, "별로예요");
 
 		// when & then
-		mockMvc.perform(post("/v1/messages/{messageId}/feedback", invalidMessageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", invalidMessageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req)))
 			.andDo(print())
-			.andExpect(status().isNotFound()) // MessageQueryService에서 예외 발생
+			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.success").value(false));
 	}
 }

@@ -35,4 +35,9 @@ public class Feedback extends BaseEntity {
 		this.text = text;
 		this.sentiment = sentiment;
 	}
+
+	public void update(String text, Sentiment sentiment) {
+		this.text = text;
+		this.sentiment = sentiment;
+	}
 }
