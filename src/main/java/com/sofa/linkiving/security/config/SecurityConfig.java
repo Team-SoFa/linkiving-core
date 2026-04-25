@@ -1,5 +1,6 @@
 package com.sofa.linkiving.security.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -85,11 +86,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		List<String> allowedOrigins = corsProperties.allowedOrigins();
-		if (allowedOrigins == null || allowedOrigins.isEmpty()) {
-			allowedOrigins = List.of();
-		}
-		config.setAllowedOrigins(allowedOrigins);
+		config.setAllowedOrigins(resolveAllowedOrigins());
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true);
@@ -97,5 +94,13 @@ public class SecurityConfig {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);
 		return source;
+	}
+
+	private List<String> resolveAllowedOrigins() {
+		List<String> allowedOrigins = new ArrayList<>(corsProperties.allowedOrigins());
+		allowedOrigins.addAll(corsProperties.extensionAllowedOrigins());
+		return allowedOrigins.stream()
+			.distinct()
+			.toList();
 	}
 }
