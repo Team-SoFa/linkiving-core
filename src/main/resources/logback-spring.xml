@@ -1,60 +1,43 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<configuration>
-    <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration packagingData="true">
 
-    <property name="CONSOLE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta([%thread]) %cyan(%-40.40logger{39}) : %msg%n"/>
+    <!-- CloudWatch Appender -->
+    <appender name="aws_cloud_watch_log" class="ca.pjer.logback.AwsLogsAppender">
+        <layout>
+            <pattern>[%thread] [%date] [%level] [%file:%line] - %msg%n</pattern>
+        </layout>
+        <logGroupName>/aws/linkiving/application</logGroupName>
+        <logStreamUuidPrefix>linkiving-server</logStreamUuidPrefix>
+        <logRegion>ap-northeast-2</logRegion>
+        <maxBatchLogEvents>50</maxBatchLogEvents>
+        <maxFlushTimeMillis>30000</maxFlushTimeMillis>
+        <maxBlockTimeMillis>5000</maxBlockTimeMillis>
+        <retentionTimeDays>30</retentionTimeDays>
+        <accessKeyId>${AWS_ACCESS_KEY_ID}</accessKeyId>
+        <secretAccessKey>${AWS_SECRET_ACCESS_KEY}</secretAccessKey>
+    </appender>
 
-    <property name="FILE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
-
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="console_log" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <pattern>%highlight(%-5level) %date [%thread] %cyan([%C{0} :: %M :: %L]) - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/application.log</file>
-        <encoder>
-            <pattern>${FILE_LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/application-%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
-
-    <springProfile name="local">
+    <springProfile name="!prod">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="console_log"/>
         </root>
-    </springProfile>
-
-    <springProfile name="default">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ROLLING_FILE"/>
-        </root>
-        <logger level="DEBUG" name="org.hibernate.SQL"/>
-        <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
-    </springProfile>
-
-    <springProfile name="dev">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ROLLING_FILE"/>
-        </root>
-        <logger level="DEBUG" name="org.hibernate.SQL"/>
-        <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
     </springProfile>
 
     <springProfile name="prod">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ROLLING_FILE"/>
+            <appender-ref ref="console_log"/>
+            <appender-ref ref="aws_cloud_watch_log"/>
         </root>
     </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="console_log"/>
+    </root>
 
 </configuration>

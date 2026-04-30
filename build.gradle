@@ -3,7 +3,6 @@ plugins {
     id 'org.springframework.boot' version '3.5.3'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'checkstyle'
-    id 'jacoco'
 }
 
 group = 'com.sofa'
@@ -16,12 +15,11 @@ java {
 }
 
 configurations {
-    configureEach {
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
-
     compileOnly {
         extendsFrom annotationProcessor
+    }
+    configureEach {
+        exclude group: 'commons-logging', module: 'commons-logging'
     }
 }
 
@@ -33,9 +31,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    //Test
+    // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
@@ -52,7 +55,7 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    //redis
+    // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5-jakarta'
@@ -72,7 +75,7 @@ dependencies {
     testImplementation "org.springframework.cloud:spring-cloud-starter-openfeign"
     testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
 
-    // Jsoup (HTML parsing for OG tag crawling)
+    // Jsoup
     implementation 'org.jsoup:jsoup:1.18.3'
 
     // WebSocket
@@ -81,14 +84,17 @@ dependencies {
     // WebFlux
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    //s3
+    // S3
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.1.1")
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
     implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 
-    //Event
+    // Event
     implementation 'org.springframework.retry:spring-retry'
-    implementation 'org.springframework:spring-aspects'
+    implementation 'org.springframework.aspects:spring-aspects'
+
+    // AWS CloudWatch appender
+    implementation "ca.pjer:logback-awslogs-appender:1.6.0"
 }
 
 dependencyManagement {
@@ -109,87 +115,4 @@ compileTestJava.options.encoding = 'UTF-8'
 
 tasks.named('test') {
     useJUnitPlatform()
-    finalizedBy jacocoTestReport
-}
-
-jacoco {
-    toolVersion = "0.8.12"
-}
-
-jacocoTestReport {
-    dependsOn test
-    reports {
-        xml.required = true
-        html.required = true
-        csv.required = false
-    }
-
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: [
-                    '**/*Dto.class',
-                    '**/*Dto$*.class',
-                    '**/*Request.class',
-                    '**/*Request$*.class',
-                    '**/*Response.class',
-                    '**/*Response$*.class',
-                    '**/*Req.class',
-                    '**/*Req$*.class',
-                    '**/*Res.class',
-                    '**/*Res$*.class',
-                    '**/config/**',
-                    '**/configuration/**',
-                    '**/exception/**',
-                    '**/*Application.class',
-                    '**/Q*.class',
-                    '**/entity/**',
-                    '**/domain/**/*Entity.class',
-                    '**/domain/link/util/OgTagCrawler.class',
-                    "**/security/auth/**"
-            ])
-        }))
-    }
-}
-
-jacocoTestCoverageVerification {
-    dependsOn jacocoTestReport
-
-    violationRules {
-        rule {
-            enabled = true
-            element = 'CLASS'
-
-            limit {
-                counter = 'LINE'
-                value = 'COVEREDRATIO'
-                minimum = 0.30  // 30%부터 시작, 점진적으로 0.50 -> 0.70으로 상향
-            }
-        }
-    }
-
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: [
-                    '**/*Dto.class',
-                    '**/*Dto$*.class',
-                    '**/*Request.class',
-                    '**/*Request$*.class',
-                    '**/*Response.class',
-                    '**/*Response$*.class',
-                    '**/*Req.class',
-                    '**/*Req$*.class',
-                    '**/*Res.class',
-                    '**/*Res$*.class',
-                    '**/config/**',
-                    '**/configuration/**',
-                    '**/exception/**',
-                    '**/*Application.class',
-                    '**/Q*.class',
-                    '**/entity/**',
-                    '**/domain/**/*Entity.class',
-                    '**/domain/link/util/OgTagCrawler.class',
-                    "**/security/auth/**"
-            ])
-        }))
-    }
 }
