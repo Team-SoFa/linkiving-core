@@ -1,5 +1,7 @@
 package com.sofa.linkiving.security.config;
 
+import java.util.Map;
+
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.messaging.Message;
@@ -31,12 +33,19 @@ public class StompHandler implements ChannelInterceptor {
 		StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
 		if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-
-			String authorizationHeader = accessor.getFirstNativeHeader(JwtKeys.Headers.AUTHORIZATION);
 			String token = null;
 
-			if (authorizationHeader != null && authorizationHeader.startsWith(JwtKeys.Headers.BEARER_PREFIX)) {
-				token = authorizationHeader.substring(JwtKeys.Headers.BEARER_PREFIX.length());
+			Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+			if (sessionAttributes != null && sessionAttributes.containsKey("accessToken")) {
+				token = (String)sessionAttributes.get("accessToken");
+			}
+
+			if (token == null) {
+				String authorizationHeader = accessor.getFirstNativeHeader(JwtKeys.Headers.AUTHORIZATION);
+
+				if (authorizationHeader != null && authorizationHeader.startsWith(JwtKeys.Headers.BEARER_PREFIX)) {
+					token = authorizationHeader.substring(JwtKeys.Headers.BEARER_PREFIX.length());
+				}
 			}
 
 			try {
