@@ -127,15 +127,20 @@ public class WebSocketChatIntegrationTest {
 
 		// 3. WebSocket 연결
 		String wsUrl = "ws://localhost:" + port + "/ws/chat";
-		StompHeaders headers = new StompHeaders();
 
 		String validToken = jwtTokenProvider.createAccessToken(testMember.getEmail());
-		headers.add("Authorization", "Bearer " + validToken);
+		String authHeaderValue = "Bearer " + validToken;
+
+		StompHeaders stompHeaders = new StompHeaders();
+		stompHeaders.add("Authorization", authHeaderValue);
+
+		WebSocketHttpHeaders webSocketHttpHeaders = new WebSocketHttpHeaders();
+		webSocketHttpHeaders.add("Authorization", authHeaderValue);
 
 		this.stompSession = stompClient.connectAsync(
 			wsUrl,
-			new WebSocketHttpHeaders(),
-			headers,
+			webSocketHttpHeaders,
+			stompHeaders,
 			new StompSessionHandlerAdapter() {
 			}
 		).get(5, SECONDS);
