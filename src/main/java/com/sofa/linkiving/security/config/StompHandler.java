@@ -20,7 +20,9 @@ import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
@@ -32,37 +34,50 @@ public class StompHandler implements ChannelInterceptor {
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
 		StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-		if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-			String token = null;
+		if (accessor != null) {
+			StompCommand command = accessor.getCommand();
 
-			Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-			if (sessionAttributes != null && sessionAttributes.containsKey("accessToken")) {
-				token = (String)sessionAttributes.get("accessToken");
-			}
+			if (StompCommand.CONNECT.equals(command) || StompCommand.SEND.equals(command)) {
+				String token = null;
+				Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
 
-			if (token == null) {
-				String authorizationHeader = accessor.getFirstNativeHeader(JwtKeys.Headers.AUTHORIZATION);
-
-				if (authorizationHeader != null && authorizationHeader.startsWith(JwtKeys.Headers.BEARER_PREFIX)) {
-					token = authorizationHeader.substring(JwtKeys.Headers.BEARER_PREFIX.length());
-				}
-			}
-
-			try {
-				if (token == null) {
-					throw new BusinessException(JwtErrorCode.EMPTY_TOKEN);
+				if (sessionAttributes != null && sessionAttributes.containsKey("accessToken")) {
+					token = (String)sessionAttributes.get("accessToken");
 				}
 
-				if (jwtTokenProvider.validateAccessToken(token)) {
-					Authentication authentication = jwtTokenProvider.getAuthentication(token);
-					accessor.setUser(authentication);
+				if (token == null && StompCommand.CONNECT.equals(command)) {
+					String authorizationHeader = accessor.getFirstNativeHeader(JwtKeys.Headers.AUTHORIZATION);
+
+					if (authorizationHeader != null && authorizationHeader.startsWith(JwtKeys.Headers.BEARER_PREFIX)) {
+						token = authorizationHeader.substring(JwtKeys.Headers.BEARER_PREFIX.length());
+
+						if (sessionAttributes != null) {
+							sessionAttributes.put("accessToken", token);
+						}
+					}
 				}
 
-			} catch (BusinessException e) {
-				throw new MessagingException(e.getMessage());
+				try {
+					if (token == null) {
+						throw new BusinessException(JwtErrorCode.EMPTY_TOKEN);
+					}
 
-			} catch (Exception e) {
-				throw new MessagingException("서버 내부 오류로 연결에 실패했습니다.");
+					if (jwtTokenProvider.validateAccessToken(token)) {
+
+						if (StompCommand.CONNECT.equals(command)) {
+							Authentication authentication = jwtTokenProvider.getAuthentication(token);
+							accessor.setUser(authentication);
+						}
+					}
+
+				} catch (BusinessException e) {
+					log.warn("웹소켓 인증/만료 에러 차단: {}", e.getMessage());
+					throw new MessagingException(e.getMessage());
+
+				} catch (Exception e) {
+					log.error("웹소켓 서버 내부 오류", e);
+					throw new MessagingException("서버 내부 오류로 연결에 실패했습니다.");
+				}
 			}
 		}
 
