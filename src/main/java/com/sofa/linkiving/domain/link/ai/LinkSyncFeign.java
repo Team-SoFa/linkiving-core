@@ -11,9 +11,9 @@ import com.sofa.linkiving.domain.link.dto.request.LinkSyncUpdateReq;
 @FeignClient(name = "linkSyncClient", url = "${ai.server.url}")
 public interface LinkSyncFeign {
 
-	@PostMapping("/update-link")
+	@PostMapping("/webhook/update-link")
 	void syncUpdate(@RequestBody LinkSyncUpdateReq req);
 
-	@DeleteMapping("/link-delete")
+	@DeleteMapping("/webhook/link-delete")
 	void syncDelete(@RequestBody LinkSyncDeleteReq req);
 }
