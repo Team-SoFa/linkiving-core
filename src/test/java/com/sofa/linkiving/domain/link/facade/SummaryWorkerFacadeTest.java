@@ -76,9 +76,9 @@ class SummaryWorkerFacadeTest {
 		Summary result = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(linkId, summaryContent);
 
 		// then
-		assertThat(result).isEqualTo(mockSummary); // 정상 생성된 요약 반환 확인
+		assertThat(result).isEqualTo(mockSummary);
 		verify(summaryService, times(1)).createInitialSummary(mockLink, summaryContent);
-		verify(mockLink, times(1)).updateSummaryStatus(SummaryStatus.COMPLETED);
+		verify(linkService, times(1)).updateSummaryStatus(linkId, SummaryStatus.COMPLETED);
 	}
 
 	@Test
@@ -98,6 +98,5 @@ class SummaryWorkerFacadeTest {
 		// then
 		assertThat(result).isNull();
 		verify(summaryService, never()).createInitialSummary(any(), any());
-		verify(mockLink, never()).updateSummaryStatus(any());
 	}
 }

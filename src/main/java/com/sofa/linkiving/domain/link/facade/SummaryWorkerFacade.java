@@ -42,7 +42,7 @@ public class SummaryWorkerFacade {
 
 		Summary savedSummary = summaryService.createInitialSummary(link, summaryContent);
 
-		link.updateSummaryStatus(SummaryStatus.COMPLETED);
+		linkService.updateSummaryStatus(linkId, SummaryStatus.COMPLETED);
 
 		return savedSummary;
 	}
