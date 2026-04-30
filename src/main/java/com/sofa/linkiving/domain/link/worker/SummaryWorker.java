@@ -104,7 +104,8 @@ public class SummaryWorker {
 			Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
 			if (summary != null) {
 				eventPublisher.publishEvent(new SummaryStatusEvent(
-					userEmail, SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
+					userEmail,
+					SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
 				));
 			}
 		} catch (Exception e) {
