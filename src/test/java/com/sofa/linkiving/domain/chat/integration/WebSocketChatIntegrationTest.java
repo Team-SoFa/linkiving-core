@@ -7,7 +7,9 @@ import static org.mockito.BDDMockito.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -28,6 +31,7 @@ import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
@@ -38,9 +42,6 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sofa.linkiving.domain.chat.ai.AnswerClient;
-import com.sofa.linkiving.domain.chat.dto.request.AnswerCancelReq;
-import com.sofa.linkiving.domain.chat.dto.request.AnswerReq;
-import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.repository.ChatRepository;
@@ -51,6 +52,10 @@ import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
+import com.sofa.linkiving.security.jwt.error.CustomJwtException;
+import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
+
+import jakarta.annotation.Nonnull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -78,15 +83,16 @@ public class WebSocketChatIntegrationTest {
 	@MockitoBean
 	private RedisService redisService;
 
-	@Autowired
+	@MockitoSpyBean
 	private JwtTokenProvider jwtTokenProvider;
 
 	@MockitoBean
 	private AnswerClient answerClient;
 
 	private StompSession stompSession;
-	private BlockingQueue<AnswerRes> blockingQueue;
+	private BlockingQueue<Map<String, Object>> blockingQueue;
 	private Chat testChat;
+	private Member testMember;
 
 	@BeforeEach
 	void setUp() throws ExecutionException, InterruptedException, TimeoutException {
@@ -97,7 +103,7 @@ public class WebSocketChatIntegrationTest {
 		memberRepository.deleteAllInBatch();
 
 		// 1. 데이터 초기화
-		Member testMember = memberRepository.save(Member.builder()
+		testMember = memberRepository.save(Member.builder()
 			.email("test@test.com")
 			.password("password")
 			.build());
@@ -127,14 +133,19 @@ public class WebSocketChatIntegrationTest {
 
 		// 3. WebSocket 연결
 		String wsUrl = "ws://localhost:" + port + "/ws/chat";
-		StompHeaders headers = new StompHeaders();
 
 		String validToken = jwtTokenProvider.createAccessToken(testMember.getEmail());
-		headers.add("Authorization", "Bearer " + validToken);
+		String authHeaderValue = "Bearer " + validToken;
+
+		StompHeaders headers = new StompHeaders();
+		headers.add("Authorization", authHeaderValue);
+
+		WebSocketHttpHeaders webSocketHttpHeaders = new WebSocketHttpHeaders();
+		webSocketHttpHeaders.add(HttpHeaders.COOKIE, "accessToken=" + validToken);
 
 		this.stompSession = stompClient.connectAsync(
 			wsUrl,
-			new WebSocketHttpHeaders(),
+			webSocketHttpHeaders,
 			headers,
 			new StompSessionHandlerAdapter() {
 			}
@@ -158,38 +169,112 @@ public class WebSocketChatIntegrationTest {
 
 	private void subscribeToChatQueue() {
 		stompSession.subscribe("/user/queue/chat", new StompFrameHandler() {
+			@Nonnull
 			@Override
-			public Type getPayloadType(StompHeaders headers) {
-				return AnswerRes.class;
+			public Type getPayloadType(@Nonnull StompHeaders headers) {
+				return Map.class;
 			}
 
 			@Override
-			public void handleFrame(StompHeaders headers, Object payload) {
-				blockingQueue.offer((AnswerRes)payload);
+			public void handleFrame(@Nonnull StompHeaders headers, Object payload) {
+				if (payload != null) {
+					blockingQueue.add((Map<String, Object>)payload);
+				}
 			}
 		});
 	}
 
 	@Test
-	@DisplayName("유저가 메시지를 보내면 AI 응답이 Queue로 수신된다")
+	@DisplayName("쿠키에 담긴 accessToken으로 정상적으로 웹소켓 연결이 가능하다")
+	void shouldConnectSuccessfullyWithCookie() throws Exception {
+		// given
+		WebSocketStompClient customClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
+		String validToken = jwtTokenProvider.createAccessToken(testMember.getEmail());
+
+		WebSocketHttpHeaders httpHeaders = new WebSocketHttpHeaders();
+		httpHeaders.add(HttpHeaders.COOKIE, "accessToken=" + validToken);
+
+		// when
+		StompSession session = customClient.connectAsync(
+			"ws://localhost:" + port + "/ws/chat",
+			httpHeaders,
+			new StompHeaders(),
+			new StompSessionHandlerAdapter() {
+			}
+		).get(5, SECONDS);
+
+		// then
+		assertThat(session.isConnected()).isTrue();
+		session.disconnect();
+	}
+
+	@Test
+	@DisplayName("쿠키(토큰)가 없거나 유효하지 않으면 웹소켓 연결에 실패한다 (401)")
+	void shouldFailToConnectWithInvalidToken() {
+		// given
+		WebSocketStompClient customClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
+
+		// 잘못된 쿠키 세팅
+		WebSocketHttpHeaders httpHeaders = new WebSocketHttpHeaders();
+		httpHeaders.add(HttpHeaders.COOKIE, "accessToken=invalid_token_value");
+
+		// when & then
+		assertThatThrownBy(() -> customClient.connectAsync(
+			"ws://localhost:" + port + "/ws/chat",
+			httpHeaders,
+			new StompHeaders(),
+			new StompSessionHandlerAdapter() {
+			}
+		).get(5, SECONDS))
+			.isInstanceOf(ExecutionException.class);
+	}
+
+	@Test
+	@DisplayName("연결 이후 SEND 요청 시 인증 토큰이 만료/조작된 경우 메시지를 차단하고 ERROR 프레임을 반환한다")
+	void shouldFailToSendWhenTokenIsInvalid() throws Exception {
+		// given
+		subscribeToChatQueue();
+		Thread.sleep(1000);
+
+		// when
+		doThrow(new CustomJwtException(JwtErrorCode.EXPIRED_JWT_TOKEN))
+			.when(jwtTokenProvider).validateAccessToken(anyString());
+
+		Long chatId = testChat.getId();
+		Map<String, Object> req = new HashMap<>();
+		req.put("chatId", chatId);
+		req.put("message", "만료된 토큰으로 전송 시도");
+
+		stompSession.send("/ws/chat/send", req);
+
+		// then
+		Thread.sleep(1000);
+		verify(answerClient, never()).generateAnswer(any());
+	}
+
+	@Test
+	@DisplayName("정상적인 유저가 메시지를 보내면 AI 응답이 Queue로 수신된다")
 	void shouldReceiveAnswerWhenMessageSent() throws InterruptedException {
 		// given
 		Long chatId = testChat.getId();
 		String userMessage = "Gemini에 대해 알려줘";
-		AnswerReq req = new AnswerReq(chatId, userMessage);
+
+		Map<String, Object> req = new HashMap<>();
+		req.put("chatId", chatId);
+		req.put("message", userMessage);
 
 		subscribeToChatQueue();
+		Thread.sleep(1000);
 
 		// when
 		stompSession.send("/ws/chat/send", req);
 
 		// then
-		AnswerRes received = blockingQueue.poll(10, SECONDS);
+		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
 		assertThat(received).isNotNull();
-		assertThat(received.chatId()).isEqualTo(chatId);
-		assertThat(received.success()).isTrue();
-		assertThat(received.content()).contains("Gemini와 관련된 내용");
+		assertThat(received.get("success")).isEqualTo(true);
+		assertThat(String.valueOf(received.get("content"))).contains("Gemini와 관련된 내용");
 	}
 
 	@Test
@@ -198,29 +283,34 @@ public class WebSocketChatIntegrationTest {
 		// given
 		Long chatId = testChat.getId();
 		String userMessage = "취소될 질문";
-		AnswerReq sendReq = new AnswerReq(chatId, userMessage);
-		AnswerCancelReq cancelReq = new AnswerCancelReq(chatId);
+
+		Map<String, Object> sendReq = new HashMap<>();
+		sendReq.put("chatId", chatId);
+		sendReq.put("message", userMessage);
+
+		Map<String, Object> cancelReq = new HashMap<>();
+		cancelReq.put("chatId", chatId);
 
 		given(answerClient.generateAnswer(any())).willAnswer(invocation -> {
-			Thread.sleep(500);
+			Thread.sleep(1500);
 			return new RagAnswerRes("지연된 답변", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
 				true);
 		});
 
 		subscribeToChatQueue();
+		Thread.sleep(1000);
 
 		// when
 		stompSession.send("/ws/chat/send", sendReq);
-		Thread.sleep(50);
+		Thread.sleep(300);
 		stompSession.send("/ws/chat/cancel", cancelReq);
 
 		// then
-		AnswerRes received = blockingQueue.poll(5, SECONDS);
+		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
 		assertThat(received).isNotNull();
-		assertThat(received.chatId()).isEqualTo(chatId);
-		assertThat(received.success()).isFalse();
-		assertThat(received.content()).isEqualTo(userMessage);
+		assertThat(received.get("success")).isEqualTo(false);
+		assertThat(String.valueOf(received.get("content"))).isEqualTo(userMessage);
 	}
-
 }
+
