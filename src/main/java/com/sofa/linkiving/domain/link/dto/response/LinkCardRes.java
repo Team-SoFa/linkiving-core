@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.link.dto.response;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -20,7 +21,10 @@ public record LinkCardRes(
 	String imageUrl,
 
 	@Schema(description = "요약 정보")
-	String summary
+	String summary,
+
+	@Schema(description = "요약 상태")
+	SummaryStatus summaryStatus
 ) {
 	public static LinkCardRes from(LinkDto dto) {
 		return of(dto.link(), dto.summary());
@@ -32,7 +36,8 @@ public record LinkCardRes(
 			link.getUrl(),
 			link.getTitle(),
 			link.getImageUrl(),
-			summary == null ? null : summary.getContent()
+			summary == null ? null : summary.getContent(),
+			link.getSummaryStatus()
 		);
 	}
 }

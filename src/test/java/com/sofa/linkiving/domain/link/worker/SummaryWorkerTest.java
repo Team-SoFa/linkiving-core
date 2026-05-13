@@ -287,9 +287,7 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().data()).isInstanceOf(String.class)
-			.extracting(data -> (String)data)
-			.asString()
+		assertThat(captor.getAllValues().get(1).response().errorMessage())
 			.contains("Retry limit exceeded");
 	}
 
@@ -316,9 +314,7 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().data()).isInstanceOf(String.class)
-			.extracting(data -> (String)data)
-			.asString()
+		assertThat(captor.getAllValues().get(1).response().errorMessage())
 			.contains("Retry limit exceeded");
 	}
 
@@ -394,9 +390,7 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
-		assertThat(captor.getAllValues().get(1).response().data()).isInstanceOf(String.class)
-			.extracting(data -> (String)data)
-			.asString()
+		assertThat(captor.getAllValues().get(1).response().errorMessage())
 			.contains("Retry limit exceeded");
 	}
 }
