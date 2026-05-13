@@ -160,7 +160,17 @@ public class LinkFacade {
 
 	@Transactional(readOnly = true)
 	public SummaryStatusRes getSummaryStatus(Long id, Member member) {
-		SummaryStatus summaryStatus = linkService.getSummaryStatus(id, member);
+		LinkDto linkDto = linkService.getLinkWithSummary(id, member);
+		SummaryStatus summaryStatus = linkDto.link().getSummaryStatus();
+
+		if (summaryStatus == SummaryStatus.COMPLETED) {
+			return SummaryStatusRes.completed(id, SummaryRes.from(linkDto.summary()));
+		}
+
+		if (summaryStatus == SummaryStatus.FAILED) {
+			return SummaryStatusRes.failed(id, "요약 생성에 실패했습니다.");
+		}
+
 		return SummaryStatusRes.of(id, summaryStatus);
 	}
 }
