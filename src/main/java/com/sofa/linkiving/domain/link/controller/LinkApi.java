@@ -39,7 +39,9 @@ import jakarta.validation.constraints.Min;
 				```json
 				{
 					"linkId": 1,
-					"status": "PROCESSING"
+					"status": "PROCESSING",
+					"summary": null,
+					"errorMessage": null
 				}
 				```
 
@@ -48,11 +50,11 @@ import jakarta.validation.constraints.Min;
 				{
 					"linkId": 1,
 					"status": "COMPLETED",
-					"data": {
+					"summary": {
 						"id": 100,
-						"content": "생성된 AI 요약 내용입니다.",
-						"format": "CONCISE"
-					}
+						"content": "생성된 AI 요약 내용입니다."
+					},
+					"errorMessage": null
 				}
 				```
 		**CASE C: FAILED (요약 실패)**
@@ -60,7 +62,8 @@ import jakarta.validation.constraints.Min;
 				{
 					"linkId": 1,
 					"status": "FAILED",
-					"data": "AI 서버 응답이 없습니다."
+					"summary": null,
+					"errorMessage": "AI 서버 응답이 없습니다."
 				}
 				```
 		**흐름**: 링크 생성/재요약 API 호출 시 PENDING 상태 부여 -> 큐 진입 시 PROCESSING 알림 -> 완료 시 COMPLETED(데이터 포함) 알림

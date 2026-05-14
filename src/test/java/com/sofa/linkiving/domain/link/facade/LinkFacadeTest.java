@@ -563,7 +563,12 @@ class LinkFacadeTest {
 		// given
 		Member member = mock(Member.class);
 		Long linkId = 123L;
-		given(linkService.getSummaryStatus(linkId, member)).willReturn(SummaryStatus.COMPLETED);
+		Link link = mock(Link.class);
+		Summary summary = mock(Summary.class);
+		given(link.getSummaryStatus()).willReturn(SummaryStatus.COMPLETED);
+		given(summary.getId()).willReturn(1L);
+		given(summary.getContent()).willReturn("요약 내용");
+		given(linkService.getLinkWithSummary(linkId, member)).willReturn(new LinkDto(link, summary));
 
 		// when
 		SummaryStatusRes result = linkFacade.getSummaryStatus(linkId, member);
@@ -572,6 +577,7 @@ class LinkFacadeTest {
 		assertThat(result).isNotNull();
 		assertThat(result.linkId()).isEqualTo(linkId);
 		assertThat(result.status()).isEqualTo(SummaryStatus.COMPLETED);
-		verify(linkService, times(1)).getSummaryStatus(linkId, member);
+		assertThat(result.summary()).isEqualTo(new SummaryRes(1L, "요약 내용"));
+		verify(linkService, times(1)).getLinkWithSummary(linkId, member);
 	}
 }

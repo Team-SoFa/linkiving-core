@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.link.dto.response;
 
 import com.sofa.linkiving.domain.link.entity.Link;
+import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -18,7 +19,10 @@ public record LinkRes(
 	String memo,
 
 	@Schema(description = "이미지 URL", example = "https://example.com/image.jpg")
-	String imageUrl
+	String imageUrl,
+
+	@Schema(description = "요약 상태")
+	SummaryStatus summaryStatus
 ) {
 	public static LinkRes from(Link link) {
 		return new LinkRes(
@@ -26,7 +30,8 @@ public record LinkRes(
 			link.getUrl(),
 			link.getTitle(),
 			link.getMemo(),
-			link.getImageUrl()
+			link.getImageUrl(),
+			link.getSummaryStatus()
 		);
 	}
 }
