@@ -3,7 +3,9 @@ package com.sofa.linkiving.domain.chat.dto.response;
 import java.util.Collections;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.chat.dto.internal.MessageDto;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -15,6 +17,7 @@ public record MessagesRes(
 	boolean hasNext,
 
 	@Schema(description = "마지막 메시지 ID (다음 요청 커서용)")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long lastId
 ) {
 	public static MessagesRes of(List<MessageDto> messageDtos, boolean hasNext) {

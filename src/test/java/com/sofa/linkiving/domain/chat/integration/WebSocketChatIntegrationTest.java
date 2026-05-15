@@ -50,6 +50,7 @@ import com.sofa.linkiving.domain.link.repository.LinkRepository;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
@@ -85,6 +86,12 @@ public class WebSocketChatIntegrationTest {
 
 	@MockitoSpyBean
 	private JwtTokenProvider jwtTokenProvider;
+
+	@Autowired
+	private HashidsUtils hashidsUtils;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@MockitoBean
 	private AnswerClient answerClient;
@@ -126,7 +133,7 @@ public class WebSocketChatIntegrationTest {
 		WebSocketStompClient stompClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
 
 		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-		converter.setObjectMapper(new ObjectMapper().registerModule(new JavaTimeModule()));
+		converter.setObjectMapper(objectMapper);
 		stompClient.setMessageConverter(converter);
 
 		this.blockingQueue = new LinkedBlockingQueue<>();
@@ -257,10 +264,11 @@ public class WebSocketChatIntegrationTest {
 	void shouldReceiveAnswerWhenMessageSent() throws InterruptedException {
 		// given
 		Long chatId = testChat.getId();
+		String hashedChatId = hashidsUtils.encode(chatId);
 		String userMessage = "Gemini에 대해 알려줘";
 
 		Map<String, Object> req = new HashMap<>();
-		req.put("chatId", chatId);
+		req.put("chatId", hashedChatId);
 		req.put("message", userMessage);
 
 		subscribeToChatQueue();
@@ -272,7 +280,8 @@ public class WebSocketChatIntegrationTest {
 		// then
 		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
-		assertThat(received).isNotNull();
+		String receivedHashedChatId = String.valueOf(received.get("chatId"));
+		assertThat(hashidsUtils.decode(receivedHashedChatId)).isEqualTo(chatId);
 		assertThat(received.get("success")).isEqualTo(true);
 		assertThat(String.valueOf(received.get("content"))).contains("Gemini와 관련된 내용");
 	}
@@ -282,14 +291,16 @@ public class WebSocketChatIntegrationTest {
 	void shouldReceiveErrorMessageWhenCancelled() throws InterruptedException {
 		// given
 		Long chatId = testChat.getId();
+		String hashedChatId = hashidsUtils.encode(chatId);
 		String userMessage = "취소될 질문";
 
-		Map<String, Object> sendReq = new HashMap<>();
-		sendReq.put("chatId", chatId);
+		java.util.Map<String, Object> sendReq = new java.util.HashMap<>();
+		sendReq.put("chatId", hashedChatId);
 		sendReq.put("message", userMessage);
 
-		Map<String, Object> cancelReq = new HashMap<>();
-		cancelReq.put("chatId", chatId);
+		// 취소용 Map 구성
+		Map<String, Object> cancelReq = new java.util.HashMap<>();
+		cancelReq.put("chatId", hashedChatId);
 
 		given(answerClient.generateAnswer(any())).willAnswer(invocation -> {
 			Thread.sleep(1500);
@@ -309,8 +320,11 @@ public class WebSocketChatIntegrationTest {
 		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
 		assertThat(received).isNotNull();
+
+		String receivedHashedChatId = String.valueOf(received.get("chatId"));
+		assertThat(hashidsUtils.decode(receivedHashedChatId)).isEqualTo(chatId);
+
 		assertThat(received.get("success")).isEqualTo(false);
 		assertThat(String.valueOf(received.get("content"))).isEqualTo(userMessage);
 	}
 }
-

@@ -2,7 +2,9 @@ package com.sofa.linkiving.domain.chat.dto.response;
 
 import java.util.List;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -20,6 +22,7 @@ public record ChatsRes(
 
 	public record ChatSummary(
 		@Schema(description = "채팅방 Id")
+		@JsonSerialize(using = HashidsSerializer.class)
 		Long id,
 		@Schema(description = "채팅방 제목")
 		String title

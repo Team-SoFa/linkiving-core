@@ -5,16 +5,19 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.chat.dto.internal.MessageDto;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardRes;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record MessageRes(
 	@Schema(description = "메시지 ID")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long id,
 
 	@Schema(description = "메시지 내용")
