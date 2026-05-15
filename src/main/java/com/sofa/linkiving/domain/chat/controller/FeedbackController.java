@@ -11,6 +11,7 @@ import com.sofa.linkiving.domain.chat.dto.response.UpsertFeedbackRes;
 import com.sofa.linkiving.domain.chat.facade.FeedbackFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
+import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import jakarta.validation.Valid;
@@ -25,7 +26,7 @@ public class FeedbackController implements FeedbackApi {
 	@Override
 	@PutMapping("/{messageId}/feedback")
 	public BaseResponse<UpsertFeedbackRes> upsertFeedback(
-		@PathVariable Long messageId,
+		@PathVariable @DecodeHash Long messageId,
 		@Valid @RequestBody UpsertFeedbackReq req,
 		@AuthMember Member member
 	) {

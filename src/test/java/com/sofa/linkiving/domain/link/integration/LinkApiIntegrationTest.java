@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.link.abstraction.ImageUploader;
-import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkCreateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkMemoUpdateReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkTitleUpdateReq;
@@ -40,6 +39,7 @@ import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
 @SpringBootTest
@@ -66,7 +66,7 @@ public class LinkApiIntegrationTest {
 	private SummaryRepository summaryRepository;
 
 	@Autowired
-	private SummaryClient summaryClient;
+	private HashidsUtils hashidsUtils;
 
 	@MockitoBean
 	private ImageUploader imageUploader;
@@ -74,7 +74,6 @@ public class LinkApiIntegrationTest {
 	private Member testMember;
 	private Member otherMember;
 	private UserDetails testUserDetails;
-	private UserDetails otherUserDetails;
 
 	@BeforeEach
 	void setUp() {
@@ -89,7 +88,6 @@ public class LinkApiIntegrationTest {
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);
-		otherUserDetails = new CustomMemberDetail(otherMember, Role.USER);
 	}
 
 	@Test
@@ -178,16 +176,18 @@ public class LinkApiIntegrationTest {
 			.selected(true)
 			.build());
 
+		String hashLinkId = hashidsUtils.encode(link.getId());
+
 		// when & then
 		mockMvc.perform(
-				get(BASE_URL + "/{id}", link.getId())
+				get(BASE_URL + "/{id}", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.accept(MediaType.APPLICATION_JSON)
 			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.id").value(link.getId()))
+			.andExpect(jsonPath("$.data.id").value(hashidsUtils.encode(link.getId())))
 			.andExpect(jsonPath("$.data.url").value(link.getUrl()))
 			.andExpect(jsonPath("$.data.title").value(link.getTitle()))
 			.andExpect(jsonPath("$.data.memo").value(link.getMemo()))
@@ -205,9 +205,12 @@ public class LinkApiIntegrationTest {
 			.title("다른 사용자 링크")
 			.build());
 
+		Long otherUserLinkId = otherUserLink.getId();
+		String hashOtherLinkId = hashidsUtils.encode(otherUserLinkId);
+
 		// when & then
 		mockMvc.perform(
-				get(BASE_URL + "/{id}", otherUserLink.getId())
+				get(BASE_URL + "/{id}", hashOtherLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.accept(MediaType.APPLICATION_JSON)
@@ -230,9 +233,12 @@ public class LinkApiIntegrationTest {
 
 		LinkTitleUpdateReq req = new LinkTitleUpdateReq("수정된 제목");
 
+		Long linkId = link.getId();
+		String hashLinkId = hashidsUtils.encode(link.getId());
+
 		// when & then
 		mockMvc.perform(
-				patch(BASE_URL + "/{id}/title", link.getId())
+				patch(BASE_URL + "/{id}/title", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.contentType(MediaType.APPLICATION_JSON)
@@ -245,7 +251,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.title").value(req.title()));
 
 		// DB 검증
-		Link updated = linkRepository.findById(link.getId()).orElseThrow();
+		Link updated = linkRepository.findById(linkId).orElseThrow();
 		assertThat(updated.getTitle()).isEqualTo(req.title());
 	}
 
@@ -259,9 +265,13 @@ public class LinkApiIntegrationTest {
 			.title("삭제할 링크")
 			.build());
 
+		Long linkId = link.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
+
+
 		// when & then
 		mockMvc.perform(
-				delete(BASE_URL + "/{id}", link.getId())
+				delete(BASE_URL + "/{id}", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 			)
@@ -270,7 +280,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.message").value("링크 삭제 완료"));
 
 		// DB 검증 - Soft Delete 확인
-		Link deleted = linkRepository.findById(link.getId()).orElseThrow();
+		Link deleted = linkRepository.findById(linkId).orElseThrow();
 		assertThat(deleted.isDeleted()).isTrue();
 	}
 
@@ -296,7 +306,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data.exists").value(true))
-			.andExpect(jsonPath("$.data.linkId").isNumber())
+			.andExpect(jsonPath("$.data.linkId").isString())
 			.andExpect(jsonPath("$.message").value("URL 중복 체크 완료"));
 	}
 
@@ -360,7 +370,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.links[1].title").value("링크 1"))
 			.andExpect(jsonPath("$.data.links[1].summary").isEmpty()) // 링크 1은 요약 없음
 			.andExpect(jsonPath("$.data.hasNext").value(false)) // 2개 조회, size 10이므로 다음 없음
-			.andExpect(jsonPath("$.data.lastId").value(link1.getId()));
+			.andExpect(jsonPath("$.data.lastId").value(hashidsUtils.encode(link1.getId())));
 	}
 
 	@Test
@@ -384,10 +394,12 @@ public class LinkApiIntegrationTest {
 			"수정된 메모",
 			originalImageUrl
 		);
+		Long linkId = link.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
 		mockMvc.perform(
-				put(BASE_URL + "/{id}", link.getId())
+				put(BASE_URL + "/{id}", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.contentType(MediaType.APPLICATION_JSON)
@@ -402,7 +414,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.imageUrl").value(uploadedS3Url));
 
 		// DB 검증
-		Link updated = linkRepository.findById(link.getId()).orElseThrow();
+		Link updated = linkRepository.findById(linkId).orElseThrow();
 		assertThat(updated.getTitle()).isEqualTo(req.title());
 		assertThat(updated.getMemo()).isEqualTo(req.memo());
 	}
@@ -419,10 +431,12 @@ public class LinkApiIntegrationTest {
 			.build());
 
 		LinkMemoUpdateReq req = new LinkMemoUpdateReq("수정된 메모");
+		Long linkId = link.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
 		mockMvc.perform(
-				patch(BASE_URL + "/{id}/memo", link.getId())
+				patch(BASE_URL + "/{id}/memo", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.contentType(MediaType.APPLICATION_JSON)
@@ -435,7 +449,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.data.memo").value(req.memo()));
 
 		// DB 검증
-		Link updated = linkRepository.findById(link.getId()).orElseThrow();
+		Link updated = linkRepository.findById(linkId).orElseThrow();
 		assertThat(updated.getMemo()).isEqualTo(req.memo());
 	}
 
@@ -444,10 +458,11 @@ public class LinkApiIntegrationTest {
 	void shouldFailWhenLinkNotFound() throws Exception {
 		// given
 		Long nonExistentId = 99999L;
+		String hashNonExistentId = hashidsUtils.encode(nonExistentId);
 
 		// when & then
 		mockMvc.perform(
-				get(BASE_URL + "/{id}", nonExistentId)
+				get(BASE_URL + "/{id}", hashNonExistentId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.accept(MediaType.APPLICATION_JSON)
@@ -470,9 +485,12 @@ public class LinkApiIntegrationTest {
 
 		LinkTitleUpdateReq req = new LinkTitleUpdateReq("해킹 시도");
 
+		Long otherUserLinkId = otherUserLink.getId();
+		String hashOtherUserLinkId = hashidsUtils.encode(otherUserLinkId);
+
 		// when & then
 		mockMvc.perform(
-				patch(BASE_URL + "/{id}/title", otherUserLink.getId())
+				patch(BASE_URL + "/{id}/title", hashOtherUserLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.contentType(MediaType.APPLICATION_JSON)
@@ -484,7 +502,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.status").value(LinkErrorCode.LINK_NOT_FOUND.getStatus().name()));
 
 		// DB 검증 - 변경되지 않았는지 확인
-		Link unchanged = linkRepository.findById(otherUserLink.getId()).orElseThrow();
+		Link unchanged = linkRepository.findById(otherUserLinkId).orElseThrow();
 		assertThat(unchanged.getTitle()).isEqualTo("다른 사용자 링크");
 	}
 
@@ -498,9 +516,12 @@ public class LinkApiIntegrationTest {
 			.title("다른 사용자 링크")
 			.build());
 
+		Long linkId = otherUserLink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
+
 		// when & then
 		mockMvc.perform(
-				delete(BASE_URL + "/{id}", otherUserLink.getId())
+				delete(BASE_URL + "/{id}", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 			)
@@ -509,7 +530,7 @@ public class LinkApiIntegrationTest {
 			.andExpect(jsonPath("$.status").value(LinkErrorCode.LINK_NOT_FOUND.getStatus().name()));
 
 		// DB 검증 - 삭제되지 않았는지 확인
-		Link unchanged = linkRepository.findById(otherUserLink.getId()).orElseThrow();
+		Link unchanged = linkRepository.findById(linkId).orElseThrow();
 		assertThat(unchanged.isDeleted()).isFalse();
 	}
 
@@ -523,12 +544,14 @@ public class LinkApiIntegrationTest {
 			.title("삭제된 링크")
 			.build());
 
-		link.markDeleted(); // Soft delete
+		link.markDeleted();
 		linkRepository.save(link);
+		Long linkId = link.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
 		mockMvc.perform(
-				get(BASE_URL + "/{id}", link.getId())
+				get(BASE_URL + "/{id}", hashLinkId)
 					.with(csrf())
 					.with(user(testUserDetails))
 					.accept(MediaType.APPLICATION_JSON)
@@ -634,7 +657,10 @@ public class LinkApiIntegrationTest {
 			.title("테스트 링크")
 			.build());
 		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
+
 		Long linkId = savedLink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
+
 
 		summaryRepository.save(Summary.builder()
 			.link(savedLink)
@@ -647,7 +673,7 @@ public class LinkApiIntegrationTest {
 		RegenerateSummaryReq req = new RegenerateSummaryReq(format);
 
 		// when & then
-		mockMvc.perform(post(BASE_URL + "/{id}/summary", linkId)
+		mockMvc.perform(post(BASE_URL + "/{id}/summary", hashLinkId)
 				.param("format", "DETAILED")
 				.with(csrf())
 				.with(user(testUserDetails))
@@ -744,11 +770,12 @@ public class LinkApiIntegrationTest {
 
 		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
 		Long linkId = savedLink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		SummaryUpdateReq request = new SummaryUpdateReq("수정된 요약 텍스트", Format.DETAILED);
 
 		// when & then
-		mockMvc.perform(patch(BASE_URL + "/{id}/summary", linkId)
+		mockMvc.perform(patch(BASE_URL + "/{id}/summary", hashLinkId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request))
 				.with(csrf())
@@ -770,15 +797,17 @@ public class LinkApiIntegrationTest {
 			.build();
 		link.updateSummaryStatus(SummaryStatus.COMPLETED);
 		Link savedlink = linkRepository.save(link);
+		Long linkId = savedlink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
-		mockMvc.perform(get(BASE_URL + "/{id}/summary-status", savedlink.getId())
+		mockMvc.perform(get(BASE_URL + "/{id}/summary-status", hashLinkId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.with(csrf())
 				.with(user(testUserDetails))
 			)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.linkId").value(savedlink.getId()))
+			.andExpect(jsonPath("$.data.linkId").value(hashidsUtils.encode(linkId)))
 			.andExpect(jsonPath("$.data.status").value(link.getSummaryStatus().toString()))
 			.andExpect(jsonPath("$.message").value("요약 상태 조회 완료"));
 	}
@@ -838,9 +867,10 @@ public class LinkApiIntegrationTest {
 			.build());
 		savedLink.updateSummaryStatus(SummaryStatus.FAILED);
 		Long linkId = savedLink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
-		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", linkId)
+		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", hashLinkId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.with(csrf())
 				.with(user(testUserDetails))
@@ -859,9 +889,10 @@ public class LinkApiIntegrationTest {
 			.build());
 		savedLink.updateSummaryStatus(SummaryStatus.COMPLETED);
 		Long linkId = savedLink.getId();
+		String hashLinkId = hashidsUtils.encode(linkId);
 
 		// when & then
-		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", linkId)
+		mockMvc.perform(post(BASE_URL + "/{id}/retry-summary", hashLinkId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.with(csrf())
 				.with(user(testUserDetails))

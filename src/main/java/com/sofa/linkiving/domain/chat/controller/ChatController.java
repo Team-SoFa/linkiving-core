@@ -20,6 +20,7 @@ import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.facade.ChatFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
+import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import lombok.RequiredArgsConstructor;
@@ -46,7 +47,7 @@ public class ChatController implements ChatApi {
 
 	@Override
 	@DeleteMapping("/{chatId}")
-	public BaseResponse<String> deleteChat(@AuthMember Member member, @PathVariable Long chatId) {
+	public BaseResponse<String> deleteChat(@AuthMember Member member, @PathVariable @DecodeHash Long chatId) {
 		chatFacade.deleteChat(member, chatId);
 		return BaseResponse.noContent("성공적으로 삭제했습니다.");
 	}
@@ -67,8 +68,8 @@ public class ChatController implements ChatApi {
 	@GetMapping("/{chatId}")
 	public BaseResponse<MessagesRes> getMessages(
 		@AuthMember Member member,
-		@PathVariable Long chatId,
-		@RequestParam(required = false) Long lastId,
+		@PathVariable @DecodeHash Long chatId,
+		@RequestParam(required = false) @DecodeHash Long lastId,
 		@RequestParam(defaultValue = "20") int size
 	) {
 		MessagesRes res = chatFacade.getMessages(member, chatId, lastId, size);

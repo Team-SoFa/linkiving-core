@@ -38,6 +38,8 @@ import jakarta.validation.constraints.Min;
 			**CASE A: PROCESSING (처리 중)**
 				```json
 				{
+					"linkId": aB9x2K8R,
+					"status": "PROCESSING"
 					"linkId": 1,
 					"status": "PROCESSING",
 					"summary": null,
@@ -48,10 +50,10 @@ import jakarta.validation.constraints.Min;
 		**CASE B: COMPLETED (요약 완료)**
 				```json
 				{
-					"linkId": 1,
+					"linkId": aB9x2K8R,
 					"status": "COMPLETED",
 					"summary": {
-						"id": 100,
+						"id": aB9x2K8S,
 						"content": "생성된 AI 요약 내용입니다."
 					},
 					"errorMessage": null
@@ -60,7 +62,7 @@ import jakarta.validation.constraints.Min;
 		**CASE C: FAILED (요약 실패)**
 				```json
 				{
-					"linkId": 1,
+					"linkId": aB9x2K8R,
 					"status": "FAILED",
 					"summary": null,
 					"errorMessage": "AI 서버 응답이 없습니다."
