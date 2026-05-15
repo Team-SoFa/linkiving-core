@@ -1,4 +1,4 @@
-package com.sofa.linkiving.global.config;
+package com.sofa.linkiving.global.config.web;
 
 import java.util.List;
 import java.util.Map;
