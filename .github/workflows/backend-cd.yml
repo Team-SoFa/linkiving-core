@@ -78,29 +78,10 @@ jobs:
       - name: ✨ Checkout repository
         uses: actions/checkout@v5
 
-      - name: 🗂️ Make monitoring config
+      - name: 🗂️ Grafana 환경변수 설정
         run: |
-          # Prometheus 설정
-          mkdir -p ./docker
-          echo "$PROMETHEUS_YML" > ./docker/prometheus.yml
-
-          # Grafana provisioning 설정
-          mkdir -p ./docker/grafana/provisioning/datasources
-          mkdir -p ./docker/grafana/provisioning/dashboards
-          mkdir -p ./docker/grafana/dashboards
-
-          echo "$GRAFANA_DATASOURCE_YML" > ./docker/grafana/provisioning/datasources/prometheus.yml
-          echo "$GRAFANA_DASHBOARD_PROVIDER_YML" > ./docker/grafana/provisioning/dashboards/dashboards.yml
-          echo "$GRAFANA_DASHBOARD_JSON" > ./docker/grafana/dashboards/http-overview.json
-
-          # Grafana 환경변수
-          echo "$DOCKER_ENV" > ./docker/.env
-        env:
-          PROMETHEUS_YML: ${{ secrets.PROMETHEUS_YML }}
-          GRAFANA_DATASOURCE_YML: ${{ secrets.GRAFANA_DATASOURCE_YML }}
-          GRAFANA_DASHBOARD_PROVIDER_YML: ${{ secrets.GRAFANA_DASHBOARD_PROVIDER_YML }}
-          GRAFANA_DASHBOARD_JSON: ${{ secrets.GRAFANA_DASHBOARD_JSON }}
-          DOCKER_ENV: ${{ secrets.DOCKER_ENV }}
+          echo "GRAFANA_ADMIN_USER=admin" > ./docker/.env
+          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> ./docker/.env
         shell: bash
 
       - name: ✨ 배포 스크립트 실행
