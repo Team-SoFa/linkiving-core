@@ -35,4 +35,6 @@ out/
 
 ### Spring
 *.yml
+!docker/prometheus.yml
+!docker/grafana/**/*.yml
 .editorconfig

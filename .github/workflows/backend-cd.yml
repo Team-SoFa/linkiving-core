@@ -78,6 +78,12 @@ jobs:
       - name: ✨ Checkout repository
         uses: actions/checkout@v5
 
+      - name: 🗂️ Grafana 환경변수 설정
+        run: |
+          echo "GRAFANA_ADMIN_USER=admin" > ./docker/.env
+          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> ./docker/.env
+        shell: bash
+
       - name: ✨ 배포 스크립트 실행
         run: |
           chmod +x deploy.sh

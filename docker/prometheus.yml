@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: 'linkiving-core'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'blue:8080'
+          - 'green:8080'
+        labels:
+          application: 'linkiving-core'
