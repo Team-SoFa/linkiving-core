@@ -20,6 +20,7 @@ import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.facade.ChatFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ChatController implements ChatApi {
 	private final ChatFacade chatFacade;
+	private final HashidsUtils hashidsUtils;
 
 	@Override
 	@GetMapping
@@ -46,8 +48,9 @@ public class ChatController implements ChatApi {
 
 	@Override
 	@DeleteMapping("/{chatId}")
-	public BaseResponse<String> deleteChat(@AuthMember Member member, @PathVariable Long chatId) {
-		chatFacade.deleteChat(member, chatId);
+	public BaseResponse<String> deleteChat(@AuthMember Member member, @PathVariable String chatId) {
+		Long realChatId = hashidsUtils.decode(chatId);
+		chatFacade.deleteChat(member, realChatId);
 		return BaseResponse.noContent("성공적으로 삭제했습니다.");
 	}
 
@@ -67,11 +70,13 @@ public class ChatController implements ChatApi {
 	@GetMapping("/{chatId}")
 	public BaseResponse<MessagesRes> getMessages(
 		@AuthMember Member member,
-		@PathVariable Long chatId,
-		@RequestParam(required = false) Long lastId,
+		@PathVariable String chatId,
+		@RequestParam(required = false) String lastId,
 		@RequestParam(defaultValue = "20") int size
 	) {
-		MessagesRes res = chatFacade.getMessages(member, chatId, lastId, size);
+		Long realChatId = hashidsUtils.decode(chatId);
+		Long realLastId = hashidsUtils.decode(lastId);
+		MessagesRes res = chatFacade.getMessages(member, realChatId, realLastId, size);
 		return BaseResponse.success(res, "채팅 기록을 가져오는데 성공했습니다.");
 	}
 }

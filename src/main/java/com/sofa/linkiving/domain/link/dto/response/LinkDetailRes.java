@@ -1,13 +1,16 @@
 package com.sofa.linkiving.domain.link.dto.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record LinkDetailRes(
 	@Schema(description = "링크 ID")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long id,
 
 	@Schema(description = "링크 URL", example = "https://example.com")

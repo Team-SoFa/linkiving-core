@@ -66,8 +66,8 @@ public interface ChatApi {
 	@Operation(summary = "채팅 기록 조회", description = "채팅 기록을 최신순으로 조회합니다. 무한 스크롤 방식으로 제공됩니다.")
 	BaseResponse<MessagesRes> getMessages(
 		Member member,
-		@Parameter(description = "채팅방 ID") Long chatId,
-		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null") Long lastId,
+		@Parameter(description = "채팅방 ID") String chatId,
+		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null") String lastId,
 
 		@Parameter(description = "페이지 크기")
 		@Min(value = 1, message = "최소 1개 이상 조회해야 합니다.")
@@ -85,7 +85,7 @@ public interface ChatApi {
 	);
 
 	@Operation(summary = "링크 삭제", description = "해당 링크방과 채팅 기록을 전부 Hard Delete 진행합니다.")
-	BaseResponse<String> deleteChat(Member member, Long chatId);
+	BaseResponse<String> deleteChat(Member member, String chatId);
 
 	void sendMessage(AnswerReq req, Member member);
 
