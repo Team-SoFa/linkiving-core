@@ -19,7 +19,8 @@ public enum CommonErrorCode implements ErrorCode {
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "C-007", "허용되지 않은 HTTP 메소드입니다."),
 	FORBIDDEN(HttpStatus.FORBIDDEN, "C-008", "접근이 허용되지 않았습니다."),
 	NULL_POINTER(HttpStatus.INTERNAL_SERVER_ERROR, "C-009", "NullPointerException이 발생했습니다."),
-	HTTP_MEDIA_NOT_SUPPORT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C-010", "지원하지 않는 미디어입니다.");
+	HTTP_MEDIA_NOT_SUPPORT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C-010", "지원하지 않는 미디어입니다."),
+	INVALID_IDENTIFIER(HttpStatus.BAD_REQUEST, "C-011", "유효하지 않은 식별자입니다.");
 
 	private final HttpStatus status;
 	private final String code;

@@ -89,6 +89,9 @@ dependencies {
     //Event
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
+
+    //Encryption
+    implementation 'org.hashids:hashids:1.0.3'
 }
 
 dependencyManagement {
