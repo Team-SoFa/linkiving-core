@@ -11,7 +11,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -87,7 +87,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\"}[1m]))",
           "legendFormat": "Total RPS",
@@ -100,7 +100,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -176,7 +176,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\", status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\"}[1m])) * 100",
           "legendFormat": "5xx Error Rate",
@@ -185,7 +185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\", status=~\"4..\"}[1m])) / sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\"}[1m])) * 100",
           "legendFormat": "4xx Error Rate",
@@ -198,7 +198,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -274,7 +274,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{application=\"linkiving-core\"}[1m])) by (le))",
           "legendFormat": "p50",
@@ -283,7 +283,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"linkiving-core\"}[1m])) by (le))",
           "legendFormat": "p95",
@@ -292,7 +292,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{application=\"linkiving-core\"}[1m])) by (le))",
           "legendFormat": "p99",
@@ -305,7 +305,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -427,7 +427,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "expr": "sum(rate(http_server_requests_seconds_count{application=\"linkiving-core\"}[1m])) by (status)",
           "legendFormat": "{{status}}",
