@@ -114,53 +114,49 @@ public class JwtTokenProvider {
 		return null;
 	}
 
-	public Date getExpiration(String token) {
-		return parseClaims(token).getExpiration();
+	private Claims validateToken(String token) {
+		if (token == null || token.isBlank()) {
+			throw new CustomJwtException(JwtErrorCode.EMPTY_TOKEN);
+		}
+
+		try {
+			return parseClaims(token);
+		} catch (ExpiredJwtException e) {
+			throw new CustomJwtException(JwtErrorCode.EXPIRED_JWT_TOKEN);
+		} catch (SecurityException | MalformedJwtException | IllegalArgumentException e) {
+			throw new CustomJwtException(JwtErrorCode.INVALID_JWT_TOKEN);
+		} catch (UnsupportedJwtException e) {
+			throw new CustomJwtException(JwtErrorCode.UNSUPPORTED_JWT_TOKEN);
+		}
 	}
 
-	public String getUserIdFromToken(String token) {
-		return parseClaims(token).getSubject();
-	}
+	public String validateRefreshToken(String refreshToken) {
+		Claims claims = validateToken(refreshToken);
 
-	public void validateRefreshToken(String refreshToken, String userId) {
-		Claims claims = parseClaims(refreshToken);
 		String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
 
 		if (!JwtKeys.TokenType.REFRESH.equals(tokenType)) {
 			throw new CustomJwtException(JwtErrorCode.INVALID_REFRESH);
 		}
 
+		String userId = claims.getSubject();
+
 		if (redisService.hasNoKey(RedisKeyRegistry.REFRESH_TOKEN, userId)) {
 			throw new CustomJwtException(JwtErrorCode.CANNOT_REFRESH);
 		}
 
 		String redisToken = redisService.get(RedisKeyRegistry.REFRESH_TOKEN, userId);
-
 		if (!redisToken.equals(refreshToken)) {
 			throw new CustomJwtException(JwtErrorCode.INVALID_JWT_TOKEN);
 		}
 
+		return userId;
 	}
 
 	public boolean validateAccessToken(String token) {
-		if (token == null || token.isBlank()) {
-			throw new CustomJwtException(JwtErrorCode.EMPTY_TOKEN);
-		}
+		Claims claims = validateToken(token);
 
-		try {
-			Claims claims = parseClaims(token);
-			boolean notExpired = !claims.getExpiration().before(new Date());
-
-			String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
-			boolean isAccess = JwtKeys.TokenType.ACCESS.equals(tokenType);
-
-			return notExpired && isAccess;
-		} catch (SecurityException | MalformedJwtException | IllegalArgumentException e) {
-			throw new CustomJwtException(JwtErrorCode.INVALID_JWT_TOKEN);
-		} catch (ExpiredJwtException e) {
-			throw new CustomJwtException(JwtErrorCode.EXPIRED_JWT_TOKEN);
-		} catch (UnsupportedJwtException e) {
-			throw new CustomJwtException(JwtErrorCode.UNSUPPORTED_JWT_TOKEN);
-		}
+		String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
+		return JwtKeys.TokenType.ACCESS.equals(tokenType);
 	}
 }
