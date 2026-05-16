@@ -123,6 +123,10 @@ public class JwtTokenProvider {
 	}
 
 	public void validateRefreshToken(String refreshToken, String userId) {
+		if (refreshToken == null || refreshToken.isBlank()) {
+			throw new CustomJwtException(JwtErrorCode.EMPTY_TOKEN);
+		}
+
 		Claims claims = parseClaims(refreshToken);
 		String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
 
