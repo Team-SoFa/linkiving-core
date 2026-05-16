@@ -36,10 +36,7 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sofa.linkiving.domain.chat.ai.AnswerClient;
-import com.sofa.linkiving.domain.chat.dto.request.AnswerCancelReq;
-import com.sofa.linkiving.domain.chat.dto.request.AnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
@@ -49,6 +46,7 @@ import com.sofa.linkiving.domain.link.repository.LinkRepository;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 
@@ -80,6 +78,12 @@ public class WebSocketChatIntegrationTest {
 
 	@Autowired
 	private JwtTokenProvider jwtTokenProvider;
+
+	@Autowired
+	private HashidsUtils hashidsUtils;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@MockitoBean
 	private AnswerClient answerClient;
@@ -120,7 +124,7 @@ public class WebSocketChatIntegrationTest {
 		WebSocketStompClient stompClient = new WebSocketStompClient(new SockJsClient(createTransportClient()));
 
 		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-		converter.setObjectMapper(new ObjectMapper().registerModule(new JavaTimeModule()));
+		converter.setObjectMapper(objectMapper);
 		stompClient.setMessageConverter(converter);
 
 		this.blockingQueue = new LinkedBlockingQueue<>();
@@ -175,11 +179,15 @@ public class WebSocketChatIntegrationTest {
 	void shouldReceiveAnswerWhenMessageSent() throws InterruptedException {
 		// given
 		Long chatId = testChat.getId();
+		String hashedChatId = hashidsUtils.encode(chatId);
 		String userMessage = "Gemini에 대해 알려줘";
-		AnswerReq req = new AnswerReq(chatId, userMessage);
+
+		record TestAnswerReq(String chatId, String message) {
+		}
+		TestAnswerReq req = new TestAnswerReq(hashedChatId, userMessage);
 
 		subscribeToChatQueue();
-
+		Thread.sleep(1000);
 		// when
 		stompSession.send("/ws/chat/send", req);
 
@@ -197,9 +205,16 @@ public class WebSocketChatIntegrationTest {
 	void shouldReceiveErrorMessageWhenCancelled() throws InterruptedException {
 		// given
 		Long chatId = testChat.getId();
+		String hashedChatId = hashidsUtils.encode(chatId);
 		String userMessage = "취소될 질문";
-		AnswerReq sendReq = new AnswerReq(chatId, userMessage);
-		AnswerCancelReq cancelReq = new AnswerCancelReq(chatId);
+
+		java.util.Map<String, Object> sendReq = new java.util.HashMap<>();
+		sendReq.put("chatId", hashedChatId);
+		sendReq.put("message", userMessage);
+
+		// 취소용 Map 구성
+		java.util.Map<String, Object> cancelReq = new java.util.HashMap<>();
+		cancelReq.put("chatId", hashedChatId);
 
 		given(answerClient.generateAnswer(any())).willAnswer(invocation -> {
 			Thread.sleep(500);
