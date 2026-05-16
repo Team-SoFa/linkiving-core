@@ -2,14 +2,17 @@ package com.sofa.linkiving.domain.member.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
 @Builder
 public record MemberProfileRes(
-	@Schema(description = "회원 ID", example = "1")
+	@Schema(description = "회원 ID")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long id,
 	@Schema(description = "유저명", example = "Linkiving User")
 	String name,

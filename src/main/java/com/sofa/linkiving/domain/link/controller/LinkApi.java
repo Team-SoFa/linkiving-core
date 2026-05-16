@@ -38,7 +38,7 @@ import jakarta.validation.constraints.Min;
 			**CASE A: PROCESSING (처리 중)**
 				```json
 				{
-					"linkId": 1,
+					"linkId": aB9x2K8R,
 					"status": "PROCESSING"
 				}
 				```
@@ -46,10 +46,10 @@ import jakarta.validation.constraints.Min;
 		**CASE B: COMPLETED (요약 완료)**
 				```json
 				{
-					"linkId": 1,
+					"linkId": aB9x2K8R,
 					"status": "COMPLETED",
 					"data": {
-						"id": 100,
+						"id": aB9x2K8S,
 						"content": "생성된 AI 요약 내용입니다.",
 						"format": "CONCISE"
 					}
@@ -58,7 +58,7 @@ import jakarta.validation.constraints.Min;
 		**CASE C: FAILED (요약 실패)**
 				```json
 				{
-					"linkId": 1,
+					"linkId": aB9x2K8R,
 					"status": "FAILED",
 					"data": "AI 서버 응답이 없습니다."
 				}
@@ -144,7 +144,7 @@ public interface LinkApi {
 	);
 
 	@Operation(summary = "요약 상태 조회", description = "링크 요약 상태를 조회합니다.")
-	BaseResponse<SummaryStatusRes> getSummaryStatus(
+	BaseResponse<SummaryStatusRes<?>> getSummaryStatus(
 		Long id,
 		Member member
 	);

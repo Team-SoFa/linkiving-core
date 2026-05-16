@@ -30,6 +30,7 @@ import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
+import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import lombok.RequiredArgsConstructor;
@@ -80,7 +81,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PutMapping("/{id}")
 	public BaseResponse<LinkRes> updateLink(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkUpdateReq request,
 		@AuthMember Member member
 	) {
@@ -97,7 +98,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@DeleteMapping("/{id}")
 	public BaseResponse<Void> deleteLink(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
 		linkFacade.deleteLink(id, member);
@@ -107,7 +108,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@GetMapping("/{id}")
 	public BaseResponse<LinkDetailRes> getLink(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
 		LinkDetailRes response = linkFacade.getLinkDetail(id, member);
@@ -118,7 +119,7 @@ public class LinkController implements LinkApi {
 	@GetMapping
 	public BaseResponse<LinkCardsRes> getLinkList(
 		@AuthMember Member member,
-		@RequestParam(required = false) Long lastId,
+		@RequestParam(required = false) @DecodeHash Long lastId,
 		@RequestParam(defaultValue = "20") int size
 	) {
 		LinkCardsRes response = linkFacade.getLinkCards(member, lastId, size);
@@ -128,7 +129,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PatchMapping("/{id}/title")
 	public BaseResponse<LinkRes> updateTitle(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkTitleUpdateReq request,
 		@AuthMember Member member
 	) {
@@ -139,7 +140,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PatchMapping("/{id}/memo")
 	public BaseResponse<LinkRes> updateMemo(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkMemoUpdateReq request,
 		@AuthMember Member member
 	) {
@@ -150,7 +151,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PostMapping("/{id}/summary")
 	public BaseResponse<RegenerateSummaryRes> recreateSummary(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody RegenerateSummaryReq req,
 		@AuthMember Member member
 	) {
@@ -161,7 +162,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PatchMapping("/{id}/summary")
 	public BaseResponse<SummaryRes> updateSummary(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody SummaryUpdateReq request,
 		@AuthMember Member member
 	) {
@@ -179,7 +180,7 @@ public class LinkController implements LinkApi {
 	@Override
 	@PostMapping("/{id}/retry-summary")
 	public BaseResponse<Void> retrySummary(
-		@PathVariable Long id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
 		linkFacade.retrySummary(id, member);
@@ -188,11 +189,11 @@ public class LinkController implements LinkApi {
 
 	@Override
 	@GetMapping("/{id}/summary-status")
-	public BaseResponse<SummaryStatusRes> getSummaryStatus(
-		@PathVariable Long id,
+	public BaseResponse<SummaryStatusRes<?>> getSummaryStatus(
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
-		SummaryStatusRes response = linkFacade.getSummaryStatus(id, member);
+		SummaryStatusRes<?> response = linkFacade.getSummaryStatus(id, member);
 		return BaseResponse.success(response, "요약 상태 조회 완료");
 	}
 }

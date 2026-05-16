@@ -1,6 +1,8 @@
 package com.sofa.linkiving.domain.chat.dto.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.chat.entity.Chat;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -8,6 +10,7 @@ import lombok.Builder;
 @Builder
 public record CreateChatRes(
 	@Schema(description = "채팅방 ID")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long id,
 	@Schema(description = "채팅방 제목")
 	String title,

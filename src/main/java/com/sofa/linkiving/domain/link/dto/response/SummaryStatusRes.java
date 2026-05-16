@@ -1,6 +1,8 @@
 package com.sofa.linkiving.domain.link.dto.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
+import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -8,6 +10,7 @@ import lombok.Builder;
 @Builder
 public record SummaryStatusRes<T>(
 	@Schema(description = "링크 ID")
+	@JsonSerialize(using = HashidsSerializer.class)
 	Long linkId,
 	@Schema(description = "요약 진행 상태:PENDING(큐 대기 중), PROCESSING(요약 진행 중), COMPLETED(완료), FAILED(생성 실패)")
 	SummaryStatus status,

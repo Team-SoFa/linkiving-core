@@ -1,9 +1,10 @@
-package com.sofa.linkiving.global.config;
+package com.sofa.linkiving.global.config.web;
 
 import java.util.List;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.format.FormatterRegistry;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class WebMvcConfig implements WebMvcConfigurer {
 
 	private final AuthMemberArgumentResolver authMemberArgumentResolver;
+	private final HashidsFormatterFactory hashidsFormatterFactory;
 
 	@Override
 	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
@@ -37,5 +39,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 		executor.setThreadNamePrefix("mvc-async-");
 		executor.initialize();
 		return executor;
+	}
+
+	@Override
+	public void addFormatters(FormatterRegistry registry) {
+		registry.addFormatterForFieldAnnotation(hashidsFormatterFactory);
 	}
 }
