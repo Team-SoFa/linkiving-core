@@ -40,6 +40,7 @@ import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
@@ -77,6 +78,9 @@ public class ChatApiIntegrationTest {
 
 	@Autowired
 	private ChatFacade chatFacade;
+
+	@Autowired
+	private HashidsUtils hashidsUtils;
 
 	@MockitoBean
 	private RedisService redisService;
@@ -171,9 +175,10 @@ public class ChatApiIntegrationTest {
 	void shouldReturn400WhenSizeExceedsLimit() throws Exception {
 		// given
 		Long chatId = 1L;
+		String hashChatId = hashidsUtils.encode(chatId);
 
 		// when & then
-		mockMvc.perform(get(BASE_URL + "/{chatId}", chatId)
+		mockMvc.perform(get(BASE_URL + "/{chatId}", hashChatId)
 				.param("size", "100")
 				.with(user(testUserDetails)))
 			.andDo(print())
@@ -227,9 +232,10 @@ public class ChatApiIntegrationTest {
 			.build());
 
 		Long chatId = chat.getId();
+		String hashChatId = hashidsUtils.encode(chatId);
 
 		// when & then
-		mockMvc.perform(delete(BASE_URL + "/{chatId}", chatId)
+		mockMvc.perform(delete(BASE_URL + "/{chatId}", hashChatId)
 				.with(csrf())
 				.with(user(testUserDetails)))
 			.andDo(print())

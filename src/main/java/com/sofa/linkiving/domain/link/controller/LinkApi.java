@@ -87,27 +87,27 @@ public interface LinkApi {
 
 	@Operation(summary = "링크 수정", description = "링크 정보를 수정합니다. null이 아닌 필드만 수정됩니다.")
 	BaseResponse<LinkRes> updateLink(
-		String id,
+		Long id,
 		@Valid LinkUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "링크 삭제", description = "링크를 삭제합니다 (Soft Delete)")
 	BaseResponse<Void> deleteLink(
-		String id,
+		Long id,
 		Member member
 	);
 
 	@Operation(summary = "링크 상세 조회", description = "링크 상세 정보를 조회합니다")
 	BaseResponse<LinkDetailRes> getLink(
-		String id,
+		Long id,
 		Member member
 	);
 
 	@Operation(summary = "링크 카드 목록 조회", description = "저장된 링크 목록을 무한 스크롤 방식으로 조회합니다")
 	BaseResponse<LinkCardsRes> getLinkList(
 		Member member,
-		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null") String lastId,
+		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null") Long lastId,
 
 		@Parameter(description = "한번에 조회할 데이터 갯수")
 		@Min(value = 1, message = "최소 1개 이상 조회해야 합니다.")
@@ -117,41 +117,41 @@ public interface LinkApi {
 
 	@Operation(summary = "링크 제목 수정", description = "링크 제목만 수정합니다")
 	BaseResponse<LinkRes> updateTitle(
-		String id,
+		Long id,
 		@Valid LinkTitleUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "링크 메모 수정", description = "링크 메모만 수정합니다")
 	BaseResponse<LinkRes> updateMemo(
-		String id,
+		Long id,
 		@Valid LinkMemoUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "요약 재생성", description = "요약을 재생성 하고 신규 요약 기존 요약, 기존 및 신규 요약 비교 정보을 제공합니다.")
 	BaseResponse<RegenerateSummaryRes> recreateSummary(
-		String id,
+		Long id,
 		@Valid RegenerateSummaryReq req,
 		Member member
 	);
 
 	@Operation(summary = "새로운 요약 선택", description = "신규 요약으로 요약 내용을 수정합니다.")
 	BaseResponse<SummaryRes> updateSummary(
-		String id,
+		Long id,
 		@Valid SummaryUpdateReq request,
 		Member member
 	);
 
 	@Operation(summary = "요약 상태 조회", description = "링크 요약 상태를 조회합니다.")
 	BaseResponse<SummaryStatusRes<?>> getSummaryStatus(
-		String id,
+		Long id,
 		Member member
 	);
 
 	@Operation(summary = "최초 요약 수동 재요청", description = "최초 요약 생성에 실패했을 경우 수동으로 최초 요약을 재요청합니다.")
 	BaseResponse<Void> retrySummary(
-		String id,
+		Long id,
 		Member member
 	);
 

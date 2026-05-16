@@ -30,7 +30,7 @@ import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
-import com.sofa.linkiving.global.util.HashidsUtils;
+import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import lombok.RequiredArgsConstructor;
@@ -41,7 +41,6 @@ import lombok.RequiredArgsConstructor;
 public class LinkController implements LinkApi {
 
 	private final LinkFacade linkFacade;
-	private final HashidsUtils hashidsUtils;
 
 	@Override
 	@PostMapping("/meta-scrape")
@@ -82,14 +81,12 @@ public class LinkController implements LinkApi {
 	@Override
 	@PutMapping("/{id}")
 	public BaseResponse<LinkRes> updateLink(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkUpdateReq request,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-
 		LinkRes response = linkFacade.updateLink(
-			realId,
+			id,
 			member,
 			request.title(),
 			request.memo(),
@@ -101,22 +98,20 @@ public class LinkController implements LinkApi {
 	@Override
 	@DeleteMapping("/{id}")
 	public BaseResponse<Void> deleteLink(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		linkFacade.deleteLink(realId, member);
+		linkFacade.deleteLink(id, member);
 		return BaseResponse.noContent("링크 삭제 완료");
 	}
 
 	@Override
 	@GetMapping("/{id}")
 	public BaseResponse<LinkDetailRes> getLink(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		LinkDetailRes response = linkFacade.getLinkDetail(realId, member);
+		LinkDetailRes response = linkFacade.getLinkDetail(id, member);
 		return BaseResponse.success(response, "링크 조회 완료");
 	}
 
@@ -124,59 +119,54 @@ public class LinkController implements LinkApi {
 	@GetMapping
 	public BaseResponse<LinkCardsRes> getLinkList(
 		@AuthMember Member member,
-		@RequestParam(required = false) String lastId,
+		@RequestParam(required = false) @DecodeHash Long lastId,
 		@RequestParam(defaultValue = "20") int size
 	) {
-		Long realLastId = hashidsUtils.decode(lastId);
-		LinkCardsRes response = linkFacade.getLinkCards(member, realLastId, size);
+		LinkCardsRes response = linkFacade.getLinkCards(member, lastId, size);
 		return BaseResponse.success(response, "링크 목록 조회 완료");
 	}
 
 	@Override
 	@PatchMapping("/{id}/title")
 	public BaseResponse<LinkRes> updateTitle(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkTitleUpdateReq request,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		LinkRes response = linkFacade.updateTitle(realId, member, request.title());
+		LinkRes response = linkFacade.updateTitle(id, member, request.title());
 		return BaseResponse.success(response, "제목 수정 완료");
 	}
 
 	@Override
 	@PatchMapping("/{id}/memo")
 	public BaseResponse<LinkRes> updateMemo(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody LinkMemoUpdateReq request,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		LinkRes response = linkFacade.updateMemo(realId, member, request.memo());
+		LinkRes response = linkFacade.updateMemo(id, member, request.memo());
 		return BaseResponse.success(response, "메모 수정 완료");
 	}
 
 	@Override
 	@PostMapping("/{id}/summary")
 	public BaseResponse<RegenerateSummaryRes> recreateSummary(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody RegenerateSummaryReq req,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		RegenerateSummaryRes response = linkFacade.recreateSummary(member, realId, req.format());
+		RegenerateSummaryRes response = linkFacade.recreateSummary(member, id, req.format());
 		return BaseResponse.success(response, "요약 재성성 완료");
 	}
 
 	@Override
 	@PatchMapping("/{id}/summary")
 	public BaseResponse<SummaryRes> updateSummary(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@RequestBody SummaryUpdateReq request,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		SummaryRes response = linkFacade.updateSummary(realId, member, request.summary(), request.format());
+		SummaryRes response = linkFacade.updateSummary(id, member, request.summary(), request.format());
 		return BaseResponse.success(response, "요약 수정 완료");
 	}
 
@@ -190,22 +180,20 @@ public class LinkController implements LinkApi {
 	@Override
 	@PostMapping("/{id}/retry-summary")
 	public BaseResponse<Void> retrySummary(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		linkFacade.retrySummary(realId, member);
+		linkFacade.retrySummary(id, member);
 		return BaseResponse.noContent("요약 재시도");
 	}
 
 	@Override
 	@GetMapping("/{id}/summary-status")
 	public BaseResponse<SummaryStatusRes<?>> getSummaryStatus(
-		@PathVariable String id,
+		@PathVariable @DecodeHash Long id,
 		@AuthMember Member member
 	) {
-		Long realId = hashidsUtils.decode(id);
-		SummaryStatusRes response = linkFacade.getSummaryStatus(realId, member);
+		SummaryStatusRes<?> response = linkFacade.getSummaryStatus(id, member);
 		return BaseResponse.success(response, "요약 상태 조회 완료");
 	}
 }

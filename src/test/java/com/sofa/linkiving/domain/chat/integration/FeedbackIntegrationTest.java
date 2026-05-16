@@ -32,6 +32,7 @@ import com.sofa.linkiving.domain.chat.repository.MessageRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
+import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
@@ -59,6 +60,9 @@ class FeedbackIntegrationTest {
 
 	@Autowired
 	private FeedbackRepository feedbackRepository;
+
+	@Autowired
+	private HashidsUtils hashidsUtils;
 
 	@MockitoBean
 	private RedisService redisService;
@@ -91,10 +95,11 @@ class FeedbackIntegrationTest {
 	void shouldCreateNewFeedbackAndReturnOkWhenNoExistingFeedback() throws Exception {
 		// given
 		Long messageId = testMessage.getId();
+		String hashMessageId = hashidsUtils.encode(messageId);
 		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.LIKE, "매우 유용한 답변입니다.");
 
 		// when & then
-		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", hashMessageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +107,7 @@ class FeedbackIntegrationTest {
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.id").isNumber());
+			.andExpect(jsonPath("$.data.id").isString());
 
 		assertThat(feedbackRepository.count()).isEqualTo(1);
 		Feedback savedFeedback = feedbackRepository.findAll().get(0);
@@ -122,10 +127,11 @@ class FeedbackIntegrationTest {
 			.build());
 
 		Long messageId = testMessage.getId();
+		String hashMessageId = hashidsUtils.encode(messageId);
 		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.DISLIKE, "내용이 수정되었습니다.");
 
 		// when & then
-		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", hashMessageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -133,7 +139,7 @@ class FeedbackIntegrationTest {
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.id").value(existingFeedback.getId()));
+			.andExpect(jsonPath("$.data.id").value(hashidsUtils.encode(existingFeedback.getId())));
 
 		assertThat(feedbackRepository.count()).isEqualTo(1);
 		Feedback updatedFeedback = feedbackRepository.findAll().get(0);
@@ -147,10 +153,11 @@ class FeedbackIntegrationTest {
 	void shouldReturnBadRequestWhenSentimentIsNull() throws Exception {
 		// given
 		Long messageId = testMessage.getId();
+		String hashMessageId = hashidsUtils.encode(messageId);
 		UpsertFeedbackReq req = new UpsertFeedbackReq(null, "내용만 있음");
 
 		// when & then
-		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", messageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", hashMessageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -164,10 +171,11 @@ class FeedbackIntegrationTest {
 	void shouldReturnNotFoundWhenMessageDoesNotExist() throws Exception {
 		// given
 		Long invalidMessageId = 99999L;
+		String hashInvalidMessageId = hashidsUtils.encode(invalidMessageId);
 		UpsertFeedbackReq req = new UpsertFeedbackReq(Sentiment.DISLIKE, "별로예요");
 
 		// when & then
-		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", invalidMessageId)
+		mockMvc.perform(put(BASE_URL + "/{messageId}/feedback", hashInvalidMessageId)
 				.with(csrf())
 				.with(user(testUserDetails))
 				.contentType(MediaType.APPLICATION_JSON)

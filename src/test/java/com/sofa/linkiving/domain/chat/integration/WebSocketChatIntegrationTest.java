@@ -7,7 +7,9 @@ import static org.mockito.BDDMockito.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,7 +39,6 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.chat.ai.AnswerClient;
-import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.repository.ChatRepository;
@@ -89,7 +90,7 @@ public class WebSocketChatIntegrationTest {
 	private AnswerClient answerClient;
 
 	private StompSession stompSession;
-	private BlockingQueue<AnswerRes> blockingQueue;
+	private BlockingQueue<Map<String, Object>> blockingQueue;
 	private Chat testChat;
 
 	@BeforeEach
@@ -164,12 +165,12 @@ public class WebSocketChatIntegrationTest {
 		stompSession.subscribe("/user/queue/chat", new StompFrameHandler() {
 			@Override
 			public Type getPayloadType(StompHeaders headers) {
-				return AnswerRes.class;
+				return java.util.Map.class;
 			}
 
 			@Override
 			public void handleFrame(StompHeaders headers, Object payload) {
-				blockingQueue.offer((AnswerRes)payload);
+				blockingQueue.offer((Map<String, Object>)payload);
 			}
 		});
 	}
@@ -182,9 +183,9 @@ public class WebSocketChatIntegrationTest {
 		String hashedChatId = hashidsUtils.encode(chatId);
 		String userMessage = "Gemini에 대해 알려줘";
 
-		record TestAnswerReq(String chatId, String message) {
-		}
-		TestAnswerReq req = new TestAnswerReq(hashedChatId, userMessage);
+		Map<String, Object> req = new HashMap<>();
+		req.put("chatId", hashedChatId);
+		req.put("message", userMessage);
 
 		subscribeToChatQueue();
 		Thread.sleep(1000);
@@ -192,12 +193,12 @@ public class WebSocketChatIntegrationTest {
 		stompSession.send("/ws/chat/send", req);
 
 		// then
-		AnswerRes received = blockingQueue.poll(10, SECONDS);
+		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
-		assertThat(received).isNotNull();
-		assertThat(received.chatId()).isEqualTo(chatId);
-		assertThat(received.success()).isTrue();
-		assertThat(received.content()).contains("Gemini와 관련된 내용");
+		String receivedHashedChatId = String.valueOf(received.get("chatId"));
+		assertThat(hashidsUtils.decode(receivedHashedChatId)).isEqualTo(chatId);
+		assertThat(received.get("success")).isEqualTo(true);
+		assertThat(String.valueOf(received.get("content"))).contains("Gemini와 관련된 내용");
 	}
 
 	@Test
@@ -213,7 +214,7 @@ public class WebSocketChatIntegrationTest {
 		sendReq.put("message", userMessage);
 
 		// 취소용 Map 구성
-		java.util.Map<String, Object> cancelReq = new java.util.HashMap<>();
+		Map<String, Object> cancelReq = new java.util.HashMap<>();
 		cancelReq.put("chatId", hashedChatId);
 
 		given(answerClient.generateAnswer(any())).willAnswer(invocation -> {
@@ -230,12 +231,15 @@ public class WebSocketChatIntegrationTest {
 		stompSession.send("/ws/chat/cancel", cancelReq);
 
 		// then
-		AnswerRes received = blockingQueue.poll(5, SECONDS);
+		Map<String, Object> received = blockingQueue.poll(10, SECONDS);
 
 		assertThat(received).isNotNull();
-		assertThat(received.chatId()).isEqualTo(chatId);
-		assertThat(received.success()).isFalse();
-		assertThat(received.content()).isEqualTo(userMessage);
+
+		String receivedHashedChatId = String.valueOf(received.get("chatId"));
+		assertThat(hashidsUtils.decode(receivedHashedChatId)).isEqualTo(chatId);
+
+		assertThat(received.get("success")).isEqualTo(false);
+		assertThat(String.valueOf(received.get("content"))).isEqualTo(userMessage);
 	}
 
 }

@@ -11,7 +11,7 @@ import com.sofa.linkiving.domain.chat.dto.response.UpsertFeedbackRes;
 import com.sofa.linkiving.domain.chat.facade.FeedbackFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
-import com.sofa.linkiving.global.util.HashidsUtils;
+import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
 
 import jakarta.validation.Valid;
@@ -22,17 +22,15 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FeedbackController implements FeedbackApi {
 	private final FeedbackFacade feedbackFacade;
-	private final HashidsUtils hashidsUtils;
 
 	@Override
 	@PutMapping("/{messageId}/feedback")
 	public BaseResponse<UpsertFeedbackRes> upsertFeedback(
-		@PathVariable String messageId,
+		@PathVariable @DecodeHash Long messageId,
 		@Valid @RequestBody UpsertFeedbackReq req,
 		@AuthMember Member member
 	) {
-		Long realMessageId = hashidsUtils.decode(messageId);
-		UpsertFeedbackRes res = feedbackFacade.upsertFeedback(member, realMessageId, req.sentiment(), req.text());
+		UpsertFeedbackRes res = feedbackFacade.upsertFeedback(member, messageId, req.sentiment(), req.text());
 		return BaseResponse.success(res, "피드백이 등록되었습니다.");
 	}
 }
