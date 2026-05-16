@@ -174,7 +174,7 @@ public class JwtTokenProviderTest {
 			.willReturn(true);
 
 		// when & then
-		assertThatThrownBy(() -> provider.validateRefreshToken(refreshToken, userId))
+		assertThatThrownBy(() -> provider.validateRefreshToken(refreshToken))
 			.isInstanceOf(CustomJwtException.class)
 			.extracting("errorCode")
 			.isEqualTo(JwtErrorCode.CANNOT_REFRESH);
@@ -190,7 +190,7 @@ public class JwtTokenProviderTest {
 		String accessToken = provider.createAccessToken("member");
 
 		// when & then
-		assertThatThrownBy(() -> provider.validateRefreshToken(accessToken, "member-5"))
+		assertThatThrownBy(() -> provider.validateRefreshToken(accessToken))
 			.isInstanceOf(CustomJwtException.class)
 			.extracting("errorCode")
 			.isEqualTo(JwtErrorCode.INVALID_REFRESH);
@@ -211,7 +211,7 @@ public class JwtTokenProviderTest {
 			.willReturn("another-token");
 
 		// when & then
-		assertThatThrownBy(() -> provider.validateRefreshToken(refreshToken, userId))
+		assertThatThrownBy(() -> provider.validateRefreshToken(refreshToken))
 			.isInstanceOf(CustomJwtException.class)
 			.extracting("errorCode")
 			.isEqualTo(JwtErrorCode.INVALID_JWT_TOKEN);
@@ -231,7 +231,7 @@ public class JwtTokenProviderTest {
 		given(redisService.get(RedisKeyRegistry.REFRESH_TOKEN, userId)).willReturn(refreshToken);
 
 		// when & then
-		assertThatCode(() -> provider.validateRefreshToken(refreshToken, userId))
+		assertThatCode(() -> provider.validateRefreshToken(refreshToken))
 			.doesNotThrowAnyException();
 	}
 }

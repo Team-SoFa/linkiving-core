@@ -22,7 +22,10 @@ public abstract class SecurityConstants {
 		"/v1/member/signup", "/v1/member/login", "/mock/**",
 
 		/* oauth2 */
-		"/oauth2/**"
+		"/oauth2/**",
+
+		/* auth */
+		"/v1/auth/reissue"
 	};
 
 	private static final String[] SEMI_PERMIT_URLS = {
