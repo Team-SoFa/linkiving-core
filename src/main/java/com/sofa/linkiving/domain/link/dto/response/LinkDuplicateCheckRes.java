@@ -9,7 +9,7 @@ public record LinkDuplicateCheckRes(
 	@Schema(description = "URL 중복 여부", example = "true")
 	boolean exists,
 
-	@Schema(description = "중복된 링크 ID (exists가 true일 때만 반환)", example = "123")
+	@Schema(description = "중복된 링크 ID (exists가 true일 때만 반환)")
 	@JsonSerialize(using = HashidsSerializer.class)
 	Long linkId
 ) {

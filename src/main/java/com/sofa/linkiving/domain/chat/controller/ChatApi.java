@@ -10,7 +10,6 @@ import com.sofa.linkiving.domain.chat.dto.response.CreateChatRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.common.BaseResponse;
-import com.sofa.linkiving.global.config.annotation.DecodeHash;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -68,10 +67,8 @@ public interface ChatApi {
 	BaseResponse<MessagesRes> getMessages(
 		Member member,
 		@Parameter(description = "채팅방 ID")
-		@DecodeHash
 		Long chatId,
 		@Parameter(description = "페이징을 위한 마지막 메시지 ID, 첫 조회 시 null")
-		@DecodeHash
 		Long lastId,
 		@Parameter(description = "페이지 크기")
 		@Min(value = 1, message = "최소 1개 이상 조회해야 합니다.")
@@ -89,7 +86,7 @@ public interface ChatApi {
 	);
 
 	@Operation(summary = "링크 삭제", description = "해당 링크방과 채팅 기록을 전부 Hard Delete 진행합니다.")
-	BaseResponse<String> deleteChat(Member member, @DecodeHash Long chatId);
+	BaseResponse<String> deleteChat(Member member, @Parameter(description = "채팅방 ID") Long chatId);
 
 	void sendMessage(AnswerReq req, Member member);
 

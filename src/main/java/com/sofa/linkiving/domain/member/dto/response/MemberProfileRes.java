@@ -11,7 +11,7 @@ import lombok.Builder;
 
 @Builder
 public record MemberProfileRes(
-	@Schema(description = "회원 ID", example = "1")
+	@Schema(description = "회원 ID")
 	@JsonSerialize(using = HashidsSerializer.class)
 	Long id,
 	@Schema(description = "유저명", example = "Linkiving User")
