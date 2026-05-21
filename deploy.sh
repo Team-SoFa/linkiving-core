@@ -32,6 +32,19 @@ if ! ${COMPOSE} pull; then
 fi
 echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
 
+# Prometheus & Grafana 실행 (이미 실행 중이면 스킵)
+echo "모니터링 서비스 확인 중..."
+PROMETHEUS_RUNNING=$(sudo docker ps --filter "name=prometheus" --filter "status=running" -q)
+GRAFANA_RUNNING=$(sudo docker ps --filter "name=grafana" --filter "status=running" -q)
+
+if [ -z "$PROMETHEUS_RUNNING" ] || [ -z "$GRAFANA_RUNNING" ]; then
+    echo "모니터링 서비스 시작 중..."
+    ${COMPOSE} up -d prometheus grafana
+    echo "✅ Prometheus & Grafana가 시작되었습니다."
+else
+    echo "✅ 모니터링 서비스가 이미 실행 중입니다."
+fi
+
 echo "사용하지 않는 이미지 정리 중..."
 sudo docker image prune -f
 
