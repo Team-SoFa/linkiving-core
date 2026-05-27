@@ -11,7 +11,11 @@ REPO_ROOT="${SCRIPT_DIR}"
 COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 
 PROJECT="linkiving-core"
-COMPOSE="sudo docker compose -p ${PROJECT} -f ${COMPOSE_FILE}"
+DEPLOY_IMAGE_TAG="${IMAGE_TAG:-latest}"
+
+compose() {
+    sudo IMAGE_TAG="${DEPLOY_IMAGE_TAG}" docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
+}
 
 # compose 파일 존재 확인
 if [ ! -f "${COMPOSE_FILE}" ]; then
@@ -23,9 +27,10 @@ fi
 
 echo "✅ Using compose file: ${COMPOSE_FILE}"
 echo "✅ Using project name: ${PROJECT}"
+echo "✅ Using image tag: ${DEPLOY_IMAGE_TAG}"
 
 echo "이미지 업데이트 중..."
-if ! ${COMPOSE} pull; then
+if ! compose pull; then
     echo "❌ Docker 이미지 pull 실패! GitHub Actions 빌드를 확인해주세요."
     echo "❌ 배포를 중단합니다."
     exit 1
@@ -34,7 +39,7 @@ echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
 
 # Prometheus & Grafana 실행 (설정 변경 시 자동 반영)
 echo "모니터링 서비스 시작 중..."
-${COMPOSE} up -d prometheus grafana alertmanager
+compose up -d prometheus grafana alertmanager
 echo "✅ Prometheus & Grafana & Alertmanager가 시작되었습니다."
 
 echo "사용하지 않는 이미지 정리 중..."
@@ -45,14 +50,14 @@ EXIST_BLUE=$(sudo docker ps --filter "name=blue" --filter "status=running" -q)
 
 if [ -z "$EXIST_BLUE" ]; then
     echo "BLUE 컨테이너 실행"
-    ${COMPOSE} up -d blue
+    compose up -d blue
     BEFORE_COLOR="green"
     AFTER_COLOR="blue"
     BEFORE_PORT=8081
     AFTER_PORT=8080
 else
     echo "GREEN 컨테이너 실행"
-    ${COMPOSE} up -d green
+    compose up -d green
     BEFORE_COLOR="blue"
     AFTER_COLOR="green"
     BEFORE_PORT=8080
@@ -87,13 +92,13 @@ done
 # 헬스체크 실패 시 롤백
 if [ $HEALTH_CHECK_COUNT -eq $MAX_RETRY ]; then
     echo "❌ 서버가 정상적으로 구동되지 않았습니다. 롤백을 시작합니다."
-    ${COMPOSE} stop ${AFTER_COLOR}
-    ${COMPOSE} rm -f ${AFTER_COLOR}
+    compose stop "${AFTER_COLOR}"
+    compose rm -f "${AFTER_COLOR}"
 
     # 이전 컨테이너가 있다면 다시 시작
     if [ "${BEFORE_COLOR}" != "" ]; then
         echo "이전 ${BEFORE_COLOR} 컨테이너를 다시 시작합니다."
-        ${COMPOSE} up -d ${BEFORE_COLOR}
+        compose up -d "${BEFORE_COLOR}"
     fi
 
     echo "❌ 배포 실패 - 롤백 완료"
@@ -142,8 +147,8 @@ if [ "${BEFORE_COLOR}" != "" ]; then
     echo "이전 컨테이너 종료 전 30초 대기..."
     sleep 30
 
-    ${COMPOSE} stop ${BEFORE_COLOR} 2>/dev/null || true
-    ${COMPOSE} rm -f ${BEFORE_COLOR} 2>/dev/null || true
+    compose stop "${BEFORE_COLOR}" 2>/dev/null || true
+    compose rm -f "${BEFORE_COLOR}" 2>/dev/null || true
     echo "✅ 이전 ${BEFORE_COLOR} 컨테이너가 종료되었습니다."
 fi
 

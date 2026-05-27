@@ -38,6 +38,7 @@ out/
 !docker/prometheus.yml
 !docker/grafana/**/*.yml
 !docker/alerting/**/*.yml
+!docker/local-bundle/*.yml
 .editorconfig
 docker/alerting/smtp_password
 docker/alerting/discord_webhook
