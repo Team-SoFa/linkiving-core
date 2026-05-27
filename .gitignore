@@ -37,4 +37,5 @@ out/
 *.yml
 !docker/prometheus.yml
 !docker/grafana/**/*.yml
+!docker/local-bundle/*.yml
 .editorconfig
