@@ -25,10 +25,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(NoResourceFoundException.class)
 	public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException exception) {
-		if (exception.getResourcePath().contains("favicon")) {
-			return ResponseEntity.notFound().build();
-		}
-		log.error("No static resource {}", exception.getResourcePath(), exception);
+		log.debug("No static resource: {}", exception.getResourcePath());
 		return ResponseEntity.notFound().build();
 	}
 

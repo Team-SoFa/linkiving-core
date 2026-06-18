@@ -47,6 +47,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 	private static final Pattern JWT_PATTERN =
 		Pattern.compile("eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
 
+	private static final String[] SKIP_PATH_PREFIXES = {
+		"/actuator",
+		"/favicon.ico",
+		"/swagger",
+		"/v3/api-docs",
+		"/health-check"
+	};
+
 	private static final int MAX_BODY_LENGTH = 2000;
 
 	@Override
@@ -70,6 +78,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
 	private void logRequestDetails(HttpServletRequest request, ContentCachingResponseWrapper response, long startNs) {
 		String uri = request.getRequestURI();
+		if (shouldSkip(uri)) {
+			return;
+		}
 
 		long tookMs = (System.nanoTime() - startNs) / 1_000_000;
 		String query = maskQueryString(request.getQueryString());
@@ -87,6 +98,15 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 			log.debug("[API REQUEST BODY] {} {} body={}", request.getMethod(), uri, requestBody(request));
 			log.debug("[API HEADERS] {} {} {}", request.getMethod(), uri, maskedHeaders(request));
 		}
+	}
+
+	private boolean shouldSkip(String uri) {
+		for (String prefix : SKIP_PATH_PREFIXES) {
+			if (uri.startsWith(prefix)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private String maskQueryString(String queryString) {
@@ -174,5 +194,4 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 		masked = JWT_PATTERN.matcher(masked).replaceAll("***JWT***");
 		return masked;
 	}
-
 }
