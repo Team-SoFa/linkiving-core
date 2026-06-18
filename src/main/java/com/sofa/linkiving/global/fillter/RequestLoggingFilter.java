@@ -35,8 +35,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 		"password",
 		"accessToken",
 		"refreshToken",
-		"token",
-		"secret"
+		"token"
 	);
 
 	private static final Set<String> SENSITIVE_QUERY_PARAMS = Set.of(
@@ -97,6 +96,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 		if (log.isDebugEnabled()) {
 			log.debug("[API REQUEST BODY] {} {} body={}", request.getMethod(), uri, requestBody(request));
 			log.debug("[API HEADERS] {} {} {}", request.getMethod(), uri, maskedHeaders(request));
+			log.debug("[API RESPONSE] {} {} -> {} body={}", request.getMethod(), uri, response.getStatus(),
+				responseBody(response));
 		}
 	}
 
@@ -166,6 +167,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 			return formatBody(wrapper.getContentType(), wrapper.getContentAsByteArray());
 		}
 		return "(skipped, content-type=" + request.getContentType() + ")";
+	}
+
+	private String responseBody(ContentCachingResponseWrapper response) {
+		return formatBody(response.getContentType(), response.getContentAsByteArray());
 	}
 
 	private String formatBody(String contentType, byte[] content) {
