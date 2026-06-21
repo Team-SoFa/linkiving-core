@@ -187,6 +187,29 @@ public class ChatFacadeTest {
 	}
 
 	@Test
+	@DisplayName("채팅방 조회에 실패하면 비동기 작업을 시작하지 않고 에러 알림 전송")
+	void shouldSendErrorNotificationWhenChatLookupFails() {
+		// given
+		Long chatId = 999L;
+		String userMessage = "질문입니다";
+		member = mock(Member.class);
+		given(member.getEmail()).willReturn("test@test.com");
+		given(chatService.getChat(chatId, member)).willThrow(new RuntimeException("chat not found"));
+
+		// when
+		chatFacade.generateAnswer(chatId, member, userMessage);
+
+		// then
+		verify(ragChatService, never()).generateAnswer(anyLong(), any(), anyString());
+		verify(taskManager, never()).put(anyLong(), any());
+		verify(messagingTemplate).convertAndSendToUser(
+			eq(member.getEmail()),
+			eq("/queue/chat"),
+			any(AnswerRes.class)
+		);
+	}
+
+	@Test
 	@DisplayName("답변 생성 중 예외가 발생하면 에러 알림 전송")
 	void shouldSendErrorNotificationWhenExceptionOccurs() {
 		// given

@@ -48,11 +48,11 @@ public class ChatRepositoryTest {
 	}
 
 	@Test
-	@DisplayName("메시지가 있는 채팅방만 조회되며, 최신 메시지 순으로 정렬됨")
-	void shouldReturnOnlyChatsWithMessagesOrderByLastMessageTime() throws InterruptedException {
+	@DisplayName("빈 채팅방도 조회되며, 마지막 메시지 또는 생성 시각 기준으로 최신순 정렬됨")
+	void shouldReturnChatsIncludingEmptyRoomsOrderByLastActivity() throws InterruptedException {
 		// given
 
-		// 메시지 없는 채팅방 -> 조회되지 않아야 함
+		// 메시지 없는 채팅방 -> 생성 시각 기준으로 함께 조회되어야 함
 		chatRepository.save(Chat
 			.builder()
 			.member(member)
@@ -90,9 +90,10 @@ public class ChatRepositoryTest {
 		List<Chat> result = chatRepository.findAllByMemberOrderByLastMessageDesc(member);
 
 		// then
-		assertThat(result).hasSize(2);
+		assertThat(result).hasSize(3);
 		assertThat(result.get(0).getTitle()).isEqualTo("New Msg Chat");
 		assertThat(result.get(1).getTitle()).isEqualTo("Old Msg Chat");
+		assertThat(result.get(2).getTitle()).isEqualTo("No Msg Chat");
 	}
 
 	@Test
