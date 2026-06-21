@@ -6,7 +6,7 @@ public abstract class SecurityConstants {
 		"/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources", "/swagger-resources/**",
 
 		/* actuator */
-		"/actuator/health",
+		"/actuator/health/**",
 		"/actuator/prometheus",
 
 		/* health check */
