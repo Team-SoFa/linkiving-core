@@ -34,8 +34,8 @@ echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
 
 # Prometheus & Grafana 실행 (설정 변경 시 자동 반영)
 echo "모니터링 서비스 시작 중..."
-${COMPOSE} up -d prometheus grafana
-echo "✅ Prometheus & Grafana가 시작되었습니다."
+${COMPOSE} up -d prometheus grafana alertmanager
+echo "✅ Prometheus & Grafana & Alertmanager가 시작되었습니다."
 
 echo "사용하지 않는 이미지 정리 중..."
 sudo docker image prune -f
