@@ -19,6 +19,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -73,56 +74,64 @@ public class SummaryWorker {
 	}
 
 	private void processQueue() throws InterruptedException {
-		Optional<Long> linkIdOpt = summaryQueue.pollFromQueue();
+		Optional<SummaryTask> taskOpt = summaryQueue.pollTaskFromQueue();
 
-		if (linkIdOpt.isEmpty()) {
+		if (taskOpt.isEmpty()) {
 			Thread.sleep(properties.sleepDuration().toMillis());
 			return;
 		}
 
-		Long linkId = linkIdOpt.get();
-		String userEmail = null;
-		log.info("Processing link for summary - linkId: {}", linkId);
-
-		try {
-			Link link = summaryWorkerFacade.getLinkWithMember(linkId);
-			userEmail = link.getMember().getEmail();
-
-			if (link.getSummaryStatus() != SummaryStatus.PENDING) {
-				log.warn("Link is not in PENDING state. Skipping summary generation - linkId: {}", linkId);
-				return;
-			}
-
-			summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
-			eventPublisher.publishEvent(new SummaryStatusEvent(
-				userEmail,
-				SummaryStatusRes.of(linkId, SummaryStatus.PROCESSING)
-			));
-
-			RagInitialSummaryRes res = selfProvider.getObject().callAiServerWithRetry(link);
-
-			Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
-			if (summary != null) {
-				eventPublisher.publishEvent(new SummaryStatusEvent(
-					userEmail,
-					SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
-				));
-			}
-		} catch (Exception e) {
-			log.error("Failed to generate summary for linkId: {}", linkId, e);
+		SummaryTask task = taskOpt.get();
+		Long linkId = task.linkId();
+		try (LogContext.MdcScope ignored = LogContext.restore(task.logContext());
+			LogContext.MdcScope linkScope = LogContext.withLinkId(linkId)) {
+			String userEmail = null;
+			log.info("Processing link for summary - linkId: {}", linkId);
 
 			try {
-				Link linkToFail = summaryWorkerFacade.getLinkWithMember(linkId);
-				summaryWorkerFacade.updateSummaryStatus(linkToFail.getId(), SummaryStatus.FAILED);
-			} catch (Exception innerEx) {
-				log.error("Failed to update status to FAILED - linkId: {}", linkId, innerEx);
-			}
+				Link link = summaryWorkerFacade.getLinkWithMember(linkId);
+				userEmail = link.getMember().getEmail();
+				LogContext.put(LogContext.MEMBER_ID, link.getMember().getId());
 
-			if (userEmail != null) {
+				if (link.getSummaryStatus() != SummaryStatus.PENDING) {
+					log.warn("Link is not in PENDING state. Skipping summary generation - linkId: {}", linkId);
+					return;
+				}
+
+				summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
 				eventPublisher.publishEvent(new SummaryStatusEvent(
 					userEmail,
-					SummaryStatusRes.failed(linkId, "Failed to communicate with the AI server (Retry limit exceeded).")
+					SummaryStatusRes.of(linkId, SummaryStatus.PROCESSING)
 				));
+
+				RagInitialSummaryRes res = selfProvider.getObject().callAiServerWithRetry(link);
+
+				Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
+				if (summary != null) {
+					eventPublisher.publishEvent(new SummaryStatusEvent(
+						userEmail,
+						SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
+					));
+				}
+			} catch (Exception e) {
+				log.error("Failed to generate summary for linkId: {}", linkId, e);
+
+				try {
+					Link linkToFail = summaryWorkerFacade.getLinkWithMember(linkId);
+					summaryWorkerFacade.updateSummaryStatus(linkToFail.getId(), SummaryStatus.FAILED);
+				} catch (Exception innerEx) {
+					log.error("Failed to update status to FAILED - linkId: {}", linkId, innerEx);
+				}
+
+				if (userEmail != null) {
+					eventPublisher.publishEvent(new SummaryStatusEvent(
+						userEmail,
+						SummaryStatusRes.failed(
+							linkId,
+							"Failed to communicate with the AI server (Retry limit exceeded)."
+						)
+					));
+				}
 			}
 		}
 	}

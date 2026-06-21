@@ -12,6 +12,7 @@ import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.global.error.code.CommonErrorCode;
 import com.sofa.linkiving.global.error.code.ErrorCode;
 import com.sofa.linkiving.global.error.util.ErrorResponse;
+import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +46,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 		if (response.isCommitted()) {
 			return;
 		}
+		AuditLogger.warn("event=authentication result=FAILED code={} status={}", errorCode.getCode(),
+			errorCode.getStatus().value());
 		ResponseEntity<BaseResponse<String>> entity = ErrorResponse.build(errorCode);
 
 		response.setStatus(errorCode.getStatus().value());
