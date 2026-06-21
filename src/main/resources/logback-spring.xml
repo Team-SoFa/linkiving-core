@@ -55,6 +55,9 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ROLLING_FILE"/>
         </root>
+        <logger level="OFF" name="org.hibernate.SQL"/>
+        <logger level="OFF" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
+        <logger level="OFF" name="org.hibernate.orm.jdbc.bind"/>
     </springProfile>
 
 </configuration>
