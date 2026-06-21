@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.security.jwt.JwtKeys;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
@@ -72,6 +73,7 @@ public class StompHandler implements ChannelInterceptor {
 
 				} catch (BusinessException e) {
 					log.warn("웹소켓 인증/만료 에러 차단: {}", e.getMessage());
+					AuditLogger.warn("event=websocket_auth result=FAILED message={}", e.getMessage());
 					throw new MessagingException(e.getMessage());
 
 				} catch (Exception e) {

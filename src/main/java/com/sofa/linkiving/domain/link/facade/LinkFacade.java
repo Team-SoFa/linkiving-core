@@ -29,6 +29,7 @@ import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,7 +49,7 @@ public class LinkFacade {
 		String storedImageUrl = processImageUpload(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
-		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail()));
+		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail(), LogContext.snapshot()));
 		eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
 
 		return LinkRes.from(link);
@@ -155,7 +156,7 @@ public class LinkFacade {
 
 	public void retrySummary(Long id, Member member) {
 		linkService.resetSummaryStatusForRetry(id, member);
-		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getEmail()));
+		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getEmail(), LogContext.snapshot()));
 	}
 
 	@Transactional(readOnly = true)

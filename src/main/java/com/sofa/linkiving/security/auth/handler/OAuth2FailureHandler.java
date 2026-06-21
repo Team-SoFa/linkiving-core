@@ -11,6 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.sofa.linkiving.global.error.code.ErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.security.auth.code.AuthErrorCode;
 import com.sofa.linkiving.security.auth.config.OAuth2Properties;
 
@@ -48,6 +49,12 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
 		String targetUrl = UriComponentsBuilder.fromUriString(oauth2Properties.failureRedirectUrl())
 			.queryParam("code", errorCode.getCode())
 			.build().toUriString();
+
+		AuditLogger.warn(
+			"event=oauth2_login result=FAILED code={} path={}",
+			errorCode.getCode(),
+			request.getRequestURI()
+		);
 
 		getRedirectStrategy().sendRedirect(request, response, targetUrl);
 	}

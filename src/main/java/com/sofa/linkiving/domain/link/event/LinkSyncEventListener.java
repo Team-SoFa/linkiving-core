@@ -13,6 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.sofa.linkiving.domain.link.ai.LinkSyncClient;
 import com.sofa.linkiving.domain.link.enums.SyncAction;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,20 +49,25 @@ public class LinkSyncEventListener {
 	)
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkSyncEvent(LinkSyncEvent event) {
-		log.info("AI 서버 동기화 비동기 실행 시도 - action: {}, linkId: {}", event.action(), event.req().linkId());
+		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
+			LogContext.MdcScope linkScope = LogContext.withLinkId(event.req().linkId())) {
+			log.info("AI 서버 동기화 비동기 실행 시도 - action: {}, linkId: {}", event.action(), event.req().linkId());
 
-		switch (event.action()) {
-			case CREATE -> linkSyncClient.syncCreate(event.req());
-			case UPDATE -> linkSyncClient.syncUpdate(event.req());
-			case DELETE -> linkSyncClient.syncDelete(event.req().linkId());
+			switch (event.action()) {
+				case CREATE -> linkSyncClient.syncCreate(event.req());
+				case UPDATE -> linkSyncClient.syncUpdate(event.req());
+				case DELETE -> linkSyncClient.syncDelete(event.req().linkId());
+			}
 		}
 	}
 
 	@Recover
 	public void recover(Exception exception, LinkSyncEvent event) {
-		log.error("[CRITICAL] AI 서버 동기화 최종 실패. 수동 복구 필요 - action: {}, linkId: {}",
-			event.action(), event.req().linkId(), exception);
-
-		failureCounters.get(event.action()).increment();
+		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
+			LogContext.MdcScope linkScope = LogContext.withLinkId(event.req().linkId())) {
+			log.error("[CRITICAL] AI 서버 동기화 최종 실패. 수동 복구 필요 - action: {}, linkId: {}",
+				event.action(), event.req().linkId(), exception);
+			failureCounters.get(event.action()).increment();
+		}
 	}
 }
