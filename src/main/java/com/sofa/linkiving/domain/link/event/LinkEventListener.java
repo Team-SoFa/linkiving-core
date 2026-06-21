@@ -13,6 +13,7 @@ import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,14 +49,17 @@ public class LinkEventListener {
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
-		eventPublisher.publishEvent(new SummaryStatusEvent(
-			event.email(),
-			SummaryStatusRes.of(event.linkId(), SummaryStatus.PENDING)
-		));
+		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
+			LogContext.MdcScope linkScope = LogContext.withLinkId(event.linkId())) {
+			eventPublisher.publishEvent(new SummaryStatusEvent(
+				event.email(),
+				SummaryStatusRes.of(event.linkId(), SummaryStatus.PENDING)
+			));
 
-		selfProvider.getObject().addToQueueWithRetry(event);
+			selfProvider.getObject().addToQueueWithRetry(event);
 
-		log.info("Link created event received & queued async - linkId: {}", event.linkId());
+			log.info("Link created event received & queued async - linkId: {}", event.linkId());
+		}
 
 	}
 
@@ -76,16 +80,17 @@ public class LinkEventListener {
 	 */
 	@Recover
 	public void recover(Exception exception, LinkCreatedEvent event) {
-		log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
+		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
+			LogContext.MdcScope linkScope = LogContext.withLinkId(event.linkId())) {
+			log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
+			enqueueFailureCounter.increment();
+			summaryWorkerFacade.updateSummaryStatus(event.linkId(), SummaryStatus.FAILED);
 
-		enqueueFailureCounter.increment();
-
-		summaryWorkerFacade.updateSummaryStatus(event.linkId(), SummaryStatus.FAILED);
-
-		eventPublisher.publishEvent(new SummaryStatusEvent(
-			event.email(),
-			SummaryStatusRes.failed(event.linkId(), "요약 대기열 등록에 실패했습니다.")
-		));
-		// TODO: 관리자 알림, 슬랙 발송 또는 실패 큐 적재 등 후속 처리
+			eventPublisher.publishEvent(new SummaryStatusEvent(
+				event.email(),
+				SummaryStatusRes.failed(event.linkId(), "요약 대기열 등록에 실패했습니다.")
+			));
+			// TODO: 관리자 알림, 슬랙 발송 또는 실패 큐 적재 등 후속 처리
+		}
 	}
 }

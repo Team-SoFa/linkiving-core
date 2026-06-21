@@ -21,6 +21,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,36 +39,39 @@ public class RagChatService {
 	@Async
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public CompletableFuture<AnswerRes> generateAnswer(Long chatId, Member member, String userMessage) {
+		try (LogContext.MdcScope memberScope = LogContext.withMemberId(member.getId());
+			LogContext.MdcScope chatScope = LogContext.withChatId(chatId)) {
 
-		Chat chat = chatQueryService.findChat(chatId, member);
+			Chat chat = chatQueryService.findChat(chatId, member);
 
-		Message question = messageCommandService.saveUserMessage(chat, userMessage);
-		List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
-			question.getId(), chat);
-		Collections.reverse(history);
+			Message question = messageCommandService.saveUserMessage(chat, userMessage);
+			List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
+				question.getId(), chat);
+			Collections.reverse(history);
 
-		RagAnswerReq request = RagAnswerReq.of(
-			member.getId(),
-			userMessage,
-			history,
-			Mode.DETAILED
-		);
+			RagAnswerReq request = RagAnswerReq.of(
+				member.getId(),
+				userMessage,
+				history,
+				Mode.DETAILED
+			);
 
-		RagAnswerRes res = answerClient.generateAnswer(request);
+			RagAnswerRes res = answerClient.generateAnswer(request);
 
-		String fullAnswer = res.answer();
+			String fullAnswer = res.answer();
 
-		List<Long> linkIds = parseLinkIds(res.linkIds());
-		List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
-		List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
+			List<Long> linkIds = parseLinkIds(res.linkIds());
+			List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
+			List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
 
-		List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
+			List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
 
-		Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, links);
+			Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, links);
 
-		AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
+			AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
 
-		return CompletableFuture.completedFuture(payload);
+			return CompletableFuture.completedFuture(payload);
+		}
 
 	}
 

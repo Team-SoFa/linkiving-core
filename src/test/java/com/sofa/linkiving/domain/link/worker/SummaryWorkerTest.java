@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -76,6 +77,10 @@ class SummaryWorkerTest {
 		summaryWorker.stopWorker();
 	}
 
+	private SummaryTask task(Long linkId) {
+		return new SummaryTask(linkId, Map.of());
+	}
+
 	@Test
 	@DisplayName("워커 실행 시 메인 쓰레드가 차단되지 않고 백그라운드 쓰레드(summary-worker)에서 동작함")
 	void shouldRunInBackgroundThread() {
@@ -83,7 +88,7 @@ class SummaryWorkerTest {
 		String mainThreadName = Thread.currentThread().getName();
 		String[] workerThreadName = new String[1];
 
-		given(summaryQueue.pollFromQueue()).willAnswer(invocation -> {
+		given(summaryQueue.pollTaskFromQueue()).willAnswer(invocation -> {
 			workerThreadName[0] = Thread.currentThread().getName();
 			return Optional.empty();
 		});
@@ -92,7 +97,7 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
-		verify(summaryQueue, timeout(1000).atLeastOnce()).pollFromQueue();
+		verify(summaryQueue, timeout(1000).atLeastOnce()).pollTaskFromQueue();
 
 		assertThat(workerThreadName[0]).isNotNull();
 		assertThat(workerThreadName[0]).isNotEqualTo(mainThreadName);
@@ -103,7 +108,7 @@ class SummaryWorkerTest {
 	@DisplayName("워커 루프 내부에서 예상치 못한 예외 발생 시 에러를 로깅하고 루프를 계속 실행함")
 	void shouldCatchExceptionAndContinueLoop_WhenUnexpectedErrorOccurs() {
 		// given
-		given(summaryQueue.pollFromQueue())
+		given(summaryQueue.pollTaskFromQueue())
 			.willThrow(new RuntimeException("Unexpected Error"))
 			.willReturn(Optional.empty());
 
@@ -111,15 +116,15 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
-		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
+		verify(summaryQueue, timeout(1000).atLeast(2)).pollTaskFromQueue();
 	}
 
 	@Test
 	@DisplayName("PENDING 상태가 아닌 링크는 AI 요약을 건너뛴다")
 	void shouldSkipIfNotPending() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
@@ -138,8 +143,8 @@ class SummaryWorkerTest {
 	void shouldProcessLinkAndSaveSummary() {
 		// given
 		Long linkId = 1L;
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(linkId))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(linkId)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(linkId)).willReturn(mockLink);
@@ -164,8 +169,8 @@ class SummaryWorkerTest {
 	void shouldContinueWorking_WhenExceptionOccurs() {
 		// given
 		Long linkId = 3L;
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(linkId))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(linkId)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(linkId)).willThrow(new RuntimeException("DB Connection Error"));
@@ -175,7 +180,7 @@ class SummaryWorkerTest {
 
 		// then
 		verify(summaryWorkerFacade, timeout(1000).times(2)).getLinkWithMember(linkId);
-		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
+		verify(summaryQueue, timeout(1000).atLeast(2)).pollTaskFromQueue();
 		verify(summaryWorkerFacade, never()).createInitialSummaryAndUpdateStatus(any(), any());
 	}
 
@@ -183,13 +188,13 @@ class SummaryWorkerTest {
 	@DisplayName("큐가 비어있으면 지정된 시간만큼 Sleep 후 다시 확인")
 	void shouldSleepAndRetry_WhenQueueIsEmpty() {
 		// given
-		given(summaryQueue.pollFromQueue()).willReturn(Optional.empty());
+		given(summaryQueue.pollTaskFromQueue()).willReturn(Optional.empty());
 
 		// when
 		summaryWorker.startWorker();
 
 		// then
-		verify(summaryQueue, timeout(500).atLeast(3)).pollFromQueue();
+		verify(summaryQueue, timeout(500).atLeast(3)).pollTaskFromQueue();
 	}
 
 	@Test
@@ -199,9 +204,9 @@ class SummaryWorkerTest {
 		Long linkId1 = 10L;
 		Long linkId2 = 20L;
 
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(linkId1))
-			.willReturn(Optional.of(linkId2))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(linkId1)))
+			.willReturn(Optional.of(task(linkId2)))
 			.willReturn(Optional.empty());
 
 		Link link1 = mock(Link.class);
@@ -244,8 +249,8 @@ class SummaryWorkerTest {
 	@DisplayName("정상 처리 시 PROCESSING 및 COMPLETED 이벤트를 순차적으로 발행함")
 	void shouldPublishProcessingAndCompletedEvents_WhenSuccess() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
@@ -274,8 +279,8 @@ class SummaryWorkerTest {
 	@DisplayName("AI 응답이 null일 경우 예외가 발생하여 FAILED 이벤트를 발행함")
 	void shouldPublishFailedEvent_WhenAiResponseIsNull() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
@@ -300,8 +305,8 @@ class SummaryWorkerTest {
 	@DisplayName("처리 중 내부 예외 발생 시 FAILED 이벤트를 발행함")
 	void shouldPublishFailedEvent_WhenExceptionOccurs() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
@@ -327,8 +332,8 @@ class SummaryWorkerTest {
 	@DisplayName("Facade에서 요약 생성 결과가 null일 경우 COMPLETED 이벤트를 발행하지 않는다")
 	void shouldNotPublishCompletedEvent_WhenFacadeReturnsNull() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
@@ -353,8 +358,8 @@ class SummaryWorkerTest {
 	@DisplayName("userEmail 추출 전(조회 단계) 예외가 발생하면 웹소켓 이벤트 발행 없이 루프를 계속한다")
 	void shouldNotPublishEvent_WhenExceptionOccursBeforeEmailExtraction() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willThrow(new RuntimeException("DB Connection Error"));
@@ -364,15 +369,15 @@ class SummaryWorkerTest {
 
 		// then
 		verify(eventPublisher, after(500).never()).publishEvent(any());
-		verify(summaryQueue, timeout(1000).atLeast(2)).pollFromQueue();
+		verify(summaryQueue, timeout(1000).atLeast(2)).pollTaskFromQueue();
 	}
 
 	@Test
 	@DisplayName("예외 복구(catch) 중 DB 상태 업데이트(inner catch)에 실패해도 FAILED 이벤트는 정상 발행된다")
 	void shouldPublishFailedEvent_EvenIfInnerStatusUpdateFails() {
 		// given
-		given(summaryQueue.pollFromQueue())
-			.willReturn(Optional.of(1L))
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
 			.willReturn(Optional.empty());
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);

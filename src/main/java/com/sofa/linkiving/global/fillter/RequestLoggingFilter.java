@@ -4,12 +4,18 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
+
+import com.sofa.linkiving.global.logging.AccessLogger;
+import com.sofa.linkiving.global.logging.LogContext;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
 	private static final Set<String> SENSITIVE_HEADERS = Set.of(
@@ -59,44 +66,53 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 		throws ServletException, IOException {
-
 		HttpServletRequest requestToUse = isLoggableBody(request.getContentType())
 			? new ContentCachingRequestWrapper(request)
 			: request;
 
 		ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
 
-		long startNs = System.nanoTime();
-		try {
+		long startedAt = System.nanoTime();
+		String requestId = resolveRequestId(request);
+		String traceId = resolveTraceId(request, requestId);
+
+		try (LogContext.MdcScope ignored = LogContext.withRequest(requestId, traceId)) {
 			filterChain.doFilter(requestToUse, responseWrapper);
 		} finally {
-			logRequestDetails(requestToUse, responseWrapper, startNs);
+			logRequestDetails(requestToUse, responseWrapper, startedAt);
 			responseWrapper.copyBodyToResponse();
 		}
 	}
 
-	private void logRequestDetails(HttpServletRequest request, ContentCachingResponseWrapper response, long startNs) {
+	private void logRequestDetails(HttpServletRequest request, ContentCachingResponseWrapper response, long startedAt) {
 		String uri = request.getRequestURI();
 		if (shouldSkip(uri)) {
 			return;
 		}
 
-		long tookMs = (System.nanoTime() - startNs) / 1_000_000;
-		String query = maskQueryString(request.getQueryString());
-
-		log.info("[API] {} {}{} -> {} ({}ms) ip={} ua=\"{}\"",
+		long latencyMs = (System.nanoTime() - startedAt) / 1_000_000;
+		AccessLogger.info(
+			"requestId={} method={} path={} status={} latencyMs={}",
+			LogContext.snapshot().get(LogContext.REQUEST_ID),
 			request.getMethod(),
 			uri,
-			query,
 			response.getStatus(),
-			tookMs,
-			clientIp(request),
-			request.getHeader("User-Agent"));
+			latencyMs
+		);
 
 		if (log.isDebugEnabled()) {
-			log.debug("[API REQUEST BODY] {} {} body={}", request.getMethod(), uri, requestBody(request));
-			log.debug("[API HEADERS] {} {} {}", request.getMethod(), uri, maskedHeaders(request));
-			log.debug("[API RESPONSE] {} {} -> {} body={}", request.getMethod(), uri, response.getStatus(),
+			String uriWithQuery = uri + maskQueryString(request.getQueryString());
+			log.debug("[API REQUEST BODY] {} {} body={}", request.getMethod(), uriWithQuery, requestBody(request));
+			log.debug("[API HEADERS] {} {} ip={} ua=\"{}\" {}",
+				request.getMethod(),
+				uriWithQuery,
+				clientIp(request),
+				request.getHeader("User-Agent"),
+				maskedHeaders(request));
+			log.debug("[API RESPONSE] {} {} -> {} body={}",
+				request.getMethod(),
+				uriWithQuery,
+				response.getStatus(),
 				responseBody(response));
 		}
 	}
@@ -108,6 +124,36 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 			}
 		}
 		return false;
+	}
+
+	private String resolveRequestId(HttpServletRequest request) {
+		String requestId = request.getHeader("X-Request-Id");
+		if (hasText(requestId)) {
+			return requestId;
+		}
+		return UUID.randomUUID().toString();
+	}
+
+	private String resolveTraceId(HttpServletRequest request, String fallback) {
+		String traceparent = request.getHeader("traceparent");
+		if (hasText(traceparent)) {
+			String[] parts = traceparent.split("-");
+			if (parts.length >= 2 && hasText(parts[1])) {
+				return parts[1];
+			}
+		}
+
+		String xB3TraceId = request.getHeader("X-B3-TraceId");
+		if (hasText(xB3TraceId)) {
+			return xB3TraceId;
+		}
+
+		String xTraceId = request.getHeader("X-Trace-Id");
+		if (hasText(xTraceId)) {
+			return xTraceId;
+		}
+
+		return fallback;
 	}
 
 	private String maskQueryString(String queryString) {
@@ -198,5 +244,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 		}
 		masked = JWT_PATTERN.matcher(masked).replaceAll("***JWT***");
 		return masked;
+	}
+
+	private boolean hasText(String value) {
+		return value != null && !value.isBlank();
 	}
 }
