@@ -1,6 +1,4 @@
 # docker-compose.yml
-version: '3.8'
-
 services:
   blue:
     image: linkivingsofa/core:latest
@@ -63,8 +61,6 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=3d'
       - '--web.enable-lifecycle'
-    ports:
-      - '9090:9090'
     restart: unless-stopped
     networks:
       - app-network
