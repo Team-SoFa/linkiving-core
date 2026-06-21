@@ -29,6 +29,9 @@ import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SummaryWorker 단위 테스트")
 class SummaryWorkerTest {
@@ -44,15 +47,17 @@ class SummaryWorkerTest {
 	@Mock
 	private ObjectProvider<SummaryWorker> selfProvider;
 
+	private MeterRegistry meterRegistry;
 	private SummaryWorker summaryWorker;
 	private Link mockLink;
 	private Member mockMember;
 
 	@BeforeEach
 	void setUp() {
+		meterRegistry = new SimpleMeterRegistry();
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
 		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher,
-			selfProvider);
+			selfProvider, meterRegistry);
 
 		mockLink = mock(Link.class);
 		mockMember = mock(Member.class);

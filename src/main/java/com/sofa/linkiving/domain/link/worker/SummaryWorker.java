@@ -20,6 +20,8 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -37,12 +39,17 @@ public class SummaryWorker {
 	private final SummaryClient summaryClient;
 	private final ApplicationEventPublisher eventPublisher;
 	private final ObjectProvider<SummaryWorker> selfProvider;
-
+	private final MeterRegistry meterRegistry;
+	private Counter generateFailureCounter;
 	private volatile boolean running = true;
 	private Thread workerThread;
 
 	@PostConstruct
 	public void startWorker() {
+		this.generateFailureCounter = Counter.builder("async.task.failures")
+			.tag("task", "summary-generate")
+			.register(meterRegistry);
+
 		workerThread = new Thread(() -> {
 			log.info("Summary worker thread started");
 			while (running) {
@@ -110,6 +117,8 @@ public class SummaryWorker {
 			}
 		} catch (Exception e) {
 			log.error("Failed to generate summary for linkId: {}", linkId, e);
+
+			generateFailureCounter.increment();
 
 			try {
 				Link linkToFail = summaryWorkerFacade.getLinkWithMember(linkId);
