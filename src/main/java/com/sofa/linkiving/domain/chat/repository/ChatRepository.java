@@ -16,10 +16,10 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 	@Query("""
 		SELECT c
 		FROM Chat c
-		JOIN Message m ON m.chat = c
+		LEFT JOIN Message m ON m.chat = c
 		WHERE c.member = :member
 		GROUP BY c
-		ORDER BY MAX(m.createdAt) DESC
+		ORDER BY COALESCE(MAX(m.createdAt), c.createdAt) DESC
 		""")
 	List<Chat> findAllByMemberOrderByLastMessageDesc(@Param("member") Member member);
 
