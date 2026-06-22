@@ -5,6 +5,10 @@ public abstract class SecurityConstants {
 		/* swagger */
 		"/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources", "/swagger-resources/**",
 
+		/* actuator */
+		"/actuator/health",
+		"/actuator/prometheus",
+
 		/* health check */
 		"/health-check",
 
