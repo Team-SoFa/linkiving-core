@@ -25,10 +25,7 @@ public abstract class SecurityConstants {
 		"/oauth2/**",
 
 		/* auth */
-		"/v1/auth/reissue",
-
-		/* websocket handshake */
-		"/ws/chat/**", "/ws/link/**"
+		"/v1/auth/reissue"
 	};
 
 	private static final String[] SEMI_PERMIT_URLS = {

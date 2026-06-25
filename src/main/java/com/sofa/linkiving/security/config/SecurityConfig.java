@@ -91,14 +91,7 @@ public class SecurityConfig {
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true);
 
-		CorsConfiguration webSocketConfig = new CorsConfiguration();
-		webSocketConfig.setAllowedOriginPatterns(List.of("*"));
-		webSocketConfig.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-		webSocketConfig.setAllowedHeaders(List.of("*"));
-		webSocketConfig.setAllowCredentials(true);
-
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/ws/**", webSocketConfig);
 		source.registerCorsConfiguration("/**", config);
 		return source;
 	}

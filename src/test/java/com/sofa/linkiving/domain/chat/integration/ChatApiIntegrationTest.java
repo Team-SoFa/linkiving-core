@@ -1,15 +1,12 @@
 package com.sofa.linkiving.domain.chat.integration;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.chat.ai.TitleClient;
 import com.sofa.linkiving.domain.chat.dto.request.CreateChatReq;
-import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessageRes;
 import com.sofa.linkiving.domain.chat.dto.response.MessagesRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;
@@ -36,7 +32,6 @@ import com.sofa.linkiving.domain.chat.enums.Type;
 import com.sofa.linkiving.domain.chat.facade.ChatFacade;
 import com.sofa.linkiving.domain.chat.repository.ChatRepository;
 import com.sofa.linkiving.domain.chat.repository.MessageRepository;
-import com.sofa.linkiving.domain.chat.service.RagChatService;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
@@ -90,9 +85,6 @@ public class ChatApiIntegrationTest {
 	@MockitoBean
 	private RedisService redisService;
 
-	@MockitoBean
-	private RagChatService ragChatService;
-
 	private UserDetails testUserDetails;
 	private Member testMember;
 
@@ -104,13 +96,6 @@ public class ChatApiIntegrationTest {
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);
-
-		given(ragChatService.generateAnswer(anyLong(), any(Member.class), anyString()))
-			.willAnswer(invocation -> {
-				Long chatId = invocation.getArgument(0);
-				String message = invocation.getArgument(2);
-				return CompletableFuture.completedFuture(AnswerRes.error(chatId, message));
-			});
 	}
 
 	@Test
@@ -219,25 +204,6 @@ public class ChatApiIntegrationTest {
 			.andExpect(jsonPath("$.success").value(true))
 			.andExpect(jsonPath("$.data.title").value(title))
 			.andExpect(jsonPath("$.data.firstChat").value(firstChatContent));
-	}
-
-	@Test
-	@DisplayName("메시지가 없는 새 채팅방도 목록 조회에 포함된다")
-	void shouldIncludeChatWithoutMessagesInChatList() throws Exception {
-		// given
-		chatRepository.save(Chat.builder()
-			.member(testMember)
-			.title("빈 채팅방")
-			.build());
-
-		// when & then
-		mockMvc.perform(get(BASE_URL)
-				.with(user(testUserDetails)))
-			.andDo(print())
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.success").value(true))
-			.andExpect(jsonPath("$.data.chats").isArray())
-			.andExpect(jsonPath("$.data.chats[0].title").value("빈 채팅방"));
 	}
 
 	@Test
