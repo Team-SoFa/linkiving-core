@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.chat.ai.TitleClient;
@@ -66,34 +65,25 @@ public class ChatFacade {
 		chatService.delete(chat);
 	}
 
-	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	@Transactional
 	public void generateAnswer(Long chatId, Member member, String message) {
-		try {
-			chatService.getChat(chatId, member);
-		} catch (RuntimeException ex) {
-			log.error("채팅 답변 시작 중 오류 발생 - chatId: {}, error: {}", chatId, ex.getMessage(), ex);
-			sendNotification(chatId, member, AnswerRes.error(chatId, message));
-			return;
-		}
 
-		Long effectiveChatId = chatId;
+		CompletableFuture<AnswerRes> task = ragChatService.generateAnswer(chatId, member, message);
 
-		CompletableFuture<AnswerRes> task = ragChatService.generateAnswer(effectiveChatId, member, message);
-
-		taskManager.put(effectiveChatId, task);
+		taskManager.put(chatId, task);
 
 		task.whenComplete((result, ex) -> {
-			taskManager.remove(effectiveChatId);
+			taskManager.remove(chatId);
 
 			if (task.isCancelled() || ex != null) {
 
 				if (ex != null) {
-					log.error("AI 답변 생성 중 오류 발생 - chatId: {}, error: {}", effectiveChatId, ex.getMessage(), ex);
+					log.error("AI 답변 생성 중 오류 발생 - chatId: {}, error: {}", chatId, ex.getMessage(), ex);
 				} else {
-					log.info("AI 답변 생성 작업 취소됨 - chatId: {}", effectiveChatId);
+					log.info("AI 답변 생성 작업 취소됨 - chatId: {}", chatId);
 				}
 
-				sendNotification(effectiveChatId, member, AnswerRes.error(effectiveChatId, message));
+				sendNotification(chatId, member, AnswerRes.error(chatId, message));
 				return;
 			}
 
@@ -102,8 +92,8 @@ public class ChatFacade {
 				return;
 			}
 
-			log.error("AI 답변 생성 결과가 null 입니다 - chatId: {}", effectiveChatId);
-			sendNotification(effectiveChatId, member, AnswerRes.error(effectiveChatId, message));
+			log.error("AI 답변 생성 결과가 null 입니다 - chatId: {}", chatId);
+			sendNotification(chatId, member, AnswerRes.error(chatId, message));
 		});
 	}
 
