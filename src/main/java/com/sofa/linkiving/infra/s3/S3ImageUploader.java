@@ -80,7 +80,8 @@ public class S3ImageUploader implements ImageUploader {
 			log.warn("Invalid image URL skipping upload: {}", originalUrl);
 			return normalizedDefaultImageUrl();
 		} catch (Exception e) {
-			log.error("S3 upload failed for URL: {}", originalUrl, e);
+			log.warn("S3 upload failed, fallback to default image - url={}, reason={}",
+				originalUrl, e.getMessage());
 			return normalizedDefaultImageUrl();
 		}
 	}
@@ -92,7 +93,7 @@ public class S3ImageUploader implements ImageUploader {
 		try {
 			String s3Key = generateUniqueKeyFromUrl(originalUrl);
 			if (s3Template.objectExists(bucketName, s3Key)) {
-				log.info("Image already exists (Cache Hit): {} -> {}", originalUrl, s3Key);
+				log.debug("Image cache hit - s3Key={}", s3Key);
 				return Optional.of(buildS3Url(s3Key));
 			}
 		} catch (Exception e) {

@@ -22,7 +22,6 @@ public class OgTagCrawler {
 	}
 
 	public OgTagDto crawl(String url) {
-		// SSRF 방어: URL 안전성 검증
 		urlValidator.validateSafeUrl(url);
 
 		try {
@@ -39,7 +38,7 @@ public class OgTagCrawler {
 				.build();
 
 		} catch (IOException e) {
-			log.warn("OG 태그 크롤링 실패: {}", url, e);
+			log.warn("OG 태그 크롤링 실패 - url={}, reason={}", url, e.getMessage());
 			return OgTagDto.EMPTY;
 		}
 	}

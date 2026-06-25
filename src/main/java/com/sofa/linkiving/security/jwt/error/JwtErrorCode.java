@@ -16,7 +16,7 @@ public enum JwtErrorCode implements ErrorCode {
 	UNSUPPORTED_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "J-002", "지원하지 않는 JWT 토큰입니다."),
 	EMPTY_TOKEN(HttpStatus.UNAUTHORIZED, "J-003", "토큰이 필요합니다."),
 	CANNOT_REFRESH(HttpStatus.UNAUTHORIZED, "J-004", "토큰을 갱신할 수 없습니다."),
-	INVALID_REFRESH(HttpStatus.BAD_REQUEST, "J-004", "refresh 토큰이 아닙니다.");
+	INVALID_REFRESH(HttpStatus.BAD_REQUEST, "J-005", "refresh 토큰이 아닙니다.");
 
 	private final HttpStatus status;
 	private final String code;

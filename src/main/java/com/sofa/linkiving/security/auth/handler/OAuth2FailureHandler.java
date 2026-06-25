@@ -17,7 +17,9 @@ import com.sofa.linkiving.security.auth.config.OAuth2Properties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
@@ -37,6 +39,10 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
 		} else if (exception instanceof OAuth2AuthenticationException oauthException) {
 			OAuth2Error error = oauthException.getError();
 			errorCode = determineAuthErrorCode(error.getErrorCode());
+		}
+
+		if (errorCode.getStatus().is5xxServerError()) {
+			log.warn("OAuth 로그인 실패(서버성 오류) - code={}", errorCode.getCode());
 		}
 
 		String targetUrl = UriComponentsBuilder.fromUriString(oauth2Properties.failureRedirectUrl())
