@@ -29,7 +29,7 @@ public class LinkService {
 		}
 
 		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl);
-		log.info("Link created - id: {}, memberId: {}, url: {}", link.getId(), member.getId(), url);
+		log.info("Link created - id={}, memberId={}", link.getId(), member.getId());
 
 		return link;
 	}
@@ -38,7 +38,7 @@ public class LinkService {
 		Link link = linkQueryService.findById(linkId, member);
 		Link updatedLink = linkCommandService.updateLink(link, title, memo, imageUrl);
 
-		log.info("Link updated - id: {}, memberId: {}", linkId, member.getId());
+		log.debug("Link updated - id={}, memberId={}", linkId, member.getId());
 
 		return updatedLink;
 	}
@@ -47,7 +47,7 @@ public class LinkService {
 		Link link = linkQueryService.findById(linkId, member);
 		Link updatedLink = linkCommandService.updateLink(link, title, link.getMemo(), link.getImageUrl());
 
-		log.info("Link title updated - id: {}, memberId: {}", linkId, member.getId());
+		log.debug("Link title updated - id={}, memberId={}", linkId, member.getId());
 
 		return updatedLink;
 	}
@@ -56,7 +56,7 @@ public class LinkService {
 		Link link = linkQueryService.findById(linkId, member);
 		Link updatedLink = linkCommandService.updateLink(link, link.getTitle(), memo, link.getImageUrl());
 
-		log.info("Link memo updated - id: {}, memberId: {}", linkId, member.getId());
+		log.debug("Link memo updated - id={}, memberId={}", linkId, member.getId());
 
 		return updatedLink;
 	}
@@ -65,7 +65,7 @@ public class LinkService {
 		Link link = linkQueryService.findById(linkId, member);
 		linkCommandService.deleteLink(link);
 
-		log.info("Link soft deleted - id: {}, memberId: {}", linkId, member.getId());
+		log.info("Link soft deleted - id={}, memberId={}", linkId, member.getId());
 	}
 
 	public Link getLink(Long linkId) {

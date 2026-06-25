@@ -110,7 +110,6 @@ public class JwtTokenProvider {
 			return cookie.getValue();
 		}
 
-		log.warn("Token not found (missing in both header and cookie)");
 		return null;
 	}
 

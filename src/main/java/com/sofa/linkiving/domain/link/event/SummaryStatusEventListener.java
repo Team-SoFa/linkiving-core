@@ -22,7 +22,8 @@ public class SummaryStatusEventListener {
 			"/queue/summary",
 			event.response()
 		);
-		log.info("요약 상태 웹소켓 푸시 완료 - 이메일: {}, 상태: {}, 링크ID: {}",
-			event.email(), event.response().status(), event.response().linkId());
+
+		log.debug("요약 상태 웹소켓 푸시 완료 - status={}, linkId={}",
+			event.response().status(), event.response().linkId());
 	}
 }

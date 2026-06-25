@@ -19,7 +19,7 @@ public class SummaryQueue {
 	 */
 	public void addToQueue(Long linkId) {
 		summaryQueue.offer(linkId);
-		log.info("Link added to summary queue - linkId: {}", linkId);
+		log.debug("Link added to summary queue - linkId={}", linkId);
 	}
 
 	/**
