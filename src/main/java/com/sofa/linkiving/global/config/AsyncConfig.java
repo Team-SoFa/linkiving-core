@@ -1,6 +1,7 @@
 package com.sofa.linkiving.global.config;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,11 +25,19 @@ public class AsyncConfig implements AsyncConfigurer {
 	@Bean
 	public ThreadPoolTaskExecutor applicationTaskExecutor() {
 		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-		executor.setCorePoolSize(10);
-		executor.setMaxPoolSize(50);
-		executor.setQueueCapacity(200);
+
+		executor.setCorePoolSize(5);
+		executor.setMaxPoolSize(20);
+		executor.setQueueCapacity(100);
 		executor.setThreadNamePrefix("async-");
+
+		executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+
+		executor.setWaitForTasksToCompleteOnShutdown(true);
+		executor.setAwaitTerminationSeconds(30);
+
 		executor.setTaskDecorator(taskDecorator);
+
 		executor.initialize();
 		return executor;
 	}
