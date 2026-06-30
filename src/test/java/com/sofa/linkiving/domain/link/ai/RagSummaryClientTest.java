@@ -19,6 +19,9 @@ import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
+import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
+import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -74,32 +77,30 @@ public class RagSummaryClientTest {
 	}
 
 	@Test
-	@DisplayName("최초 요약 요청 시 응답이 비어있으면 null을 반환한다")
-	void shouldReturnNullWhenInitialSummaryResponseIsEmpty() {
+	@DisplayName("최초 요약 요청 시 응답이 비어있으면 EmptyAiResponseException 을 던지고 empty 로 집계한다")
+	void shouldThrowEmptyResponse_WhenInitialSummaryResponseIsEmpty() {
 		// given
 		given(ragSummaryFeign.requestInitialSummary(any(RagInitialSummaryReq.class)))
 			.willReturn(Collections.emptyList());
 
-		// when
-		RagInitialSummaryRes result = ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo");
-
-		// then
-		assertThat(result).isNull();
+		// when & then
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo"))
+			.isInstanceOf(EmptyAiResponseException.class);
 		assertThat(counterCount("initial", "empty")).isEqualTo(1.0);
 	}
 
 	@Test
-	@DisplayName("최초 요약 요청 중 예외 발생 시 로그를 남기고 null을 반환한다")
-	void shouldReturnNullWhenInitialSummaryThrowsException() {
+	@DisplayName("최초 요약 요청 중 예외 발생 시 통신 오류 예외로 전환하고 failure 로 집계한다")
+	void shouldThrowCommunicationError_WhenInitialSummaryThrowsException() {
 		// given
 		given(ragSummaryFeign.requestInitialSummary(any(RagInitialSummaryReq.class)))
 			.willThrow(new RuntimeException("AI Server Error"));
 
-		// when
-		RagInitialSummaryRes result = ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo");
-
-		// then
-		assertThat(result).isNull();
+		// when & then
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo"))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		assertThat(counterCount("initial", "failure")).isEqualTo(1.0);
 	}
 
@@ -130,17 +131,30 @@ public class RagSummaryClientTest {
 	}
 
 	@Test
-	@DisplayName("요약 재생성 요청 중 예외 발생 시 null을 반환한다")
-	void shouldReturnNullWhenRegenerateSummaryThrowsException() {
+	@DisplayName("요약 재생성 요청 중 예외 발생 시 통신 오류 예외로 전환하고 failure 로 집계한다")
+	void shouldThrowCommunicationError_WhenRegenerateSummaryThrowsException() {
 		// given
 		given(ragSummaryFeign.requestRegenerateSummary(any(RagRegenerateSummaryReq.class)))
 			.willThrow(new RuntimeException("Connection Timeout"));
 
-		// when
-		RagRegenerateSummaryRes result = ragSummaryClient.regenerateSummary(1L, 100L, "URL", "Old");
-
-		// then
-		assertThat(result).isNull();
+		// when & then
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(1L, 100L, "URL", "Old"))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		assertThat(counterCount("regenerate", "failure")).isEqualTo(1.0);
+	}
+
+	@Test
+	@DisplayName("요약 재생성 요청 시 응답이 비어있으면 EmptyAiResponseException 을 던지고 empty 로 집계한다")
+	void shouldThrowEmptyResponse_WhenRegenerateSummaryResponseIsEmpty() {
+		// given
+		given(ragSummaryFeign.requestRegenerateSummary(any(RagRegenerateSummaryReq.class)))
+			.willReturn(Collections.emptyList());
+
+		// when & then
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(1L, 100L, "URL", "Old"))
+			.isInstanceOf(EmptyAiResponseException.class);
+		assertThat(counterCount("regenerate", "empty")).isEqualTo(1.0);
 	}
 }

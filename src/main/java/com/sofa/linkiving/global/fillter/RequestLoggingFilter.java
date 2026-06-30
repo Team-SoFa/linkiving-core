@@ -58,7 +58,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 		"/favicon.ico",
 		"/swagger",
 		"/v3/api-docs",
-		"/health-check"
+		"/health-check",
+		"/h2-console"
 	};
 
 	private static final int MAX_BODY_LENGTH = 2000;
