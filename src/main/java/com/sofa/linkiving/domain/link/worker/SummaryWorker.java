@@ -19,6 +19,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
+import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.global.logging.LogContext;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
@@ -42,6 +43,7 @@ public class SummaryWorker {
 	private final ApplicationEventPublisher eventPublisher;
 	private final ObjectProvider<SummaryWorker> selfProvider;
 	private final MeterRegistry meterRegistry;
+	private final SummaryDeadLetterService summaryDeadLetterService;
 	private Counter generateFailureCounter;
 	private volatile boolean running = true;
 	private Thread workerThread;
@@ -125,12 +127,16 @@ public class SummaryWorker {
 				generateFailureCounter.increment();
 				log.error("Failed to generate summary for linkId: {}", linkId, e);
 
+				Long failedMemberId = null;
 				try {
 					Link linkToFail = summaryWorkerFacade.getLinkWithMember(linkId);
+					failedMemberId = linkToFail.getMember().getId();
 					summaryWorkerFacade.updateSummaryStatus(linkToFail.getId(), SummaryStatus.FAILED);
 				} catch (Exception innerEx) {
 					log.error("Failed to update status to FAILED - linkId: {}", linkId, innerEx);
 				}
+
+				recordDeadLetter(linkId, failedMemberId, e);
 
 				if (userEmail != null) {
 					eventPublisher.publishEvent(new SummaryStatusEvent(
@@ -142,6 +148,14 @@ public class SummaryWorker {
 					));
 				}
 			}
+		}
+	}
+
+	private void recordDeadLetter(Long linkId, Long memberId, Throwable cause) {
+		try {
+			summaryDeadLetterService.record(linkId, memberId, cause);
+		} catch (Exception e) {
+			log.error("Failed to record summary dead-letter - linkId: {}", linkId, e);
 		}
 	}
 

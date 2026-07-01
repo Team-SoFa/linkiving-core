@@ -93,6 +93,9 @@ dependencies {
 
     //Encryption
     implementation 'org.hashids:hashids:1.0.3'
+
+    //Resilience4j Circuit Breaker (Spring Cloud CircuitBreaker)
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 }
 
 dependencyManagement {

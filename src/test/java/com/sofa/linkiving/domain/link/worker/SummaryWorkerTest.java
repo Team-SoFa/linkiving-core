@@ -28,6 +28,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
+import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
@@ -48,21 +49,21 @@ class SummaryWorkerTest {
 	private ApplicationEventPublisher eventPublisher;
 	@Mock
 	private ObjectProvider<SummaryWorker> selfProvider;
+	@Mock
+	private SummaryDeadLetterService summaryDeadLetterService;
 
-	private MeterRegistry meterRegistry;
 	private SummaryWorker summaryWorker;
 	private Link mockLink;
-	private Member mockMember;
 
 	@BeforeEach
 	void setUp() {
-		meterRegistry = new SimpleMeterRegistry();
+		MeterRegistry meterRegistry = new SimpleMeterRegistry();
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
 		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher,
-			selfProvider, meterRegistry);
+			selfProvider, meterRegistry, summaryDeadLetterService);
 
 		mockLink = mock(Link.class);
-		mockMember = mock(Member.class);
+		Member mockMember = mock(Member.class);
 
 		lenient().when(mockLink.getId()).thenReturn(1L);
 		lenient().when(mockLink.getMember()).thenReturn(mockMember);

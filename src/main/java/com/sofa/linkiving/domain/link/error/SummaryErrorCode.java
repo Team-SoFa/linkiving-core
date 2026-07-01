@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 public enum SummaryErrorCode implements ErrorCode {
 
 	SUMMARY_NOT_FOUND(HttpStatus.BAD_REQUEST, "S-001", "요약 정보를 찾을 수 없습니다."),
-	ALREADY_PROCESSING(HttpStatus.CONFLICT, "S-002", "요약 작업이 진행중입니다.");
+	ALREADY_PROCESSING(HttpStatus.CONFLICT, "S-002", "요약 작업이 진행중입니다."),
+	DEAD_LETTER_NOT_FOUND(HttpStatus.NOT_FOUND, "S-003", "데드레터를 찾을 수 없습니다."),
+	DEAD_LETTER_NOT_REPROCESSABLE(HttpStatus.CONFLICT, "S-004", "재처리할 수 없는 데드레터 상태입니다.");
 
 	private final HttpStatus status;
 	private final String code;

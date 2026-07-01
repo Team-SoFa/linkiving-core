@@ -268,7 +268,6 @@ public class LinkApiIntegrationTest {
 		Long linkId = link.getId();
 		String hashLinkId = hashidsUtils.encode(linkId);
 
-
 		// when & then
 		mockMvc.perform(
 				delete(BASE_URL + "/{id}", hashLinkId)
@@ -660,7 +659,6 @@ public class LinkApiIntegrationTest {
 
 		Long linkId = savedLink.getId();
 		String hashLinkId = hashidsUtils.encode(linkId);
-
 
 		summaryRepository.save(Summary.builder()
 			.link(savedLink)

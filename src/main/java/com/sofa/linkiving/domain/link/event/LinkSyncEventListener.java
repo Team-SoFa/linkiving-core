@@ -65,9 +65,9 @@ public class LinkSyncEventListener {
 	public void recover(Exception exception, LinkSyncEvent event) {
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
 			LogContext.MdcScope linkScope = LogContext.withLinkId(event.req().linkId())) {
+			failureCounters.get(event.action()).increment();
 			log.error("[CRITICAL] AI 서버 동기화 최종 실패. 수동 복구 필요 - action: {}, linkId: {}",
 				event.action(), event.req().linkId(), exception);
-			failureCounters.get(event.action()).increment();
 		}
 	}
 }

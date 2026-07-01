@@ -10,16 +10,13 @@ import com.sofa.linkiving.domain.link.dto.request.LinkSyncUpdateReq;
 public class MockLinkSyncClient implements LinkSyncClient {
 	@Override
 	public void syncCreate(LinkSyncUpdateReq req) {
-		return;
 	}
 
 	@Override
 	public void syncUpdate(LinkSyncUpdateReq req) {
-		return;
 	}
 
 	@Override
 	public void syncDelete(Long linkId) {
-		return;
 	}
 }

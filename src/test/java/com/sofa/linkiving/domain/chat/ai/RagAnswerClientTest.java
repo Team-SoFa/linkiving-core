@@ -27,7 +27,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 @DisplayName("RagAnswerClient 단위 테스트")
 class RagAnswerClientTest {
 
-
 	@Mock
 	private RagAnswerFeign ragAnswerFeign;
 	private RagAnswerClient ragAnswerClient;
@@ -43,7 +42,6 @@ class RagAnswerClientTest {
 	private double counterCount(String result) {
 		return meterRegistry.counter("ai.client.calls", "client", "answer", "result", result).count();
 	}
-
 
 	@Test
 	@DisplayName("Feign 응답이 정상일 경우 리스트의 첫 번째 요소를 반환한다")
