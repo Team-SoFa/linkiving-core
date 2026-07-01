@@ -9,21 +9,21 @@ import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
-import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.global.logging.ExternalApiLogger;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
-import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
+import com.sofa.linkiving.infra.feign.ExternalApiSupport;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Component
 @Profile("!test")
 @RequiredArgsConstructor
 public class RagSummaryClient implements SummaryClient {
+
+	private static final String CLIENT = "summary";
 
 	private final RagSummaryFeign ragSummaryFeign;
 	private final MeterRegistry meterRegistry;
@@ -54,53 +54,48 @@ public class RagSummaryClient implements SummaryClient {
 
 	@Override
 	public RagInitialSummaryRes initialSummary(Long linkId, Long userId, String title, String url, String memo) {
+		String operation = "initialSummary";
+		long startNanos = System.nanoTime();
 		List<RagInitialSummaryRes> response;
 		try {
 			RagInitialSummaryReq req = new RagInitialSummaryReq(linkId, userId, title, url, memo);
 			response = ragSummaryFeign.requestInitialSummary(req);
-		} catch (BusinessException e) {
-			initialFailure.increment();
-			log.warn("[AI Server] Initial summary failed - linkId={}, code={}", linkId, e.getErrorCode().getCode());
-			throw e;
 		} catch (Exception e) {
-			initialFailure.increment();
-			log.warn("[AI Server] Initial summary failed - linkId={}, reason={}", linkId, e.getMessage());
-			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
+			throw ExternalApiSupport.handleFailure(CLIENT, operation, linkId, initialFailure, startNanos, e);
 		}
 
-		if (response == null || response.isEmpty()) {
-			initialEmpty.increment();
-			log.warn("[AI Server] Initial summary empty response - linkId={}", linkId);
-			throw new EmptyAiResponseException();
-		}
-
+		RagInitialSummaryRes result = firstOrThrowEmpty(response, operation, linkId, initialEmpty, startNanos);
 		initialSuccess.increment();
-		return response.get(0);
+		return result;
 	}
 
 	@Override
 	public RagRegenerateSummaryRes regenerateSummary(Long linkId, Long userId, String url, String existingSummary) {
+		String operation = "regenerateSummary";
+		long startNanos = System.nanoTime();
 		List<RagRegenerateSummaryRes> response;
 		try {
 			RagRegenerateSummaryReq req = new RagRegenerateSummaryReq(linkId, userId, url, existingSummary);
 			response = ragSummaryFeign.requestRegenerateSummary(req);
-		} catch (BusinessException e) {
-			regenerateFailure.increment();
-			log.warn("[AI Server] Regenerate summary failed - linkId={}, code={}", linkId, e.getErrorCode().getCode());
-			throw e;
 		} catch (Exception e) {
-			regenerateFailure.increment();
-			log.warn("[AI Server] Regenerate summary failed - linkId={}, reason={}", linkId, e.getMessage());
-			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
+			throw ExternalApiSupport.handleFailure(CLIENT, operation, linkId, regenerateFailure, startNanos, e);
 		}
 
-		if (response == null || response.isEmpty()) {
-			regenerateEmpty.increment();
-			log.warn("[AI Server] Regenerate summary empty response - linkId={}", linkId);
-			throw new EmptyAiResponseException();
-		}
-
+		RagRegenerateSummaryRes result = firstOrThrowEmpty(response, operation, linkId, regenerateEmpty, startNanos);
 		regenerateSuccess.increment();
-		return response.get(0);
+		return result;
+	}
+
+	private <T> T firstOrThrowEmpty(List<T> response, String operation, Long linkId, Counter emptyCounter,
+		long startNanos) {
+		if (response != null && !response.isEmpty()) {
+			return response.get(0);
+		}
+		emptyCounter.increment();
+		ExternalApiLogger.client(CLIENT, operation)
+			.detail("linkId", linkId)
+			.elapsedMs(ExternalApiSupport.elapsedMs(startNanos))
+			.empty();
+		throw new EmptyAiResponseException();
 	}
 }

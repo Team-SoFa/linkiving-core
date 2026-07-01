@@ -7,21 +7,22 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
-import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.global.logging.ExternalApiLogger;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
-import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
+import com.sofa.linkiving.infra.feign.ExternalApiSupport;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Component
 @Profile("!test")
 @RequiredArgsConstructor
 public class RagAnswerClient implements AnswerClient {
+
+	private static final String CLIENT = "answer";
+	private static final String OPERATION = "generateAnswer";
 
 	private final RagAnswerFeign ragAnswerFeign;
 	private final MeterRegistry meterRegistry;
@@ -46,22 +47,19 @@ public class RagAnswerClient implements AnswerClient {
 
 	@Override
 	public RagAnswerRes generateAnswer(RagAnswerReq request) {
+		long startNanos = System.nanoTime();
 		List<RagAnswerRes> ragAnswerRes;
 		try {
 			ragAnswerRes = ragAnswerFeign.generateAnswer(request);
-		} catch (BusinessException e) {
-			failureCounter.increment();
-			log.warn("[AI Server] generateAnswer failed - code={}", e.getErrorCode().getCode());
-			throw e;
 		} catch (Exception e) {
-			failureCounter.increment();
-			log.warn("[AI Server] generateAnswer failed - reason={}", e.getMessage());
-			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
+			throw ExternalApiSupport.handleFailure(CLIENT, OPERATION, null, failureCounter, startNanos, e);
 		}
 
 		if (ragAnswerRes == null || ragAnswerRes.isEmpty()) {
 			emptyCounter.increment();
-			log.warn("[AI Server] generateAnswer empty response");
+			ExternalApiLogger.client(CLIENT, OPERATION)
+				.elapsedMs(ExternalApiSupport.elapsedMs(startNanos))
+				.empty();
 			throw new EmptyAiResponseException();
 		}
 

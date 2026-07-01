@@ -40,7 +40,6 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sofa.linkiving.domain.chat.ai.AnswerClient;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
 import com.sofa.linkiving.domain.chat.entity.Chat;

@@ -28,6 +28,11 @@ public abstract class SecurityConstants {
 		"/v1/auth/reissue"
 	};
 
+	public static final String[] ADMIN_URLS = {
+		/* admin */
+		"/v1/admin/**"
+	};
+
 	private static final String[] SEMI_PERMIT_URLS = {
 		//GET만 허용해야 하는 URL
 	};

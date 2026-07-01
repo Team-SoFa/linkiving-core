@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,6 +27,7 @@ import okhttp3.mockwebserver.MockWebServer;
 	properties = "spring.main.allow-bean-definition-overriding=true"
 )
 @EnableFeignClients(clients = TestExternalClient.class)
+@ActiveProfiles("test")
 public class OpenFeignIntegrationTest {
 
 	private static MockWebServer mockWebServer;

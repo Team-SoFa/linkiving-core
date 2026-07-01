@@ -50,6 +50,18 @@
         </rollingPolicy>
     </appender>
 
+    <appender name="EXTERNAL_API_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/external-api.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/external-api-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
     <springProfile name="local">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
@@ -69,6 +81,10 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="AUDIT_FILE"/>
         </logger>
+        <logger name="EXTERNAL_API" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="EXTERNAL_API_FILE"/>
+        </logger>
         <logger level="DEBUG" name="org.hibernate.SQL"/>
         <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
     </springProfile>
@@ -86,6 +102,10 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="AUDIT_FILE"/>
         </logger>
+        <logger name="EXTERNAL_API" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="EXTERNAL_API_FILE"/>
+        </logger>
         <logger level="DEBUG" name="org.hibernate.SQL"/>
         <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
     </springProfile>
@@ -102,6 +122,10 @@
         <logger name="AUDIT" level="INFO" additivity="false">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="AUDIT_FILE"/>
+        </logger>
+        <logger name="EXTERNAL_API" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="EXTERNAL_API_FILE"/>
         </logger>
         <logger level="OFF" name="org.hibernate.SQL"/>
         <logger level="OFF" name="org.hibernate.type.descriptor.sql.BasicBinder"/>

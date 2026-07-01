@@ -64,6 +64,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(authorize ->
 				authorize
 					.requestMatchers(SecurityConstants.PERMIT_URLS).permitAll()
+					.requestMatchers(SecurityConstants.ADMIN_URLS).hasRole("ADMIN")
 					.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2 -> oauth2
