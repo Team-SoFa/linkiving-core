@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.global.util.CookieUtils;
 import com.sofa.linkiving.security.auth.config.OAuth2Properties;
 import com.sofa.linkiving.security.jwt.JwtProperties;
@@ -40,6 +41,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 		cookieUtils.addCookie(request, response, "accessToken", accessToken, accessExp);
 		cookieUtils.addCookie(request, response, "refreshToken", refreshToken, refreshExp);
+
+		AuditLogger.info("event=oauth2_login result=SUCCESS email={}", email);
 
 		String targetUrl = oauth2Properties.successRedirectUrl();
 		getRedirectStrategy().sendRedirect(request, response, targetUrl);

@@ -3,10 +3,10 @@
     <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
 
     <property name="CONSOLE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta([%thread]) %cyan(%-40.40logger{39}) : %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %magenta([%thread]) %cyan(%-20.20X{logCategory:-app}) %cyan([req=%X{requestId:-} trace=%X{traceId:-} member=%X{memberId:-} link=%X{linkId:-} chat=%X{chatId:-}]) %cyan(%-40.40logger{39}) : %msg%n"/>
 
     <property name="FILE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{logCategory:-app}] [req=%X{requestId:-} trace=%X{traceId:-} member=%X{memberId:-} link=%X{linkId:-} chat=%X{chatId:-}] %logger{36} - %msg%n"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -26,6 +26,30 @@
         </rollingPolicy>
     </appender>
 
+    <appender name="ACCESS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/access.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/access-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
     <springProfile name="local">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
@@ -37,6 +61,14 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ROLLING_FILE"/>
         </root>
+        <logger name="ACCESS" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ACCESS_FILE"/>
+        </logger>
+        <logger name="AUDIT" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="AUDIT_FILE"/>
+        </logger>
         <logger level="DEBUG" name="org.hibernate.SQL"/>
         <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
     </springProfile>
@@ -46,6 +78,14 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ROLLING_FILE"/>
         </root>
+        <logger name="ACCESS" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ACCESS_FILE"/>
+        </logger>
+        <logger name="AUDIT" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="AUDIT_FILE"/>
+        </logger>
         <logger level="DEBUG" name="org.hibernate.SQL"/>
         <logger level="TRACE" name="org.hibernate.type.descriptor.sql.BasicBinder"/>
     </springProfile>
@@ -55,6 +95,14 @@
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ROLLING_FILE"/>
         </root>
+        <logger name="ACCESS" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ACCESS_FILE"/>
+        </logger>
+        <logger name="AUDIT" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="AUDIT_FILE"/>
+        </logger>
     </springProfile>
 
 </configuration>
