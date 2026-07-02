@@ -16,9 +16,12 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import com.sofa.linkiving.domain.link.ai.RagLinkSyncClient;
+import com.sofa.linkiving.domain.link.ai.LinkSyncClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkSyncUpdateReq;
 import com.sofa.linkiving.domain.link.enums.SyncAction;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = LinkSyncEventListenerTest.RetryTestConfig.class)
@@ -27,9 +30,8 @@ class LinkSyncEventListenerTest {
 
 	@Autowired
 	private LinkSyncEventListener linkSyncEventListener;
-
 	@Autowired
-	private RagLinkSyncClient linkSyncClient;
+	private LinkSyncClient linkSyncClient;
 
 	@BeforeEach
 	void setUp() {
@@ -123,15 +125,19 @@ class LinkSyncEventListenerTest {
 	@EnableRetry
 	@EnableAspectJAutoProxy(proxyTargetClass = true)
 	static class RetryTestConfig {
-
 		@Bean
-		public RagLinkSyncClient linkSyncClient() {
-			return mock(RagLinkSyncClient.class);
+		public LinkSyncClient linkSyncClient() {
+			return mock(LinkSyncClient.class);
 		}
 
 		@Bean
-		public LinkSyncEventListener linkSyncEventListener(RagLinkSyncClient linkSyncClient) {
-			return new LinkSyncEventListener(linkSyncClient);
+		public MeterRegistry meterRegistry() {
+			return new SimpleMeterRegistry();
+		}
+
+		@Bean
+		public LinkSyncEventListener linkSyncEventListener(LinkSyncClient linkSyncClient, MeterRegistry meterRegistry) {
+			return new LinkSyncEventListener(linkSyncClient, meterRegistry);
 		}
 	}
 }
