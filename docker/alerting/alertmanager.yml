@@ -1,0 +1,29 @@
+# Alertmanager 설정
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'all'
+  group_by: [ 'alertname' ]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: 'all'
+    # ── 이메일 ──
+    email_configs:
+      - to: 'linkivingsofa@gmail.com'
+        from: 'linkivingsofa@gmail.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'linkivingsofa@gmail.com'
+        auth_password_file: '/etc/alertmanager/smtp_password'
+        require_tls: true
+        send_resolved: true
+    # ── 디스코드 ──
+    discord_configs:
+      - webhook_url_file: '/etc/alertmanager/discord_webhook'
+        send_resolved: true
+        title: '{{ .Status }}: {{ .CommonLabels.alertname }}'
+        message: "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"
