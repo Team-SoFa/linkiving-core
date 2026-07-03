@@ -4,30 +4,46 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RagAnswerClient 단위 테스트")
 class RagAnswerClientTest {
 
-	@InjectMocks
-	private RagAnswerClient ragAnswerClient;
 
 	@Mock
 	private RagAnswerFeign ragAnswerFeign;
+	private RagAnswerClient ragAnswerClient;
+	private SimpleMeterRegistry meterRegistry;
+
+	@BeforeEach
+	void setUp() {
+		meterRegistry = new SimpleMeterRegistry();
+		ragAnswerClient = new RagAnswerClient(ragAnswerFeign, meterRegistry);
+		ReflectionTestUtils.invokeMethod(ragAnswerClient, "initCounters");
+	}
+
+	private double counterCount(String result) {
+		return meterRegistry.counter("ai.client.calls", "client", "answer", "result", result).count();
+	}
+
 
 	@Test
-	@DisplayName("generateAnswer: Feign 응답이 정상일 경우 리스트의 첫 번째 요소를 반환한다")
+	@DisplayName("Feign 응답이 정상일 경우 리스트의 첫 번째 요소를 반환한다")
 	void shouldReturnFirstElement_WhenGenerateAnswerSuccess() {
 		// given
 		RagAnswerReq req = mock(RagAnswerReq.class);
@@ -40,10 +56,11 @@ class RagAnswerClientTest {
 
 		// then
 		assertThat(actualRes).isEqualTo(expectedRes);
+		assertThat(counterCount("success")).isEqualTo(1.0);
 	}
 
 	@Test
-	@DisplayName("generateAnswer: Feign 요청 중 예외가 발생하면 예외를 잡고 null을 반환한다")
+	@DisplayName("Feign 요청 중 예외가 발생하면 예외를 잡고 null을 반환한다")
 	void shouldCatchExceptionAndReturnNull_WhenGenerateAnswerThrowsException() {
 		// given
 		RagAnswerReq req = mock(RagAnswerReq.class);
@@ -55,5 +72,22 @@ class RagAnswerClientTest {
 
 		// then
 		assertThat(actualRes).isNull();
+		assertThat(counterCount("failure")).isEqualTo(1.0);
+	}
+
+	@Test
+	@DisplayName("Feign 응답이 비어있으면 null 을 반환하고 empty 로 집계한다")
+	void shouldReturnNullAndCountEmpty_WhenResponseIsEmpty() {
+		// given
+		RagAnswerReq req = mock(RagAnswerReq.class);
+		given(ragAnswerFeign.generateAnswer(any(RagAnswerReq.class)))
+			.willReturn(Collections.emptyList());
+
+		// when
+		RagAnswerRes actualRes = ragAnswerClient.generateAnswer(req);
+
+		// then
+		assertThat(actualRes).isNull();
+		assertThat(counterCount("empty")).isEqualTo(1.0);
 	}
 }

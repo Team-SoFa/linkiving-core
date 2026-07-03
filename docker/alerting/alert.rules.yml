@@ -1,0 +1,68 @@
+groups:
+  - name: linkiving-core-alerts
+    rules:
+
+      # ── 가용성 ─────────────────────────────────────────────
+      # 인스턴스가 스크레이프되지 않음 (앱 다운/네트워크 단절)
+      - alert: InstanceDown
+        expr: up{job="linkiving-core"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "인스턴스 다운: {{ $labels.instance }}"
+          description: "{{ $labels.instance }} 가 1분 이상 스크레이프되지 않습니다."
+
+      # ── HTTP 5xx 에러율 ────────────────────────────────────
+      # 전체 요청 중 5xx 비율이 5분간 5% 초과
+      - alert: HighServerErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "서버 5xx 에러율 높음"
+          description: "최근 5분간 5xx 에러율이 5%를 초과했습니다 (현재 {{ $value | humanizePercentage }})."
+
+      # ── 응답 지연 (p95) ────────────────────────────────────
+      # p95 응답시간이 1초 초과
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "응답 지연(p95) 높음"
+          description: "p95 응답시간이 1초를 초과했습니다 (현재 {{ $value }}s)."
+
+      # ── 외부 AI 호출 실패율 ────────────────────────────────
+      # AI 호출 중 failure 비율이 5분간 20% 초과 (클라이언트별)
+      - alert: HighAiCallFailureRate
+        expr: |
+          sum by (client) (rate(ai_client_calls_total{result="failure"}[5m]))
+          / sum by (client) (rate(ai_client_calls_total[5m]))
+          > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI 호출 실패율 높음: {{ $labels.client }}"
+          description: "AI 클라이언트 '{{ $labels.client }}' 실패율이 5분간 20%를 초과했습니다 (현재 {{ $value | humanizePercentage }})."
+
+      # ── 비동기 작업 최종 실패 ──────────────────────────────
+      # 재시도 소진 후 최종 실패가 발생하면 즉시 알림 (수동 복구 필요 신호)
+      - alert: AsyncTaskFinalFailure
+        expr: increase(async_task_failures_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "비동기 작업 최종 실패: {{ $labels.task }}"
+          description: "task '{{ $labels.task }}'{{ if $labels.action }} (action {{ $labels.action }}){{ end }} 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."

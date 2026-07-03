@@ -84,6 +84,17 @@ jobs:
           echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> ./docker/.env
         shell: bash
 
+      - name: 🗂️ Alertmanager 알림 채널 설정
+        shell: bash
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERTMANAGER_DISCORD_WEBHOOK_URL: ${{ secrets.AlERTMANAGER_DISCORD_WEBHOOK_URL }}
+        run: |
+          printf '%s' "$SMTP_PASSWORD" > ./docker/alerting/smtp_password
+          chmod 600 ./docker/alerting/smtp_password
+          printf '%s' "$ALERTMANAGER_DISCORD_WEBHOOK_URL" > ./docker/alerting/discord_webhook
+          chmod 600 ./docker/alerting/discord_webhook
+
       - name: ✨ 배포 스크립트 실행
         run: |
           chmod +x deploy.sh

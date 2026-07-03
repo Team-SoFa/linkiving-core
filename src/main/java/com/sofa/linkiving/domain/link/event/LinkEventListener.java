@@ -14,6 +14,9 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,6 +33,15 @@ public class LinkEventListener {
 	private final ApplicationEventPublisher eventPublisher;
 	private final SummaryWorkerFacade summaryWorkerFacade;
 	private final ObjectProvider<LinkEventListener> selfProvider;
+	private final MeterRegistry meterRegistry;
+	private Counter enqueueFailureCounter;
+
+	@PostConstruct
+	private void initCounters() {
+		this.enqueueFailureCounter = Counter.builder("async.task.failures")
+			.tag("task", "summary-enqueue")
+			.register(meterRegistry);
+	}
 
 	/**
 	 * 트랜잭션 커밋 후 비동기로 큐 적재 실행
@@ -65,6 +77,8 @@ public class LinkEventListener {
 	@Recover
 	public void recover(Exception exception, LinkCreatedEvent event) {
 		log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
+
+		enqueueFailureCounter.increment();
 
 		summaryWorkerFacade.updateSummaryStatus(event.linkId(), SummaryStatus.FAILED);
 

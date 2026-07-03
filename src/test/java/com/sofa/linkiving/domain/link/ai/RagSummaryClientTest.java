@@ -7,27 +7,44 @@ import static org.mockito.BDDMockito.*;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RagSummaryClient 단위 테스트")
 public class RagSummaryClientTest {
 
-	@InjectMocks
 	private RagSummaryClient ragSummaryClient;
 
 	@Mock
 	private RagSummaryFeign ragSummaryFeign;
+
+	private SimpleMeterRegistry meterRegistry;
+
+	@BeforeEach
+	void setUp() {
+		meterRegistry = new SimpleMeterRegistry();
+		ragSummaryClient = new RagSummaryClient(ragSummaryFeign, meterRegistry);
+		// @PostConstruct 는 단위 테스트에서 자동 호출되지 않으므로 카운터를 수동 등록
+		ReflectionTestUtils.invokeMethod(ragSummaryClient, "initCounters");
+	}
+
+	private double counterCount(String operation, String result) {
+		return meterRegistry.counter("ai.client.calls",
+			"client", "summary", "operation", operation, "result", result).count();
+	}
 
 	@Test
 	@DisplayName("최초 요약 요청 성공 시 응답 객체를 반환한다")
@@ -53,6 +70,7 @@ public class RagSummaryClientTest {
 		assertThat(result).isEqualTo(expectedRes);
 
 		verify(ragSummaryFeign, times(1)).requestInitialSummary(any(RagInitialSummaryReq.class));
+		assertThat(counterCount("initial", "success")).isEqualTo(1.0);
 	}
 
 	@Test
@@ -67,6 +85,7 @@ public class RagSummaryClientTest {
 
 		// then
 		assertThat(result).isNull();
+		assertThat(counterCount("initial", "empty")).isEqualTo(1.0);
 	}
 
 	@Test
@@ -81,6 +100,7 @@ public class RagSummaryClientTest {
 
 		// then
 		assertThat(result).isNull();
+		assertThat(counterCount("initial", "failure")).isEqualTo(1.0);
 	}
 
 	@Test
@@ -106,6 +126,7 @@ public class RagSummaryClientTest {
 		assertThat(result).isEqualTo(expectedRes);
 
 		verify(ragSummaryFeign, times(1)).requestRegenerateSummary(any(RagRegenerateSummaryReq.class));
+		assertThat(counterCount("regenerate", "success")).isEqualTo(1.0);
 	}
 
 	@Test
@@ -120,5 +141,6 @@ public class RagSummaryClientTest {
 
 		// then
 		assertThat(result).isNull();
+		assertThat(counterCount("regenerate", "failure")).isEqualTo(1.0);
 	}
 }

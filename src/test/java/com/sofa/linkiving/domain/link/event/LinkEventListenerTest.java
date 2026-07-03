@@ -25,6 +25,9 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = LinkEventListenerTest.RetryTestConfig.class)
 @DisplayName("LinkEventListener 재시도(Retry) 및 복구(Recover) 단위 테스트")
@@ -183,11 +186,17 @@ class LinkEventListenerTest {
 		}
 
 		@Bean
+		public MeterRegistry meterRegistry() {
+			return new SimpleMeterRegistry();
+		}
+
+		@Bean
 		public LinkEventListener linkEventListener(SummaryQueue summaryQueue,
 			ApplicationEventPublisher eventPublisher,
 			SummaryWorkerFacade summaryWorkerFacade,
 			ObjectProvider<LinkEventListener> selfProvider) {
-			return new LinkEventListener(summaryQueue, eventPublisher, summaryWorkerFacade, selfProvider);
+			return new LinkEventListener(summaryQueue, eventPublisher, summaryWorkerFacade, selfProvider,
+				meterRegistry());
 		}
 	}
 }
