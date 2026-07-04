@@ -1,7 +1,9 @@
 # docker-compose.yml
+version: '3.8'
+
 services:
   blue:
-    image: linkivingsofa/core:latest
+    image: linkivingsofa/core:${IMAGE_TAG:-latest}
     container_name: blue
     environment:
       - LANG=ko_KR.UTF-8
@@ -26,7 +28,7 @@ services:
         max-file: "3"
 
   green:
-    image: linkivingsofa/core:latest
+    image: linkivingsofa/core:${IMAGE_TAG:-latest}
     container_name: green
     environment:
       - LANG=ko_KR.UTF-8
