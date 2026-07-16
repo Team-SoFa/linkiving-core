@@ -38,7 +38,7 @@
   "timezone": "",
   "title": "Linkiving AI / Async Overview",
   "uid": "linkiving-ai-async-overview",
-  "version": 2,
+  "version": 3,
   "panels": [
     {
       "id": 1,
@@ -231,7 +231,7 @@
     },
     {
       "id": 4,
-      "title": "비동기 작업 최종 실패 (task별, 1h 증가)",
+      "title": "비동기 작업 최종 실패 (task/action별, 1h 증가)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -278,8 +278,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (task) (increase(async_task_failures_total[1h]))",
-          "legendFormat": "{{task}}",
+          "expr": "sum by (task, action) (increase(async_task_failures_total[1h]))",
+          "legendFormat": "{{task}} / {{action}}",
           "refId": "A"
         }
       ]
