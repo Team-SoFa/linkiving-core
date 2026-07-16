@@ -20,6 +20,7 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.global.logging.LogContext;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -95,8 +96,6 @@ public class SummaryWorker {
 			String userEmail = null;
 			log.info("Processing link for summary - linkId: {}", linkId);
 
-			generateFailureCounter.increment();
-
 			try {
 				Link link = summaryWorkerFacade.getLinkWithMember(linkId);
 				userEmail = link.getMember().getEmail();
@@ -123,6 +122,7 @@ public class SummaryWorker {
 					));
 				}
 			} catch (Exception e) {
+				generateFailureCounter.increment();
 				log.error("Failed to generate summary for linkId: {}", linkId, e);
 
 				try {
@@ -146,25 +146,20 @@ public class SummaryWorker {
 	}
 
 	@Retryable(
-		value = {Exception.class},
+		retryFor = {Exception.class},
+		noRetryFor = {EmptyAiResponseException.class},
 		maxAttempts = 3,
 		backoff = @Backoff(delay = 2000)
 	)
 	public RagInitialSummaryRes callAiServerWithRetry(Link link) {
 		log.info("Attempting summary request to AI server - linkId: {}", link.getId());
 
-		RagInitialSummaryRes res = summaryClient.initialSummary(
+		return summaryClient.initialSummary(
 			link.getId(),
 			link.getMember().getId(),
 			link.getTitle(),
 			link.getUrl(),
 			link.getMemo()
 		);
-
-		if (res == null) {
-			throw new RuntimeException("Received a null response from the AI server.");
-		}
-
-		return res;
 	}
 }

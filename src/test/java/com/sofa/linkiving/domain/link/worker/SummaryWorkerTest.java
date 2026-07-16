@@ -29,6 +29,7 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -276,8 +277,8 @@ class SummaryWorkerTest {
 	}
 
 	@Test
-	@DisplayName("AI 응답이 null일 경우 예외가 발생하여 FAILED 이벤트를 발행함")
-	void shouldPublishFailedEvent_WhenAiResponseIsNull() {
+	@DisplayName("AI 응답이 비어있어 EmptyAiResponseException 이 발생하면 FAILED 이벤트를 발행함")
+	void shouldPublishFailedEvent_WhenAiResponseIsEmpty() {
 		// given
 		given(summaryQueue.pollTaskFromQueue())
 			.willReturn(Optional.of(task(1L)))
@@ -285,8 +286,8 @@ class SummaryWorkerTest {
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
-		// AI 응답이 null이면 callAiServerWithRetry 내에서 RuntimeException 발생
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(null);
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+			.willThrow(new EmptyAiResponseException());
 
 		// when
 		summaryWorker.startWorker();

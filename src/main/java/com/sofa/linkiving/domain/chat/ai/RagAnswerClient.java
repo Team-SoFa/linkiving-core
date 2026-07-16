@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
+import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
+import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -43,23 +46,26 @@ public class RagAnswerClient implements AnswerClient {
 
 	@Override
 	public RagAnswerRes generateAnswer(RagAnswerReq request) {
+		List<RagAnswerRes> ragAnswerRes;
 		try {
-			List<RagAnswerRes> ragAnswerRes = ragAnswerFeign.generateAnswer(request);
-
-			if (ragAnswerRes == null || ragAnswerRes.isEmpty()) {
-				log.warn("RagAnswerClient generateAnswer empty response");
-				emptyCounter.increment();
-				return null;
-			}
-
-			log.info("RagAnswerClient generateAnswer ragAnswerRes={}", ragAnswerRes);
-			successCounter.increment();
-			return ragAnswerRes.get(0);
-
-		} catch (Exception e) {
-			log.error("RagAnswerClient generateAnswer error", e);
+			ragAnswerRes = ragAnswerFeign.generateAnswer(request);
+		} catch (BusinessException e) {
 			failureCounter.increment();
-			return null;
+			log.warn("[AI Server] generateAnswer failed - code={}", e.getErrorCode().getCode());
+			throw e;
+		} catch (Exception e) {
+			failureCounter.increment();
+			log.warn("[AI Server] generateAnswer failed - reason={}", e.getMessage());
+			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		}
+
+		if (ragAnswerRes == null || ragAnswerRes.isEmpty()) {
+			emptyCounter.increment();
+			log.warn("[AI Server] generateAnswer empty response");
+			throw new EmptyAiResponseException();
+		}
+
+		successCounter.increment();
+		return ragAnswerRes.get(0);
 	}
 }

@@ -9,6 +9,9 @@ import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
+import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
+import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,47 +54,53 @@ public class RagSummaryClient implements SummaryClient {
 
 	@Override
 	public RagInitialSummaryRes initialSummary(Long linkId, Long userId, String title, String url, String memo) {
+		List<RagInitialSummaryRes> response;
 		try {
 			RagInitialSummaryReq req = new RagInitialSummaryReq(linkId, userId, title, url, memo);
-			List<RagInitialSummaryRes> response = ragSummaryFeign.requestInitialSummary(req);
-
-			if (response != null && !response.isEmpty()) {
-				log.info("[AI Server]  Initial Summary Requested Success. LinkId: {}", linkId);
-				initialSuccess.increment();
-				return response.get(0);
-			}
-
-			initialEmpty.increment();
-			return null;
-
-		} catch (Exception e) {
-			log.error("[AI Server Error] Failed to request initial summary for LinkId: {}. Error: {}", linkId,
-				e.getMessage());
+			response = ragSummaryFeign.requestInitialSummary(req);
+		} catch (BusinessException e) {
 			initialFailure.increment();
-			return null;
+			log.warn("[AI Server] Initial summary failed - linkId={}, code={}", linkId, e.getErrorCode().getCode());
+			throw e;
+		} catch (Exception e) {
+			initialFailure.increment();
+			log.warn("[AI Server] Initial summary failed - linkId={}, reason={}", linkId, e.getMessage());
+			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		}
+
+		if (response == null || response.isEmpty()) {
+			initialEmpty.increment();
+			log.warn("[AI Server] Initial summary empty response - linkId={}", linkId);
+			throw new EmptyAiResponseException();
+		}
+
+		initialSuccess.increment();
+		return response.get(0);
 	}
 
 	@Override
 	public RagRegenerateSummaryRes regenerateSummary(Long linkId, Long userId, String url, String existingSummary) {
+		List<RagRegenerateSummaryRes> response;
 		try {
 			RagRegenerateSummaryReq req = new RagRegenerateSummaryReq(linkId, userId, url, existingSummary);
-			List<RagRegenerateSummaryRes> response = ragSummaryFeign.requestRegenerateSummary(req);
-
-			if (response != null && !response.isEmpty()) {
-				log.info("[AI Server] Regenerate Summary Success. LinkId: {}", linkId);
-				regenerateSuccess.increment();
-				return response.get(0);
-			}
-
-			regenerateEmpty.increment();
-			return null;
-
-		} catch (Exception e) {
-			log.error("[AI Server Error] Failed to regenerate summary for LinkId: {}. Error: {}", linkId,
-				e.getMessage());
+			response = ragSummaryFeign.requestRegenerateSummary(req);
+		} catch (BusinessException e) {
 			regenerateFailure.increment();
-			return null;
+			log.warn("[AI Server] Regenerate summary failed - linkId={}, code={}", linkId, e.getErrorCode().getCode());
+			throw e;
+		} catch (Exception e) {
+			regenerateFailure.increment();
+			log.warn("[AI Server] Regenerate summary failed - linkId={}, reason={}", linkId, e.getMessage());
+			throw new BusinessException(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		}
+
+		if (response == null || response.isEmpty()) {
+			regenerateEmpty.increment();
+			log.warn("[AI Server] Regenerate summary empty response - linkId={}", linkId);
+			throw new EmptyAiResponseException();
+		}
+
+		regenerateSuccess.increment();
+		return response.get(0);
 	}
 }

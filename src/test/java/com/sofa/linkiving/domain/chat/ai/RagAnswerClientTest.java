@@ -17,6 +17,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
+import com.sofa.linkiving.global.error.exception.BusinessException;
+import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
+import com.sofa.linkiving.infra.feign.ExternalApiErrorCode;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -60,34 +63,32 @@ class RagAnswerClientTest {
 	}
 
 	@Test
-	@DisplayName("Feign 요청 중 예외가 발생하면 예외를 잡고 null을 반환한다")
-	void shouldCatchExceptionAndReturnNull_WhenGenerateAnswerThrowsException() {
+	@DisplayName("Feign 요청 중 예외가 발생하면 통신 오류 예외로 전환하고 failure 로 집계한다")
+	void shouldThrowCommunicationError_WhenGenerateAnswerThrowsException() {
 		// given
 		RagAnswerReq req = mock(RagAnswerReq.class);
 		given(ragAnswerFeign.generateAnswer(any(RagAnswerReq.class)))
 			.willThrow(new RuntimeException("AI Server Error"));
 
-		// when
-		RagAnswerRes actualRes = ragAnswerClient.generateAnswer(req);
-
-		// then
-		assertThat(actualRes).isNull();
+		// when & then
+		assertThatThrownBy(() -> ragAnswerClient.generateAnswer(req))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
 		assertThat(counterCount("failure")).isEqualTo(1.0);
 	}
 
 	@Test
-	@DisplayName("Feign 응답이 비어있으면 null 을 반환하고 empty 로 집계한다")
-	void shouldReturnNullAndCountEmpty_WhenResponseIsEmpty() {
+	@DisplayName("Feign 응답이 비어있으면 EmptyAiResponseException 을 던지고 empty 로 집계한다")
+	void shouldThrowEmptyResponse_WhenResponseIsEmpty() {
 		// given
 		RagAnswerReq req = mock(RagAnswerReq.class);
 		given(ragAnswerFeign.generateAnswer(any(RagAnswerReq.class)))
 			.willReturn(Collections.emptyList());
 
-		// when
-		RagAnswerRes actualRes = ragAnswerClient.generateAnswer(req);
-
-		// then
-		assertThat(actualRes).isNull();
+		// when & then
+		assertThatThrownBy(() -> ragAnswerClient.generateAnswer(req))
+			.isInstanceOf(EmptyAiResponseException.class);
 		assertThat(counterCount("empty")).isEqualTo(1.0);
 	}
 }
