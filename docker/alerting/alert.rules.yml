@@ -58,14 +58,15 @@ groups:
 
       # ── 비동기 작업 최종 실패 ──────────────────────────────
       # 재시도 소진 후 최종 실패가 발생하면 즉시 알림 (수동 복구 필요 신호)
+      # async.task.failures 태그 키셋은 task·action 으로 통일되어 action 은 항상 존재한다.
       - alert: AsyncTaskFinalFailure
         expr: increase(async_task_failures_total[10m]) > 0
         for: 0m
         labels:
           severity: critical
         annotations:
-          summary: "비동기 작업 최종 실패: {{ $labels.task }}"
-          description: "task '{{ $labels.task }}'{{ if $labels.action }} (action {{ $labels.action }}){{ end }} 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."
+          summary: "비동기 작업 최종 실패: {{ $labels.task }} ({{ $labels.action }})"
+          description: "task '{{ $labels.task }}' 의 action '{{ $labels.action }}' 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."
 
       # ── 비동기 executor 큐 포화 임박 ──────────────────────
       # applicationTaskExecutor 큐(capacity 100)의 80% 이상(=80건)이 2분 지속되면 경고.

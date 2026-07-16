@@ -8,6 +8,10 @@ import org.springframework.stereotype.Component;
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.RagAnswerRes;
 import com.sofa.linkiving.global.logging.ExternalApiLogger;
+import com.sofa.linkiving.global.metrics.AiClientMetrics;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Client;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Operation;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Result;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 import com.sofa.linkiving.infra.feign.ExternalApiSupport;
 
@@ -21,8 +25,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RagAnswerClient implements AnswerClient {
 
-	private static final String CLIENT = "answer";
-	private static final String OPERATION = "generateAnswer";
+	private static final Client CLIENT = Client.ANSWER;
+	private static final Operation OPERATION = Operation.GENERATE;
 
 	private final RagAnswerFeign ragAnswerFeign;
 	private final MeterRegistry meterRegistry;
@@ -33,16 +37,13 @@ public class RagAnswerClient implements AnswerClient {
 
 	@PostConstruct
 	private void initCounters() {
-		this.successCounter = buildCounter("success");
-		this.emptyCounter = buildCounter("empty");
-		this.failureCounter = buildCounter("failure");
+		this.successCounter = buildCounter(Result.SUCCESS);
+		this.emptyCounter = buildCounter(Result.EMPTY);
+		this.failureCounter = buildCounter(Result.FAILURE);
 	}
 
-	private Counter buildCounter(String result) {
-		return Counter.builder("ai.client.calls")
-			.tag("client", "answer")
-			.tag("result", result)
-			.register(meterRegistry);
+	private Counter buildCounter(Result result) {
+		return AiClientMetrics.counter(meterRegistry, CLIENT, OPERATION, result);
 	}
 
 	@Override
@@ -52,12 +53,13 @@ public class RagAnswerClient implements AnswerClient {
 		try {
 			ragAnswerRes = ragAnswerFeign.generateAnswer(request);
 		} catch (Exception e) {
-			throw ExternalApiSupport.handleFailure(CLIENT, OPERATION, null, failureCounter, startNanos, e);
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), OPERATION.getValue(), null, failureCounter,
+				startNanos, e);
 		}
 
 		if (ragAnswerRes == null || ragAnswerRes.isEmpty()) {
 			emptyCounter.increment();
-			ExternalApiLogger.client(CLIENT, OPERATION)
+			ExternalApiLogger.client(CLIENT.getValue(), OPERATION.getValue())
 				.elapsedMs(ExternalApiSupport.elapsedMs(startNanos))
 				.empty();
 			throw new EmptyAiResponseException();
