@@ -10,6 +10,10 @@ import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.RagRegenerateSummaryRes;
 import com.sofa.linkiving.global.logging.ExternalApiLogger;
+import com.sofa.linkiving.global.metrics.AiClientMetrics;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Client;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Operation;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Result;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 import com.sofa.linkiving.infra.feign.ExternalApiSupport;
 
@@ -17,13 +21,15 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @Profile("!test")
 @RequiredArgsConstructor
 public class RagSummaryClient implements SummaryClient {
 
-	private static final String CLIENT = "summary";
+	private static final Client CLIENT = Client.SUMMARY;
 
 	private final RagSummaryFeign ragSummaryFeign;
 	private final MeterRegistry meterRegistry;
@@ -36,32 +42,28 @@ public class RagSummaryClient implements SummaryClient {
 
 	@PostConstruct
 	private void initCounters() {
-		this.initialSuccess = buildCounter("initial", "success");
-		this.initialEmpty = buildCounter("initial", "empty");
-		this.initialFailure = buildCounter("initial", "failure");
-		this.regenerateSuccess = buildCounter("regenerate", "success");
-		this.regenerateEmpty = buildCounter("regenerate", "empty");
-		this.regenerateFailure = buildCounter("regenerate", "failure");
+		this.initialSuccess = buildCounter(Operation.INITIAL, Result.SUCCESS);
+		this.initialEmpty = buildCounter(Operation.INITIAL, Result.EMPTY);
+		this.initialFailure = buildCounter(Operation.INITIAL, Result.FAILURE);
+		this.regenerateSuccess = buildCounter(Operation.REGENERATE, Result.SUCCESS);
+		this.regenerateEmpty = buildCounter(Operation.REGENERATE, Result.EMPTY);
+		this.regenerateFailure = buildCounter(Operation.REGENERATE, Result.FAILURE);
 	}
 
-	private Counter buildCounter(String operation, String result) {
-		return Counter.builder("ai.client.calls")
-			.tag("client", "summary")
-			.tag("operation", operation)
-			.tag("result", result)
-			.register(meterRegistry);
+	private Counter buildCounter(Operation operation, Result result) {
+		return AiClientMetrics.counter(meterRegistry, CLIENT, operation, result);
 	}
 
 	@Override
 	public RagInitialSummaryRes initialSummary(Long linkId, Long userId, String title, String url, String memo) {
-		String operation = "initialSummary";
+		String operation = Operation.INITIAL.getValue();
 		long startNanos = System.nanoTime();
 		List<RagInitialSummaryRes> response;
 		try {
 			RagInitialSummaryReq req = new RagInitialSummaryReq(linkId, userId, title, url, memo);
 			response = ragSummaryFeign.requestInitialSummary(req);
 		} catch (Exception e) {
-			throw ExternalApiSupport.handleFailure(CLIENT, operation, linkId, initialFailure, startNanos, e);
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), operation, linkId, initialFailure, startNanos, e);
 		}
 
 		RagInitialSummaryRes result = firstOrThrowEmpty(response, operation, linkId, initialEmpty, startNanos);
@@ -71,14 +73,15 @@ public class RagSummaryClient implements SummaryClient {
 
 	@Override
 	public RagRegenerateSummaryRes regenerateSummary(Long linkId, Long userId, String url, String existingSummary) {
-		String operation = "regenerateSummary";
+		String operation = Operation.REGENERATE.getValue();
 		long startNanos = System.nanoTime();
 		List<RagRegenerateSummaryRes> response;
 		try {
 			RagRegenerateSummaryReq req = new RagRegenerateSummaryReq(linkId, userId, url, existingSummary);
 			response = ragSummaryFeign.requestRegenerateSummary(req);
 		} catch (Exception e) {
-			throw ExternalApiSupport.handleFailure(CLIENT, operation, linkId, regenerateFailure, startNanos, e);
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), operation, linkId, regenerateFailure,
+				startNanos, e);
 		}
 
 		RagRegenerateSummaryRes result = firstOrThrowEmpty(response, operation, linkId, regenerateEmpty, startNanos);
@@ -92,7 +95,7 @@ public class RagSummaryClient implements SummaryClient {
 			return response.get(0);
 		}
 		emptyCounter.increment();
-		ExternalApiLogger.client(CLIENT, operation)
+		ExternalApiLogger.client(CLIENT.getValue(), operation)
 			.detail("linkId", linkId)
 			.elapsedMs(ExternalApiSupport.elapsedMs(startNanos))
 			.empty();
