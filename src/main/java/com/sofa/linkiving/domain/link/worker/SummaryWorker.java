@@ -21,6 +21,9 @@ import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.global.logging.LogContext;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Task;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
 import io.micrometer.core.instrument.Counter;
@@ -50,9 +53,7 @@ public class SummaryWorker {
 
 	@PostConstruct
 	public void startWorker() {
-		this.generateFailureCounter = Counter.builder("async.task.failures")
-			.tag("task", "summary-generate")
-			.register(meterRegistry);
+		this.generateFailureCounter = AsyncTaskMetrics.failureCounter(meterRegistry, Task.SUMMARY, Action.GENERATE);
 
 		workerThread = new Thread(() -> {
 			log.info("Summary worker thread started");
@@ -94,7 +95,7 @@ public class SummaryWorker {
 		SummaryTask task = taskOpt.get();
 		Long linkId = task.linkId();
 		try (LogContext.MdcScope ignored = LogContext.restore(task.logContext());
-			LogContext.MdcScope linkScope = LogContext.withLinkId(linkId)) {
+			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(linkId)) {
 			String userEmail = null;
 			log.info("Processing link for summary - linkId: {}", linkId);
 

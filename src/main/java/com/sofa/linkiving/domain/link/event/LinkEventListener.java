@@ -14,6 +14,9 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 import com.sofa.linkiving.global.logging.LogContext;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Task;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -39,9 +42,7 @@ public class LinkEventListener {
 
 	@PostConstruct
 	private void initCounters() {
-		this.enqueueFailureCounter = Counter.builder("async.task.failures")
-			.tag("task", "summary-enqueue")
-			.register(meterRegistry);
+		this.enqueueFailureCounter = AsyncTaskMetrics.failureCounter(meterRegistry, Task.SUMMARY, Action.ENQUEUE);
 	}
 
 	/**
@@ -50,7 +51,7 @@ public class LinkEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
-			LogContext.MdcScope linkScope = LogContext.withLinkId(event.linkId())) {
+			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(event.linkId())) {
 			eventPublisher.publishEvent(new SummaryStatusEvent(
 				event.email(),
 				SummaryStatusRes.of(event.linkId(), SummaryStatus.PENDING)
@@ -81,7 +82,7 @@ public class LinkEventListener {
 	@Recover
 	public void recover(Exception exception, LinkCreatedEvent event) {
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
-			LogContext.MdcScope linkScope = LogContext.withLinkId(event.linkId())) {
+			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(event.linkId())) {
 			log.error("Final failure to queue link after retries - linkId: {}", event.linkId(), exception);
 			enqueueFailureCounter.increment();
 			summaryWorkerFacade.updateSummaryStatus(event.linkId(), SummaryStatus.FAILED);

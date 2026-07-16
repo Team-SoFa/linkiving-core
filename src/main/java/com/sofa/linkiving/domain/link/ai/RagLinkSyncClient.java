@@ -5,6 +5,10 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.dto.request.LinkSyncDeleteReq;
 import com.sofa.linkiving.domain.link.dto.request.LinkSyncUpdateReq;
+import com.sofa.linkiving.global.metrics.AiClientMetrics;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Client;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Operation;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Result;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -18,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RagLinkSyncClient implements LinkSyncClient {
 
+	private static final Client CLIENT = Client.LINK_SYNC;
+
 	private final LinkSyncFeign linkSyncFeign;
 	private final MeterRegistry meterRegistry;
 	private Counter createSuccess;
@@ -27,22 +33,23 @@ public class RagLinkSyncClient implements LinkSyncClient {
 	private Counter deleteSuccess;
 	private Counter deleteFailure;
 
+	/*
+	 * link-sync 는 void 반환이라 '빈 응답' 결과가 도메인에 존재하지 않는다.
+	 * 따라서 result 값은 success/failure 2종만 사용한다(의도적).
+	 * 통일 대상은 태그 키셋(client·operation·result)이며, 값 도메인은 각 클라이언트 성격에 따른다.
+	 */
 	@PostConstruct
 	private void initCounters() {
-		this.createSuccess = buildCounter("create", "success");
-		this.createFailure = buildCounter("create", "failure");
-		this.updateSuccess = buildCounter("update", "success");
-		this.updateFailure = buildCounter("update", "failure");
-		this.deleteSuccess = buildCounter("delete", "success");
-		this.deleteFailure = buildCounter("delete", "failure");
+		this.createSuccess = buildCounter(Operation.CREATE, Result.SUCCESS);
+		this.createFailure = buildCounter(Operation.CREATE, Result.FAILURE);
+		this.updateSuccess = buildCounter(Operation.UPDATE, Result.SUCCESS);
+		this.updateFailure = buildCounter(Operation.UPDATE, Result.FAILURE);
+		this.deleteSuccess = buildCounter(Operation.DELETE, Result.SUCCESS);
+		this.deleteFailure = buildCounter(Operation.DELETE, Result.FAILURE);
 	}
 
-	private Counter buildCounter(String operation, String result) {
-		return Counter.builder("ai.client.calls")
-			.tag("client", "link-sync")
-			.tag("operation", operation)
-			.tag("result", result)
-			.register(meterRegistry);
+	private Counter buildCounter(Operation operation, Result result) {
+		return AiClientMetrics.counter(meterRegistry, CLIENT, operation, result);
 	}
 
 	@Override
