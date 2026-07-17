@@ -36,7 +36,7 @@ public class RagChatService {
 	private final LinkQueryService linkQueryService;
 	private final ChatQueryService chatQueryService;
 
-	@Async
+	@Async("aiTaskExecutor")
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public CompletableFuture<AnswerRes> generateAnswer(Long chatId, Member member, String userMessage) {
 		try (LogContext.MdcScope memberScope = LogContext.withMemberId(member.getId());

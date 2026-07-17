@@ -41,7 +41,7 @@ public class LinkSyncEventListener {
 		}
 	}
 
-	@Async
+	@Async("aiTaskExecutor")
 	@Retryable(
 		retryFor = Exception.class,
 		maxAttempts = 3,
