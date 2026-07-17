@@ -38,7 +38,7 @@
   "timezone": "",
   "title": "Linkiving AI / Async Overview",
   "uid": "linkiving-ai-async-overview",
-  "version": 2,
+  "version": 4,
   "panels": [
     {
       "id": 1,
@@ -231,7 +231,7 @@
     },
     {
       "id": 4,
-      "title": "비동기 작업 최종 실패 (task별, 1h 증가)",
+      "title": "비동기 작업 최종 실패 (task/action별, 1h 증가)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -278,8 +278,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (task) (increase(async_task_failures_total[1h]))",
-          "legendFormat": "{{task}}",
+          "expr": "sum by (task, action) (increase(async_task_failures_total[1h]))",
+          "legendFormat": "{{task}} / {{action}}",
           "refId": "A"
         }
       ]
@@ -347,7 +347,7 @@
     },
     {
       "id": 6,
-      "title": "Async Executor 큐 대기 (capacity 100)",
+      "title": "Async Executor 큐 사용률 (executor별)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -361,9 +361,9 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percentunit",
           "min": 0,
-          "max": 100,
+          "max": 1,
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -381,11 +381,11 @@
               },
               {
                 "color": "orange",
-                "value": 80
+                "value": 0.8
               },
               {
                 "color": "red",
-                "value": 100
+                "value": 1
               }
             ]
           }
@@ -411,15 +411,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "executor_queued_tasks{name=\"applicationTaskExecutor\"}",
-          "legendFormat": "queued",
+          "expr": "executor_queued_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"} / (executor_queued_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"} + executor_queue_remaining_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"})",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ]
     },
     {
       "id": 7,
-      "title": "Async Executor 스레드 (active / pool / max)",
+      "title": "Async Executor 스레드 (executor별 active / pool / max)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -444,8 +444,8 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "max"
+              "id": "byRegexp",
+              "options": ".*max"
             },
             "properties": [
               {
@@ -488,8 +488,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "executor_active_threads{name=\"applicationTaskExecutor\"}",
-          "legendFormat": "active",
+          "expr": "executor_active_threads{name=~\"applicationTaskExecutor|aiTaskExecutor\"}",
+          "legendFormat": "{{name}} active",
           "refId": "A"
         },
         {
@@ -497,8 +497,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "executor_pool_size_threads{name=\"applicationTaskExecutor\"}",
-          "legendFormat": "pool",
+          "expr": "executor_pool_size_threads{name=~\"applicationTaskExecutor|aiTaskExecutor\"}",
+          "legendFormat": "{{name}} pool",
           "refId": "B"
         },
         {
@@ -506,15 +506,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "executor_pool_max_threads{name=\"applicationTaskExecutor\"}",
-          "legendFormat": "max",
+          "expr": "executor_pool_max_threads{name=~\"applicationTaskExecutor|aiTaskExecutor\"}",
+          "legendFormat": "{{name}} max",
           "refId": "C"
         }
       ]
     },
     {
       "id": 8,
-      "title": "큐 사용률 (현재)",
+      "title": "큐 사용률 (현재, executor별)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -528,9 +528,9 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percentunit",
           "min": 0,
-          "max": 100,
+          "max": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -540,11 +540,11 @@
               },
               {
                 "color": "orange",
-                "value": 80
+                "value": 0.8
               },
               {
                 "color": "red",
-                "value": 100
+                "value": 1
               }
             ]
           }
@@ -568,8 +568,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "executor_queued_tasks{name=\"applicationTaskExecutor\"}",
-          "legendFormat": "queued",
+          "expr": "executor_queued_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"} / (executor_queued_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"} + executor_queue_remaining_tasks{name=~\"applicationTaskExecutor|aiTaskExecutor\"})",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ]
