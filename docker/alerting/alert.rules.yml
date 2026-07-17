@@ -58,36 +58,42 @@ groups:
 
       # ── 비동기 작업 최종 실패 ──────────────────────────────
       # 재시도 소진 후 최종 실패가 발생하면 즉시 알림 (수동 복구 필요 신호)
+      # async.task.failures 태그 키셋은 task·action 으로 통일되어 action 은 항상 존재한다.
       - alert: AsyncTaskFinalFailure
         expr: increase(async_task_failures_total[10m]) > 0
         for: 0m
         labels:
           severity: critical
         annotations:
-          summary: "비동기 작업 최종 실패: {{ $labels.task }}"
-          description: "task '{{ $labels.task }}'{{ if $labels.action }} (action {{ $labels.action }}){{ end }} 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."
+          summary: "비동기 작업 최종 실패: {{ $labels.task }} ({{ $labels.action }})"
+          description: "task '{{ $labels.task }}' 의 action '{{ $labels.action }}' 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."
 
       # ── 비동기 executor 큐 포화 임박 ──────────────────────
-      # applicationTaskExecutor 큐(capacity 100)의 80% 이상(=80건)이 2분 지속되면 경고.
-      # 큐가 가득 차고 풀도 max면 CallerRunsPolicy가 발동해 호출/이벤트 스레드가 작업을 직접 실행하게 됨.
+      # executor별 큐 용량이 다르므로(app 100 / ai 30) 절대값 대신 사용률 기반으로 감지.
+      # 큐 사용률 80% 이상이 2분 지속되면 경고. 큐가 가득 차고 풀도 max면
+      # CallerRunsPolicy가 발동해 호출/이벤트 스레드가 작업을 직접 실행하게 됨.
       - alert: AsyncExecutorQueueSaturation
-        expr: executor_queued_tasks{name="applicationTaskExecutor"} >= 80
+        expr: |
+          executor_queued_tasks{name=~"applicationTaskExecutor|aiTaskExecutor"}
+          / (executor_queued_tasks{name=~"applicationTaskExecutor|aiTaskExecutor"}
+             + executor_queue_remaining_tasks{name=~"applicationTaskExecutor|aiTaskExecutor"})
+          >= 0.8
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "async executor 큐 포화 임박"
-          description: "applicationTaskExecutor 대기 작업이 큐 용량(100)의 80%를 2분 이상 초과했습니다 (현재 대기 {{ $value }}건). 큐가 가득 차면 CallerRunsPolicy로 호출 스레드가 작업을 직접 실행하여 응답 지연이 발생할 수 있습니다."
+          summary: "async executor 큐 포화 임박: {{ $labels.name }}"
+          description: "executor '{{ $labels.name }}' 큐 사용률이 2분 이상 80%를 초과했습니다 (현재 {{ $value | humanizePercentage }}). 큐가 가득 차면 CallerRunsPolicy로 호출 스레드가 작업을 직접 실행하여 응답 지연이 발생할 수 있습니다."
 
       # ── 비동기 executor 스레드 풀 max 도달 ────────────────
-      # 현재 풀 스레드 수가 max(20)에 도달한 상태가 2분 지속되면 경고 (큐까지 차면 포화).
+      # 현재 풀 스레드 수가 max에 도달한 상태가 2분 지속되면 경고 (큐까지 차면 포화).
       - alert: AsyncExecutorPoolExhausted
         expr: |
-          executor_pool_size_threads{name="applicationTaskExecutor"}
-          >= executor_pool_max_threads{name="applicationTaskExecutor"}
+          executor_pool_size_threads{name=~"applicationTaskExecutor|aiTaskExecutor"}
+          >= executor_pool_max_threads{name=~"applicationTaskExecutor|aiTaskExecutor"}
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "async executor 스레드 풀 max 도달"
-          description: "applicationTaskExecutor 풀이 max({{ $value }})에 2분 이상 도달했습니다. 큐까지 가득 차면 CallerRunsPolicy로 호출/이벤트 스레드가 작업을 직접 실행하게 됩니다."
+          summary: "async executor 스레드 풀 max 도달: {{ $labels.name }}"
+          description: "executor '{{ $labels.name }}' 풀이 max({{ $value }})에 2분 이상 도달했습니다. 큐까지 가득 차면 CallerRunsPolicy로 호출/이벤트 스레드가 작업을 직접 실행하게 됩니다."
