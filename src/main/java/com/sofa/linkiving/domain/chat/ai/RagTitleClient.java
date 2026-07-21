@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.chat.dto.request.TitleGenerateReq;
 import com.sofa.linkiving.domain.chat.dto.response.TitleGenerateRes;
+import com.sofa.linkiving.global.metrics.AiClientMetrics;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Client;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Operation;
+import com.sofa.linkiving.global.metrics.AiClientMetrics.Result;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -21,6 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 public class RagTitleClient implements TitleClient {
 
 	private static final int MAX_TITLE_LENGTH = 100;
+	private static final Client CLIENT = Client.TITLE;
+	private static final Operation OPERATION = Operation.GENERATE;
+
 	private final RagTitleFeign ragTitleFeign;
 	private final MeterRegistry meterRegistry;
 
@@ -30,16 +37,13 @@ public class RagTitleClient implements TitleClient {
 
 	@PostConstruct
 	private void initCounters() {
-		this.successCounter = buildCounter("success");
-		this.emptyCounter = buildCounter("empty");
-		this.failureCounter = buildCounter("failure");
+		this.successCounter = buildCounter(Result.SUCCESS);
+		this.emptyCounter = buildCounter(Result.EMPTY);
+		this.failureCounter = buildCounter(Result.FAILURE);
 	}
 
-	private Counter buildCounter(String result) {
-		return Counter.builder("ai.client.calls")
-			.tag("client", "title")
-			.tag("result", result)
-			.register(meterRegistry);
+	private Counter buildCounter(Result result) {
+		return AiClientMetrics.counter(meterRegistry, CLIENT, OPERATION, result);
 	}
 
 	@Override

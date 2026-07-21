@@ -14,6 +14,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import com.sofa.linkiving.domain.link.ai.LinkSyncClient;
 import com.sofa.linkiving.domain.link.enums.SyncAction;
 import com.sofa.linkiving.global.logging.LogContext;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
+import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Task;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -33,12 +36,18 @@ public class LinkSyncEventListener {
 
 	@PostConstruct
 	private void initCounters() {
-		for (SyncAction action : SyncAction.values()) {
-			failureCounters.put(action, Counter.builder("async.task.failures")
-				.tag("task", "link-sync")
-				.tag("action", action.name())
-				.register(meterRegistry));
+		for (SyncAction syncAction : SyncAction.values()) {
+			failureCounters.put(syncAction,
+				AsyncTaskMetrics.failureCounter(meterRegistry, Task.LINK_SYNC, toMetricAction(syncAction)));
 		}
+	}
+
+	private Action toMetricAction(SyncAction syncAction) {
+		return switch (syncAction) {
+			case CREATE -> Action.CREATE;
+			case UPDATE -> Action.UPDATE;
+			case DELETE -> Action.DELETE;
+		};
 	}
 
 	@Async
@@ -50,7 +59,7 @@ public class LinkSyncEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkSyncEvent(LinkSyncEvent event) {
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
-			LogContext.MdcScope linkScope = LogContext.withLinkId(event.req().linkId())) {
+			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(event.req().linkId())) {
 			log.info("AI 서버 동기화 비동기 실행 시도 - action: {}, linkId: {}", event.action(), event.req().linkId());
 
 			switch (event.action()) {
@@ -65,9 +74,9 @@ public class LinkSyncEventListener {
 	public void recover(Exception exception, LinkSyncEvent event) {
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
 			LogContext.MdcScope linkScope = LogContext.withLinkId(event.req().linkId())) {
-			failureCounters.get(event.action()).increment();
 			log.error("[CRITICAL] AI 서버 동기화 최종 실패. 수동 복구 필요 - action: {}, linkId: {}",
 				event.action(), event.req().linkId(), exception);
+			failureCounters.get(event.action()).increment();
 		}
 	}
 }

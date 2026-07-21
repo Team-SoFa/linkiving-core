@@ -40,7 +40,8 @@ class RagAnswerClientTest {
 	}
 
 	private double counterCount(String result) {
-		return meterRegistry.counter("ai.client.calls", "client", "answer", "result", result).count();
+		return meterRegistry.counter("ai.client.calls", "client", "answer", "operation", "generate", "result", result)
+			.count();
 	}
 
 	@Test
