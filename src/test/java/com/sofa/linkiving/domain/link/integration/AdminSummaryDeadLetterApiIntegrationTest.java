@@ -30,7 +30,7 @@ import com.sofa.linkiving.global.util.HashidsUtils;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:admin-deadletter-test;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
