@@ -350,8 +350,11 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		// then
+		// 파이프라인이 끝(저장 시도)까지 도달한 것을 먼저 보장 → 스텁 소비 완료 후 검증 (레이스 제거)
+		verify(summaryWorkerFacade, timeout(1000)).createInitialSummaryAndUpdateStatus(anyLong(), anyString());
+
 		ArgumentCaptor<SummaryStatusEvent> captor = ArgumentCaptor.forClass(SummaryStatusEvent.class);
-		verify(eventPublisher, timeout(1000).times(1)).publishEvent(captor.capture());
+		verify(eventPublisher, after(300).times(1)).publishEvent(captor.capture());
 
 		assertThat(captor.getValue().response().status()).isEqualTo(SummaryStatus.PROCESSING);
 	}

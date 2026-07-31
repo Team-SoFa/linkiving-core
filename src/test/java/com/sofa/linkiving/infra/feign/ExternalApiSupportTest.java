@@ -11,6 +11,8 @@ import org.springframework.cloud.client.circuitbreaker.NoFallbackAvailableExcept
 
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -42,6 +44,32 @@ class ExternalApiSupportTest {
 			"summary", "op", 1L, failureCounter, System.nanoTime(), new RuntimeException("boom"));
 
 		assertThat(result.getErrorCode()).isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
+	}
+
+	@Test
+	@DisplayName("원인이 CallNotPermittedException(circuit-open)이면 일시 차단(503)으로 변환한다")
+	void handleFailure_circuitOpenCause() {
+		CallNotPermittedException circuitOpen = CallNotPermittedException.createCallNotPermittedException(
+			CircuitBreaker.ofDefaults("testCircuitBreaker"));
+
+		BusinessException result = ExternalApiSupport.handleFailure(
+			"summary", "op", 1L, failureCounter, System.nanoTime(), circuitOpen);
+
+		assertThat(result.getErrorCode()).isEqualTo(ExternalApiErrorCode.EXTERNAL_API_UNAVAILABLE);
+		assertThat(failureCounter.count()).isEqualTo(1.0);
+	}
+
+	@Test
+	@DisplayName("NoFallbackAvailableException 으로 감싼 CallNotPermittedException 도 일시 차단(503)으로 변환한다")
+	void handleFailure_unwrapsCircuitOpen() {
+		CallNotPermittedException circuitOpen = CallNotPermittedException.createCallNotPermittedException(
+			CircuitBreaker.ofDefaults("testCircuitBreaker"));
+		Throwable wrapped = new NoFallbackAvailableException("no fallback", circuitOpen);
+
+		BusinessException result = ExternalApiSupport.handleFailure(
+			"answer", "generateAnswer", null, failureCounter, System.nanoTime(), wrapped);
+
+		assertThat(result.getErrorCode()).isEqualTo(ExternalApiErrorCode.EXTERNAL_API_UNAVAILABLE);
 	}
 
 	@Test
