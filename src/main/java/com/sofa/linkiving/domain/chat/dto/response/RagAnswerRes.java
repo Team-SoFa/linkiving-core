@@ -7,8 +7,21 @@ public record RagAnswerRes(
 	List<String> linkIds,
 	List<ReasoningStep> reasoningSteps,
 	List<String> relatedLinks,
-	boolean isFallback
+	boolean isFallback,
+	Integer retrievedCount,
+	Integer selectedCount,
+	Double topSimilarity
 ) {
+	public RagAnswerRes(
+		String answer,
+		List<String> linkIds,
+		List<ReasoningStep> reasoningSteps,
+		List<String> relatedLinks,
+		boolean isFallback
+	) {
+		this(answer, linkIds, reasoningSteps, relatedLinks, isFallback, null, null, null);
+	}
+
 	public record ReasoningStep(
 		String step,
 		List<String> linkIds
