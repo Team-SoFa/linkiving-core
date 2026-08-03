@@ -97,6 +97,11 @@ public class ChatFacade {
 		});
 	}
 
+	@Transactional
+	public void generateAnswer(Long chatId, Member member, String message) {
+		generateAnswer(chatId, member, message, null);
+	}
+
 	private void sendNotification(Long chatId, Member member, AnswerRes res) {
 		messagingTemplate.convertAndSendToUser(
 			member.getEmail(),

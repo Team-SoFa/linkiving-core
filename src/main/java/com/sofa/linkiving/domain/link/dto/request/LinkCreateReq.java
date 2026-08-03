@@ -10,7 +10,11 @@ public record LinkCreateReq(
 	@Size(max = 2048, message = "URL must be 2048 characters or less")
 	String url,
 
-	@Schema(description = "Link title", example = "Useful development resource", requiredMode = Schema.RequiredMode.REQUIRED)
+	@Schema(
+		description = "Link title",
+		example = "Useful development resource",
+		requiredMode = Schema.RequiredMode.REQUIRED
+	)
 	@NotBlank(message = "Title is required")
 	@Size(max = 100, message = "Title must be 100 characters or less")
 	String title,
@@ -27,4 +31,7 @@ public record LinkCreateReq(
 	@Schema(description = "Link save source", example = "web")
 	String source
 ) {
+	public LinkCreateReq(String url, String title, String memo, String imageUrl) {
+		this(url, title, memo, imageUrl, null, null);
+	}
 }

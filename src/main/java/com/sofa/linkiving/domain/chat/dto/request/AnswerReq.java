@@ -14,4 +14,7 @@ public record AnswerReq(
 	@Schema(description = "GA4 client_id")
 	String clientId
 ) {
+	public AnswerReq(Long chatId, String message) {
+		this(chatId, message, null);
+	}
 }
