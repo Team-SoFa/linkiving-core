@@ -60,7 +60,7 @@ public class LinkFacade {
 		String imageUrl,
 		AnalyticsContext analyticsContext
 	) {
-		publishBookmarkSaveAttempt(member, analyticsContext);
+		publishLinkSaveAttempt(member, analyticsContext);
 
 		try {
 			String storedImageUrl = processImageUpload(imageUrl);
@@ -68,11 +68,11 @@ public class LinkFacade {
 
 			eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail(), LogContext.snapshot()));
 			eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
-			publishBookmarkSaveSuccess(member, analyticsContext, link);
+			publishLinkSaveSuccess(member, analyticsContext, link);
 
 			return LinkRes.from(link);
 		} catch (RuntimeException exception) {
-			publishBookmarkSaveFail(member, analyticsContext, exception);
+			publishLinkSaveFail(member, analyticsContext, exception);
 			throw exception;
 		}
 	}
@@ -181,28 +181,28 @@ public class LinkFacade {
 		return imageUploader.uploadFromUrl(imageUrl);
 	}
 
-	private void publishBookmarkSaveAttempt(Member member, AnalyticsContext analyticsContext) {
-		publishBookmarkEvent(member, analyticsContext, "bookmark_save_attempt", Map.of(
+	private void publishLinkSaveAttempt(Member member, AnalyticsContext analyticsContext) {
+		publishLinkEvent(member, analyticsContext, "link_save_attempt", Map.of(
 			"source", analyticsSource(analyticsContext)
 		));
 	}
 
-	private void publishBookmarkSaveSuccess(Member member, AnalyticsContext analyticsContext, Link link) {
-		publishBookmarkEvent(member, analyticsContext, "bookmark_save_success", Map.of(
+	private void publishLinkSaveSuccess(Member member, AnalyticsContext analyticsContext, Link link) {
+		publishLinkEvent(member, analyticsContext, "link_save_success", Map.of(
 			"source", analyticsSource(analyticsContext),
 			"domain", extractHost(link.getUrl()),
 			"has_memo", link.getMemo() != null && !link.getMemo().isBlank()
 		));
 	}
 
-	private void publishBookmarkSaveFail(Member member, AnalyticsContext analyticsContext, RuntimeException exception) {
-		publishBookmarkEvent(member, analyticsContext, "bookmark_save_fail", Map.of(
+	private void publishLinkSaveFail(Member member, AnalyticsContext analyticsContext, RuntimeException exception) {
+		publishLinkEvent(member, analyticsContext, "link_save_fail", Map.of(
 			"source", analyticsSource(analyticsContext),
 			"error_type", exception.getClass().getSimpleName()
 		));
 	}
 
-	private void publishBookmarkEvent(Member member, AnalyticsContext analyticsContext, String eventName,
+	private void publishLinkEvent(Member member, AnalyticsContext analyticsContext, String eventName,
 		Map<String, Object> params) {
 		if (analyticsContext == null || analyticsContext.clientId() == null || analyticsContext.clientId().isBlank()) {
 			return;
