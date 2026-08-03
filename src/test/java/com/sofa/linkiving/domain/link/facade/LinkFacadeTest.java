@@ -42,6 +42,8 @@ import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
+import com.sofa.linkiving.global.analytics.Ga4Publisher;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,10 +71,13 @@ class LinkFacadeTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private Ga4Publisher ga4Publisher;
+
 	@BeforeEach
 	void setUp() {
 		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, eventPublisher,
-			summaryClient);
+			summaryClient, ga4Publisher);
 	}
 
 	@Test
@@ -236,7 +241,8 @@ class LinkFacadeTest {
 		given(linkService.createLink(member, url, title, memo, storedImageUrl)).willReturn(savedLink);
 
 		// when
-		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
+		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl,
+			AnalyticsContext.of("1234567890.1234567890", "web"));
 
 		// then
 		assertThat(result).isNotNull();
@@ -245,6 +251,7 @@ class LinkFacadeTest {
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 		verify(linkService, times(1)).createLink(member, url, title, memo, storedImageUrl);
 		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
+		verify(ga4Publisher, times(2)).publish(eq("1234567890.1234567890"), any(), any());
 	}
 
 	@Test

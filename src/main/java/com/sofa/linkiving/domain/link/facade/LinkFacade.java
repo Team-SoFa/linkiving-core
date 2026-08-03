@@ -1,5 +1,8 @@
 package com.sofa.linkiving.domain.link.facade;
 
+import java.net.URI;
+import java.util.Map;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,8 @@ import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.analytics.AnalyticsContext;
+import com.sofa.linkiving.global.analytics.Ga4Event;
+import com.sofa.linkiving.global.analytics.Ga4Publisher;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
@@ -45,6 +50,7 @@ public class LinkFacade {
 	private final ImageUploader imageUploader;
 	private final ApplicationEventPublisher eventPublisher;
 	private final SummaryClient summaryClient;
+	private final Ga4Publisher ga4Publisher;
 
 	public LinkRes createLink(
 		Member member,
@@ -54,13 +60,31 @@ public class LinkFacade {
 		String imageUrl,
 		AnalyticsContext analyticsContext
 	) {
-		String storedImageUrl = processImageUpload(imageUrl);
-		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
+		publishBookmarkSaveAttempt(member, analyticsContext);
 
-		eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail(), LogContext.snapshot()));
-		eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
+		try {
+			String storedImageUrl = processImageUpload(imageUrl);
+			Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
-		return LinkRes.from(link);
+			eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail(), LogContext.snapshot()));
+			eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
+			publishBookmarkSaveSuccess(member, analyticsContext, link);
+
+			return LinkRes.from(link);
+		} catch (RuntimeException exception) {
+			publishBookmarkSaveFail(member, analyticsContext, exception);
+			throw exception;
+		}
+	}
+
+	public LinkRes createLink(
+		Member member,
+		String url,
+		String title,
+		String memo,
+		String imageUrl
+	) {
+		return createLink(member, url, title, memo, imageUrl, AnalyticsContext.of(null, null));
 	}
 
 	public LinkRes createLink(
@@ -165,6 +189,55 @@ public class LinkFacade {
 			return null;
 		}
 		return imageUploader.uploadFromUrl(imageUrl);
+	}
+
+	private void publishBookmarkSaveAttempt(Member member, AnalyticsContext analyticsContext) {
+		publishBookmarkEvent(member, analyticsContext, "bookmark_save_attempt", Map.of(
+			"source", analyticsSource(analyticsContext)
+		));
+	}
+
+	private void publishBookmarkSaveSuccess(Member member, AnalyticsContext analyticsContext, Link link) {
+		publishBookmarkEvent(member, analyticsContext, "bookmark_save_success", Map.of(
+			"source", analyticsSource(analyticsContext),
+			"domain", extractHost(link.getUrl()),
+			"has_memo", link.getMemo() != null && !link.getMemo().isBlank()
+		));
+	}
+
+	private void publishBookmarkSaveFail(Member member, AnalyticsContext analyticsContext, RuntimeException exception) {
+		publishBookmarkEvent(member, analyticsContext, "bookmark_save_fail", Map.of(
+			"source", analyticsSource(analyticsContext),
+			"error_type", exception.getClass().getSimpleName()
+		));
+	}
+
+	private void publishBookmarkEvent(Member member, AnalyticsContext analyticsContext, String eventName,
+		Map<String, Object> params) {
+		if (analyticsContext == null || analyticsContext.clientId() == null || analyticsContext.clientId().isBlank()) {
+			return;
+		}
+		String userId = member.getId() == null ? null : String.valueOf(member.getId());
+		ga4Publisher.publish(analyticsContext.clientId(), userId, new Ga4Event(eventName, params));
+	}
+
+	private String analyticsSource(AnalyticsContext analyticsContext) {
+		if (analyticsContext == null || analyticsContext.source() == null || analyticsContext.source().isBlank()) {
+			return "web";
+		}
+		return analyticsContext.source();
+	}
+
+	private String extractHost(String url) {
+		try {
+			String host = URI.create(url).getHost();
+			if (host == null || host.isBlank()) {
+				return "unknown";
+			}
+			return host.startsWith("www.") ? host.substring(4) : host;
+		} catch (IllegalArgumentException exception) {
+			return "unknown";
+		}
 	}
 
 	@Transactional(readOnly = true)
