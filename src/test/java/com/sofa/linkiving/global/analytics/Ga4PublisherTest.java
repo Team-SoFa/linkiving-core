@@ -13,7 +13,7 @@ class Ga4PublisherTest {
 	void publish_sendsEventToMeasurementProtocolClient() {
 		Ga4MeasurementProtocolClient client = mock(Ga4MeasurementProtocolClient.class);
 		Ga4Publisher publisher = new Ga4Publisher(client);
-		Ga4Event event = new Ga4Event("bookmark_save_success", Map.of("source", "web"));
+		Ga4Event event = new Ga4Event("link_save_success", Map.of("source", "web"));
 
 		publisher.publish("123.456", "42", event);
 
@@ -23,7 +23,7 @@ class Ga4PublisherTest {
 	@Test
 	void publish_doesNotPropagateClientException() {
 		Ga4MeasurementProtocolClient client = mock(Ga4MeasurementProtocolClient.class);
-		Ga4Event event = new Ga4Event("bookmark_save_success", Map.of("source", "web"));
+		Ga4Event event = new Ga4Event("link_save_success", Map.of("source", "web"));
 		willThrow(new RuntimeException("ga4 unavailable")).given(client).send("123.456", "42", event);
 		Ga4Publisher publisher = new Ga4Publisher(client);
 

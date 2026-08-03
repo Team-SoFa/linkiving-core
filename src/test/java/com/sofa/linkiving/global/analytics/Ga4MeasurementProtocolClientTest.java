@@ -27,11 +27,11 @@ class Ga4MeasurementProtocolClientTest {
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.client_id").value("123.456"))
 			.andExpect(jsonPath("$.user_id").value("42"))
-			.andExpect(jsonPath("$.events[0].name").value("bookmark_save_success"))
+			.andExpect(jsonPath("$.events[0].name").value("link_save_success"))
 			.andExpect(jsonPath("$.events[0].params.source").value("web"))
 			.andRespond(withSuccess());
 
-		client.send("123.456", "42", new Ga4Event("bookmark_save_success", Map.of("source", "web")));
+		client.send("123.456", "42", new Ga4Event("link_save_success", Map.of("source", "web")));
 
 		server.verify();
 	}
@@ -43,7 +43,7 @@ class Ga4MeasurementProtocolClientTest {
 		Ga4Properties properties = new Ga4Properties(false, "G-TEST", "secret", null);
 		Ga4MeasurementProtocolClient client = new Ga4MeasurementProtocolClient(builder.build(), properties);
 
-		client.send("123.456", "42", new Ga4Event("bookmark_save_success", Map.of()));
+		client.send("123.456", "42", new Ga4Event("link_save_success", Map.of()));
 
 		server.verify();
 	}
@@ -55,7 +55,7 @@ class Ga4MeasurementProtocolClientTest {
 		Ga4Properties properties = new Ga4Properties(true, "G-TEST", "secret", null);
 		Ga4MeasurementProtocolClient client = new Ga4MeasurementProtocolClient(builder.build(), properties);
 
-		client.send(" ", "42", new Ga4Event("bookmark_save_success", Map.of()));
+		client.send(" ", "42", new Ga4Event("link_save_success", Map.of()));
 
 		server.verify();
 	}
