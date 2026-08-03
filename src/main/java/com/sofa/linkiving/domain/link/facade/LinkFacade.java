@@ -87,16 +87,6 @@ public class LinkFacade {
 		return createLink(member, url, title, memo, imageUrl, AnalyticsContext.of(null, null));
 	}
 
-	public LinkRes createLink(
-		Member member,
-		String url,
-		String title,
-		String memo,
-		String imageUrl
-	) {
-		return createLink(member, url, title, memo, imageUrl, AnalyticsContext.of(null, null));
-	}
-
 	public LinkRes updateLink(Long linkId, Member member, String title, String memo, String imageUrl) {
 		String storedImageUrl = null;
 		if (imageUrl != null) {
