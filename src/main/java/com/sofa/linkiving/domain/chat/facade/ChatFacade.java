@@ -66,7 +66,7 @@ public class ChatFacade {
 	}
 
 	@Transactional
-	public void generateAnswer(Long chatId, Member member, String message) {
+	public void generateAnswer(Long chatId, Member member, String message, String clientId) {
 
 		CompletableFuture<AnswerRes> task = ragChatService.generateAnswer(chatId, member, message);
 

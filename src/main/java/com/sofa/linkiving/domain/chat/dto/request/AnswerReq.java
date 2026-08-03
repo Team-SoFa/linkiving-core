@@ -6,10 +6,12 @@ import com.sofa.linkiving.global.config.jackson.HashidsDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record AnswerReq(
-	@Schema(description = "채팅방 ID")
+	@Schema(description = "Chat ID")
 	@JsonDeserialize(using = HashidsDeserializer.class)
 	Long chatId,
-	@Schema(description = "유저 질문 내용")
-	String message
+	@Schema(description = "User message")
+	String message,
+	@Schema(description = "GA4 client_id")
+	String clientId
 ) {
 }

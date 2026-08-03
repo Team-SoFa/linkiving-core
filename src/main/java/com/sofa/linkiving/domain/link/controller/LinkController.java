@@ -29,6 +29,7 @@ import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.facade.LinkFacade;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.global.common.BaseResponse;
 import com.sofa.linkiving.global.config.annotation.DecodeHash;
 import com.sofa.linkiving.security.annotation.AuthMember;
@@ -73,7 +74,8 @@ public class LinkController implements LinkApi {
 			request.url(),
 			request.title(),
 			request.memo(),
-			request.imageUrl()
+			request.imageUrl(),
+			AnalyticsContext.of(request.clientId(), request.source())
 		);
 		return BaseResponse.success(response, "링크 생성 완료");
 	}
