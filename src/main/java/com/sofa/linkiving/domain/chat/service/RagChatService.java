@@ -63,8 +63,8 @@ public class RagChatService {
 			LogContext.MdcScope chatScope = LogContext.withChatId(chatId)) {
 
 			if (hasAnalyticsClient(clientId)) {
-				long bookmarkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
-				publishQuerySubmit(member, clientId, queryId, bookmarkCountAtQuery);
+				long linkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
+				publishQuerySubmit(member, clientId, queryId, linkCountAtQuery);
 			}
 
 			Chat chat = chatQueryService.findChat(chatId, member);
@@ -91,7 +91,7 @@ public class RagChatService {
 
 			List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
 
-			Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, links);
+			Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, queryId, links);
 
 			AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
 			publishQueryResponseComplete(member, clientId, queryId, startNanos, false, null, res, linkDtos);
@@ -122,10 +122,10 @@ public class RagChatService {
 			.toList();
 	}
 
-	private void publishQuerySubmit(Member member, String clientId, String queryId, long bookmarkCountAtQuery) {
+	private void publishQuerySubmit(Member member, String clientId, String queryId, long linkCountAtQuery) {
 		publishQueryEvent(member, clientId, "query_submit", Map.of(
 			"query_id", queryId,
-			"bookmark_count_at_query", bookmarkCountAtQuery
+			"link_count_at_query", linkCountAtQuery
 		));
 	}
 

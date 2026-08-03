@@ -103,7 +103,7 @@ public class RagChatServiceTest {
 		Message answerMsg = mock(Message.class);
 		given(answerMsg.getId()).willReturn(51L);
 		given(answerMsg.getContent()).willReturn("AI 답변입니다.");
-		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyList()))
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
 			.willReturn(answerMsg);
 
 		// when
@@ -121,7 +121,7 @@ public class RagChatServiceTest {
 		verify(messageCommandService).saveUserMessage(chat, userMessage);
 		verify(answerClient).generateAnswer(any(RagAnswerReq.class));
 		verify(linkQueryService).findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member));
-		verify(messageCommandService).saveAiMessage(chat, "AI 답변입니다.", List.of(link1));
+		verify(messageCommandService).saveAiMessage(eq(chat), eq("AI 답변입니다."), anyString(), eq(List.of(link1)));
 	}
 
 	@Test
@@ -197,7 +197,7 @@ public class RagChatServiceTest {
 		Message answerMsg = mock(Message.class);
 		given(answerMsg.getId()).willReturn(51L);
 		given(answerMsg.getContent()).willReturn("AI answer");
-		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyList()))
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
 			.willReturn(answerMsg);
 
 		// when
@@ -212,7 +212,7 @@ public class RagChatServiceTest {
 		Ga4Event complete = events.get(1);
 
 		assertThat(submit.name()).isEqualTo("query_submit");
-		assertThat(submit.params()).containsEntry("bookmark_count_at_query", 7L);
+		assertThat(submit.params()).containsEntry("link_count_at_query", 7L);
 		assertThat(complete.name()).isEqualTo("query_response_complete");
 		assertThat(complete.params()).containsEntry("is_error", false);
 		assertThat(complete.params()).containsEntry("retrieved_count", 9);
