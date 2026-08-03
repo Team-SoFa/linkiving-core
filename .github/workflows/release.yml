@@ -106,7 +106,36 @@ jobs:
     if: ${{ needs.backend-docker-pull-and-run.result == 'success' }}
 
     steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
+      - name: 📝 Build release notes from changelog
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          awk -v tag="${TAG_NAME}" '
+            $0 == "## [" tag "]" || $0 ~ "^## \\[" tag "\\] " {
+              capture = 1
+              next
+            }
+            capture && /^## \[/ {
+              exit
+            }
+            capture {
+              print
+            }
+          ' CHANGELOG.md | sed '/^[[:space:]]*$/d' > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            {
+              echo "Could not find release notes for ${TAG_NAME} in CHANGELOG.md."
+              echo "Please add a ## [${TAG_NAME}] section before creating the tag."
+            } >&2
+            exit 1
+          fi
+
       - name: 📝 Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: release-notes.md
