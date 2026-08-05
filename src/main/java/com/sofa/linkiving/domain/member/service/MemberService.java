@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -40,7 +41,7 @@ public class MemberService {
 
 		Member member = memberCommandService.addUser(req.email(), encoded);
 
-		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String accessToken = jwtTokenProvider.createAccessToken(member);
 		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
@@ -58,7 +59,7 @@ public class MemberService {
 			throw new BusinessException(MemberErrorCode.INCORRECT_PASSWORD);
 		}
 
-		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String accessToken = jwtTokenProvider.createAccessToken(member);
 		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
@@ -71,5 +72,14 @@ public class MemberService {
 	@Transactional(readOnly = true)
 	public MemberProfileRes getProfile(Member member) {
 		return MemberProfileRes.from(member);
+	}
+
+	public TokenRes agreeTerms(Member member, TermsAgreementReq req) {
+		member.agreeTerms(req.termsVersion(), req.privacyVersion());
+
+		String accessToken = jwtTokenProvider.createAccessToken(member);
+		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
+
+		return TokenRes.of(accessToken, refreshToken);
 	}
 }

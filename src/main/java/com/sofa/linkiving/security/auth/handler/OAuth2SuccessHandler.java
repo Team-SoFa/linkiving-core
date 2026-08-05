@@ -7,6 +7,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.global.util.CookieUtils;
 import com.sofa.linkiving.security.auth.config.OAuth2Properties;
@@ -25,6 +27,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 	private final OAuth2Properties oauth2Properties;
 	private final JwtProperties jwtProperties;
 	private final CookieUtils cookieUtils;
+	private final MemberQueryService memberQueryService;
 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -32,8 +35,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 		OAuth2User oAuth2User = (OAuth2User)authentication.getPrincipal();
 		String email = oAuth2User.getAttribute("email");
+		Member member = memberQueryService.getUser(email);
 
-		String accessToken = jwtTokenProvider.createAccessToken(email);
+		String accessToken = jwtTokenProvider.createAccessToken(member);
 		String refreshToken = jwtTokenProvider.createRefreshToken(email);
 
 		int accessExp = (int)(jwtProperties.accessTokenValidTime() / 1000);
@@ -44,7 +48,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 		AuditLogger.info("event=oauth2_login result=SUCCESS email={}", email);
 
-		String targetUrl = oauth2Properties.successRedirectUrl();
+		String targetUrl = member.needsTermsAgreement() ? oauth2Properties.termsRedirectUrl() :
+			oauth2Properties.successRedirectUrl();
 		getRedirectStrategy().sendRedirect(request, response, targetUrl);
 	}
 }

@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.WebUtils;
 
+import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
@@ -70,6 +71,21 @@ public class JwtTokenProvider {
 
 	public String createAccessToken(String id) {
 		return createJwtToken(id, accessTokenValidTime, JwtKeys.TokenType.ACCESS);
+	}
+
+	public String createAccessToken(Member member) {
+		Date now = new Date();
+		Date exp = new Date(now.getTime() + accessTokenValidTime);
+
+		return Jwts.builder()
+			.subject(member.getEmail())
+			.claim(JwtKeys.Claims.TOKEN_TYPE, JwtKeys.TokenType.ACCESS)
+			.claim(JwtKeys.Claims.MEMBER_STATUS, member.getStatus().name())
+			.claim(JwtKeys.Claims.TERMS_AGREED, member.hasAgreedTerms())
+			.issuedAt(now)
+			.expiration(exp)
+			.signWith(secretKey, Jwts.SIG.HS256)
+			.compact();
 	}
 
 	public String createRefreshToken(String id) {

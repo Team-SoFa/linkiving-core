@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.member.service;
 import org.springframework.stereotype.Service;
 
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class MemberCommandService {
 					.password(email)
 					.name(name)
 					.profileImageUrl(profileImageUrl)
+					.status(MemberStatus.PENDING_TERMS)
 					.build();
 
 				return memberRepository.save(newMember);

@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 
@@ -19,6 +20,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
@@ -79,6 +83,26 @@ public class JwtTokenProviderTest {
 
 		boolean valid = provider.validateAccessToken(token);
 		assertThat(valid).isTrue();
+	}
+
+	@Test
+	void shouldCreateAccessTokenWithTermsClaims() throws Exception {
+		// given
+		JwtTokenProvider provider = createProvider(mock(RedisService.class), null);
+		Member member = Member.builder()
+			.email("pending@test.com")
+			.password("password")
+			.status(MemberStatus.PENDING_TERMS)
+			.build();
+
+		// when
+		String token = provider.createAccessToken(member);
+		String payloadJson = new String(Base64.getUrlDecoder().decode(token.split("\\.")[1]), StandardCharsets.UTF_8);
+		Map<String, Object> payload = new ObjectMapper().readValue(payloadJson, Map.class);
+
+		// then
+		assertThat(payload.get(JwtKeys.Claims.MEMBER_STATUS)).isEqualTo(MemberStatus.PENDING_TERMS.name());
+		assertThat(payload.get(JwtKeys.Claims.TERMS_AGREED)).isEqualTo(false);
 	}
 
 	@Test

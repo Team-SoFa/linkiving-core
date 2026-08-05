@@ -33,6 +33,10 @@ public abstract class SecurityConstants {
 		"/v1/admin/**"
 	};
 
+	public static final String[] PENDING_TERMS_ALLOWED_URLS = {
+		"/v1/member/terms-agreement", "/v1/auth/reissue", "/v1/member/logout"
+	};
+
 	private static final String[] SEMI_PERMIT_URLS = {
 		//GET만 허용해야 하는 URL
 	};

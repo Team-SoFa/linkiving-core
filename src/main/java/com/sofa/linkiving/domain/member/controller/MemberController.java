@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -85,5 +86,12 @@ public class MemberController implements MemberApi {
 	public BaseResponse<MemberProfileRes> getProfile(@AuthMember Member member) {
 		MemberProfileRes profile = memberService.getProfile(member);
 		return BaseResponse.success(profile, "프로필 조회에 성공하였습니다.");
+	}
+
+	@Override
+	@PostMapping("/terms-agreement")
+	public BaseResponse<TokenRes> agreeTerms(@AuthMember Member member, @Validated @RequestBody TermsAgreementReq req) {
+		TokenRes token = memberService.agreeTerms(member, req);
+		return BaseResponse.success(token, "약관 동의가 완료되었습니다.");
 	}
 }

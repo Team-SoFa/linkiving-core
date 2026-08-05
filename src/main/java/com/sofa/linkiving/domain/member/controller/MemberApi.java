@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.member.controller;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -25,4 +26,7 @@ public interface MemberApi {
 
 	@Operation(summary = "내 프로필 조회", description = "로그인한 사용자의 프로필 정보를 조회합니다.")
 	BaseResponse<MemberProfileRes> getProfile(Member member);
+
+	@Operation(summary = "약관 동의", description = "OAuth 최초 가입 회원의 필수 약관 동의를 처리합니다.")
+	BaseResponse<TokenRes> agreeTerms(Member member, TermsAgreementReq req);
 }

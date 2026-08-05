@@ -1,7 +1,9 @@
 package com.sofa.linkiving.domain.member.entity;
 
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
 import com.sofa.linkiving.domain.member.enums.Role;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.common.BaseEntity;
@@ -9,6 +11,7 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.PrePersist;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,9 +34,19 @@ public class Member extends BaseEntity {
 	private String profileImageUrl;
 	@Column(nullable = false)
 	private Role role;
+	@Column(nullable = false, columnDefinition = "integer default 2")
+	private MemberStatus status;
+	@Column
+	private LocalDateTime termsAgreedAt;
+	@Column
+	private LocalDateTime privacyAgreedAt;
+	@Column
+	private String termsVersion;
+	@Column
+	private String privacyVersion;
 
 	@Builder
-	public Member(String email, String password, String name, String profileImageUrl) {
+	public Member(String email, String password, String name, String profileImageUrl, MemberStatus status) {
 		if (!isValidEmail(email)) {
 			throw new BusinessException(MemberErrorCode.INVALID_EMAIL_FORMAT);
 		}
@@ -42,10 +55,22 @@ public class Member extends BaseEntity {
 		this.name = name;
 		this.profileImageUrl = profileImageUrl;
 		this.role = Role.USER;
+		this.status = status == null ? MemberStatus.ACTIVE : status;
 	}
 
 	private boolean isValidEmail(String email) {
 		return EMAIL_PATTERN.matcher(email).matches();
+	}
+
+	public MemberStatus getStatus() {
+		return status == null ? MemberStatus.ACTIVE : status;
+	}
+
+	@PrePersist
+	private void setDefaultStatus() {
+		if (status == null) {
+			status = MemberStatus.ACTIVE;
+		}
 	}
 
 	public boolean verifyPassword(String rawPassword) {
@@ -59,5 +84,22 @@ public class Member extends BaseEntity {
 		if (profileImageUrl != null) {
 			this.profileImageUrl = profileImageUrl;
 		}
+	}
+
+	public boolean needsTermsAgreement() {
+		return getStatus() == MemberStatus.PENDING_TERMS;
+	}
+
+	public boolean hasAgreedTerms() {
+		return getStatus() == MemberStatus.ACTIVE;
+	}
+
+	public void agreeTerms(String termsVersion, String privacyVersion) {
+		LocalDateTime now = LocalDateTime.now();
+		this.termsAgreedAt = now;
+		this.privacyAgreedAt = now;
+		this.termsVersion = termsVersion;
+		this.privacyVersion = privacyVersion;
+		this.status = MemberStatus.ACTIVE;
 	}
 }
