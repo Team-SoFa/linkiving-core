@@ -1,5 +1,6 @@
 package com.sofa.linkiving.global.analytics;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,14 +29,16 @@ public class Ga4MeasurementProtocolClient {
 			return;
 		}
 
-		Map<String, Object> payload = Map.of(
-			"client_id", clientId,
-			"user_id", userId,
-			"events", List.of(Map.of(
+		Map<String, Object> payload = new HashMap<>();
+		payload.put("client_id", clientId);
+		payload.put("events", List.of(Map.of(
 				"name", event.name(),
 				"params", event.params()
-			))
-		);
+		)));
+
+		if (userId != null && !userId.isBlank()) {
+			payload.put("user_id", userId);
+		}
 
 		ga4RestClient.post()
 			.uri(uriBuilder -> uriBuilder
