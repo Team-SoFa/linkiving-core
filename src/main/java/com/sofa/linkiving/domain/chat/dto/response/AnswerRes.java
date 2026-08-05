@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.chat.dto.response;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
@@ -19,6 +20,7 @@ public record AnswerRes(
 	@Schema(description = "메세지 ID")
 	@JsonSerialize(using = HashidsSerializer.class)
 	Long messageId,
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	@Schema(description = "GA query_id")
 	String queryId,
 	@Schema(description = "답변 내용")

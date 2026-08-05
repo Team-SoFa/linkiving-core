@@ -166,7 +166,7 @@ public class ChatFacadeTest {
 
 		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
 
-		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+		given(ragChatService.generateAnswer(chatId, member, userMessage, null)).willReturn(future);
 
 		// when
 		chatFacade.generateAnswer(chatId, member, userMessage);
@@ -196,7 +196,7 @@ public class ChatFacadeTest {
 		given(member.getEmail()).willReturn("test@test.com");
 
 		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
-		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+		given(ragChatService.generateAnswer(chatId, member, userMessage, null)).willReturn(future);
 
 		// when
 		chatFacade.generateAnswer(chatId, member, userMessage);
@@ -228,7 +228,7 @@ public class ChatFacadeTest {
 		given(member.getEmail()).willReturn("test@test.com");
 
 		CompletableFuture<AnswerRes> future = new CompletableFuture<>();
-		given(ragChatService.generateAnswer(chatId, member, userMessage)).willReturn(future);
+		given(ragChatService.generateAnswer(chatId, member, userMessage, null)).willReturn(future);
 
 		// when
 		chatFacade.generateAnswer(chatId, member, userMessage);

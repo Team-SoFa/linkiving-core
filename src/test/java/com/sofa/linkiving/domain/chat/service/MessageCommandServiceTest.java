@@ -90,7 +90,7 @@ public class MessageCommandServiceTest {
 		given(messageRepository.save(any(Message.class))).willAnswer(invocation -> invocation.getArgument(0));
 
 		// when
-		Message savedMessage = messageCommandService.saveAiMessage(chat, content, links);
+		Message savedMessage = messageCommandService.saveAiMessage(chat, content, null, links);
 
 		// then
 		ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);

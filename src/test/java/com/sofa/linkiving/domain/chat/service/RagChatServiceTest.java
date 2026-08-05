@@ -107,7 +107,7 @@ public class RagChatServiceTest {
 			.willReturn(answerMsg);
 
 		// when
-		CompletableFuture<AnswerRes> future = ragChatService.generateAnswer(chatId, member, userMessage);
+		CompletableFuture<AnswerRes> future = ragChatService.generateAnswer(chatId, member, userMessage, null);
 
 		// then
 		AnswerRes result = future.get();
@@ -132,11 +132,12 @@ public class RagChatServiceTest {
 			.willThrow(new RuntimeException("Chat Not Found"));
 
 		// when & then
-		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage))
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, "123.456"))
 			.isInstanceOf(RuntimeException.class)
 			.hasMessage("Chat Not Found");
 
 		verifyNoInteractions(answerClient);
+		verifyNoInteractions(ga4Publisher);
 	}
 
 	@Test
@@ -156,7 +157,7 @@ public class RagChatServiceTest {
 			.willThrow(new RuntimeException("AI Service Unavailable"));
 
 		// when & then
-		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage))
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, null))
 			.isInstanceOf(RuntimeException.class)
 			.hasMessage("AI Service Unavailable");
 	}
@@ -256,7 +257,7 @@ public class RagChatServiceTest {
 		assertThat(submit.name()).isEqualTo("query_submit");
 		assertThat(complete.name()).isEqualTo("query_response_complete");
 		assertThat(complete.params()).containsEntry("is_error", true);
-		assertThat(complete.params()).containsEntry("error_type", "RuntimeException");
+		assertThat(complete.params()).containsEntry("error_type", "UNKNOWN");
 		assertThat(complete.params()).containsKey("latency_ms");
 		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
 		assertThat(complete.params()).doesNotContainValue(userMessage);

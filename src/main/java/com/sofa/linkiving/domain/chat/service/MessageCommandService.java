@@ -35,10 +35,6 @@ public class MessageCommandService {
 		return messageRepository.save(message);
 	}
 
-	public Message saveAiMessage(Chat chat, String content, List<Link> links) {
-		return saveAiMessage(chat, content, null, links);
-	}
-
 	public Message saveAiMessage(Chat chat, String content, String queryId, List<Link> links) {
 		Message message = Message.builder()
 			.chat(chat)

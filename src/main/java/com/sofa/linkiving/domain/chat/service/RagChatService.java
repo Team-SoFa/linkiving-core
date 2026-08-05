@@ -26,6 +26,7 @@ import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.analytics.Ga4Event;
 import com.sofa.linkiving.global.analytics.Ga4Publisher;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
@@ -44,12 +45,6 @@ public class RagChatService {
 
 	@Async("aiTaskExecutor")
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public CompletableFuture<AnswerRes> generateAnswer(Long chatId, Member member, String userMessage) {
-		return generateAnswer(chatId, member, userMessage, null);
-	}
-
-	@Async("aiTaskExecutor")
-	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public CompletableFuture<AnswerRes> generateAnswer(
 		Long chatId,
 		Member member,
@@ -58,49 +53,52 @@ public class RagChatService {
 	) {
 		String queryId = UUID.randomUUID().toString();
 		long startNanos = System.nanoTime();
+		Long memberId = Objects.requireNonNull(member.getId(), "memberId must not be null");
 
-		try (LogContext.MdcScope memberScope = LogContext.withMemberId(member.getId());
+		try (LogContext.MdcScope memberScope = LogContext.withMemberId(memberId);
 			LogContext.MdcScope chatScope = LogContext.withChatId(chatId)) {
-
-			if (hasAnalyticsClient(clientId)) {
-				long linkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
-				publishQuerySubmit(member, clientId, queryId, linkCountAtQuery);
-			}
 
 			Chat chat = chatQueryService.findChat(chatId, member);
 
-			Message question = messageCommandService.saveUserMessage(chat, userMessage);
-			List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
-				question.getId(), chat);
-			Collections.reverse(history);
+			try {
+				if (hasAnalyticsClient(clientId)) {
+					long linkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
+					publishQuerySubmit(member, clientId, queryId, linkCountAtQuery);
+				}
 
-			RagAnswerReq request = RagAnswerReq.of(
-				member.getId(),
-				userMessage,
-				history,
-				Mode.DETAILED
-			);
+				Message question = messageCommandService.saveUserMessage(chat, userMessage);
+				List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
+					question.getId(), chat);
+				Collections.reverse(history);
 
-			RagAnswerRes res = answerClient.generateAnswer(request);
+				RagAnswerReq request = RagAnswerReq.of(
+					memberId,
+					userMessage,
+					history,
+					Mode.DETAILED
+				);
 
-			String fullAnswer = res.answer();
+				RagAnswerRes res = answerClient.generateAnswer(request);
 
-			List<Long> linkIds = parseLinkIds(res.linkIds());
-			List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
-			List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
+				String fullAnswer = res.answer();
 
-			List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
+				List<Long> linkIds = parseLinkIds(res.linkIds());
+				List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
+				List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
 
-			Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, queryId, links);
+				List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
 
-			AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
-			publishQueryResponseComplete(member, clientId, queryId, startNanos, false, null, res, linkDtos);
+				Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, queryId, links);
 
-			return CompletableFuture.completedFuture(payload);
-		} catch (RuntimeException exception) {
-			publishQueryResponseComplete(member, clientId, queryId, startNanos, true,
-				exception.getClass().getSimpleName(), null, List.of());
-			throw exception;
+				AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
+				publishQueryResponseComplete(member, clientId, queryId, startNanos, false, null, res, linkDtos);
+
+				return CompletableFuture.completedFuture(payload);
+			} catch (RuntimeException exception) {
+				publishQueryResponseComplete(member, clientId, queryId, startNanos, true,
+					analyticsErrorType(exception), null, List.of());
+				throw exception;
+			}
 		}
 
 	}
@@ -158,8 +156,15 @@ public class RagChatService {
 		if (!hasAnalyticsClient(clientId)) {
 			return;
 		}
-		String userId = member.getId() == null ? null : String.valueOf(member.getId());
+		String userId = String.valueOf(Objects.requireNonNull(member.getId(), "memberId must not be null"));
 		ga4Publisher.publish(clientId, userId, new Ga4Event(eventName, params));
+	}
+
+	private String analyticsErrorType(RuntimeException exception) {
+		if (exception instanceof BusinessException businessException) {
+			return businessException.getErrorCode().getCode();
+		}
+		return "UNKNOWN";
 	}
 
 	private boolean hasAnalyticsClient(String clientId) {
