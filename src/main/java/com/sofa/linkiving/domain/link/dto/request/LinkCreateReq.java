@@ -34,4 +34,7 @@ public record LinkCreateReq(
 	@Pattern(regexp = "web|extension", message = "source는 web 또는 extension만 허용됩니다")
 	String source
 ) {
+	public LinkCreateReq(String url, String title, String memo, String imageUrl) {
+		this(url, title, memo, imageUrl, null, null);
+	}
 }
