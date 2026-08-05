@@ -10,6 +10,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
+import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
@@ -47,6 +48,7 @@ public class SummaryWorker {
 	private final ObjectProvider<SummaryWorker> selfProvider;
 	private final MeterRegistry meterRegistry;
 	private final SummaryDeadLetterService summaryDeadLetterService;
+	private final SummaryAnalyticsPublisher summaryAnalyticsPublisher;
 	private Counter generateFailureCounter;
 	private volatile boolean running = true;
 	private Thread workerThread;
@@ -102,7 +104,8 @@ public class SummaryWorker {
 			try {
 				Link link = summaryWorkerFacade.getLinkWithMember(linkId);
 				userEmail = link.getMember().getEmail();
-				LogContext.put(LogContext.MEMBER_ID, link.getMember().getId());
+				Long memberId = link.getMember().getId();
+				LogContext.put(LogContext.MEMBER_ID, memberId);
 
 				if (link.getSummaryStatus() != SummaryStatus.PENDING) {
 					log.warn("Link is not in PENDING state. Skipping summary generation - linkId: {}", linkId);
@@ -123,6 +126,13 @@ public class SummaryWorker {
 						userEmail,
 						SummaryStatusRes.completed(linkId, SummaryRes.from(summary))
 					));
+					summaryAnalyticsPublisher.publishComplete(
+						task.analyticsContext(),
+						firstNonNull(task.memberId(), memberId),
+						linkId,
+						false,
+						task.startedAtNanos()
+					);
 				}
 			} catch (Exception e) {
 				generateFailureCounter.increment();
@@ -148,8 +158,19 @@ public class SummaryWorker {
 						)
 					));
 				}
+				summaryAnalyticsPublisher.publishComplete(
+					task.analyticsContext(),
+					firstNonNull(task.memberId(), failedMemberId),
+					linkId,
+					true,
+					task.startedAtNanos()
+				);
 			}
 		}
+	}
+
+	private Long firstNonNull(Long value, Long fallback) {
+		return value == null ? fallback : value;
 	}
 
 	private void recordDeadLetter(Long linkId, Long memberId, Throwable cause) {

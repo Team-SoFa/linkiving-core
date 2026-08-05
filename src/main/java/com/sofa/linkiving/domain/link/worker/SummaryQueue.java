@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.springframework.stereotype.Component;
 
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +21,11 @@ public class SummaryQueue {
 	 * 요약 대기 큐에 링크 ID 추가
 	 */
 	public void addToQueue(Long linkId) {
-		summaryQueue.offer(new SummaryTask(linkId, LogContext.snapshot()));
+		addToQueue(linkId, null, AnalyticsContext.of(null, null), System.nanoTime());
+	}
+
+	public void addToQueue(Long linkId, Long memberId, AnalyticsContext analyticsContext, long startedAtNanos) {
+		summaryQueue.offer(new SummaryTask(linkId, memberId, analyticsContext, startedAtNanos, LogContext.snapshot()));
 		log.debug("Link added to summary queue - linkId={}", linkId);
 	}
 

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
@@ -37,6 +38,7 @@ public class LinkEventListener {
 	private final ApplicationEventPublisher eventPublisher;
 	private final SummaryWorkerFacade summaryWorkerFacade;
 	private final ObjectProvider<LinkEventListener> selfProvider;
+	private final SummaryAnalyticsPublisher summaryAnalyticsPublisher;
 	private final MeterRegistry meterRegistry;
 	private Counter enqueueFailureCounter;
 
@@ -73,7 +75,12 @@ public class LinkEventListener {
 		backoff = @Backoff(delay = 1000)
 	)
 	public void addToQueueWithRetry(LinkCreatedEvent event) {
-		summaryQueue.addToQueue(event.linkId());
+		summaryQueue.addToQueue(
+			event.linkId(),
+			event.memberId(),
+			event.analyticsContext(),
+			event.summaryStartedAtNanos()
+		);
 	}
 
 	/**
@@ -91,6 +98,13 @@ public class LinkEventListener {
 				event.email(),
 				SummaryStatusRes.failed(event.linkId(), "요약 대기열 등록에 실패했습니다.")
 			));
+			summaryAnalyticsPublisher.publishComplete(
+				event.analyticsContext(),
+				event.memberId(),
+				event.linkId(),
+				true,
+				event.summaryStartedAtNanos()
+			);
 			// TODO: 관리자 알림, 슬랙 발송 또는 실패 큐 적재 등 후속 처리
 		}
 	}
