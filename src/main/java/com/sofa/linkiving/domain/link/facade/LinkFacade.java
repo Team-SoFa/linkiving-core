@@ -35,6 +35,7 @@ import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.global.analytics.Ga4Event;
 import com.sofa.linkiving.global.analytics.Ga4Publisher;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
@@ -198,7 +199,7 @@ public class LinkFacade {
 	private void publishLinkSaveFail(Member member, AnalyticsContext analyticsContext, RuntimeException exception) {
 		publishLinkEvent(member, analyticsContext, "link_save_fail", Map.of(
 			"source", analyticsSource(analyticsContext),
-			"error_type", exception.getClass().getSimpleName()
+			"error_type", analyticsErrorType(exception)
 		));
 	}
 
@@ -213,9 +214,16 @@ public class LinkFacade {
 
 	private String analyticsSource(AnalyticsContext analyticsContext) {
 		if (analyticsContext == null || analyticsContext.source() == null || analyticsContext.source().isBlank()) {
-			return "web";
+			return AnalyticsContext.DEFAULT_SOURCE;
 		}
 		return analyticsContext.source();
+	}
+
+	private String analyticsErrorType(RuntimeException exception) {
+		if (exception instanceof BusinessException businessException) {
+			return businessException.getErrorCode().getCode();
+		}
+		return exception.getClass().getSimpleName();
 	}
 
 	private String extractHost(String url) {
