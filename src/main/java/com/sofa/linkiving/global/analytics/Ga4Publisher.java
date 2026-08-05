@@ -13,12 +13,12 @@ public class Ga4Publisher {
 
 	private final Ga4MeasurementProtocolClient client;
 
-	@Async("applicationTaskExecutor")
+	@Async("analyticsTaskExecutor")
 	public void publish(String clientId, String userId, Ga4Event event) {
 		try {
 			client.send(clientId, userId, event);
 		} catch (Exception exception) {
-			log.warn("Failed to publish GA4 event - event={}", event.name(), exception);
+			log.warn("Failed to publish GA4 event - event={}, reason={}", event.name(), exception.getMessage());
 		}
 	}
 }

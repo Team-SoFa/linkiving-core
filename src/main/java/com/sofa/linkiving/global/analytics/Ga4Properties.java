@@ -21,4 +21,10 @@ public record Ga4Properties(
 	public boolean isReady() {
 		return enabled && StringUtils.hasText(measurementId) && StringUtils.hasText(apiSecret);
 	}
+
+	@Override
+	public String toString() {
+		return "Ga4Properties[enabled=%s, measurementId=%s, apiSecret=****, endpoint=%s]"
+			.formatted(enabled, measurementId, endpoint);
+	}
 }
