@@ -74,6 +74,23 @@ public class AsyncConfig implements AsyncConfigurer {
 		return executor;
 	}
 
+	@Bean
+	public ThreadPoolTaskExecutor analyticsTaskExecutor() {
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+
+		executor.setCorePoolSize(1);
+		executor.setMaxPoolSize(2);
+		executor.setQueueCapacity(100);
+		executor.setThreadNamePrefix("analytics-");
+		executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+
+		executor.setWaitForTasksToCompleteOnShutdown(false);
+		executor.setTaskDecorator(taskDecorator);
+
+		executor.initialize();
+		return executor;
+	}
+
 	@Override
 	public Executor getAsyncExecutor() {
 		return applicationTaskExecutor();
