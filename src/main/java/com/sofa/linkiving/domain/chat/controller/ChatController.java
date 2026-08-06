@@ -55,7 +55,7 @@ public class ChatController implements ChatApi {
 	@Override
 	@MessageMapping("/send")
 	public void sendMessage(@Payload AnswerReq req, @AuthMember Member member) {
-		chatFacade.generateAnswer(req.chatId(), member, req.message());
+		chatFacade.generateAnswer(req.chatId(), member, req.message(), req.clientId());
 	}
 
 	@Override

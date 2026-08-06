@@ -29,6 +29,7 @@ import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,14 @@ public class LinkFacade {
 	private final ApplicationEventPublisher eventPublisher;
 	private final SummaryClient summaryClient;
 
-	public LinkRes createLink(Member member, String url, String title, String memo, String imageUrl) {
+	public LinkRes createLink(
+		Member member,
+		String url,
+		String title,
+		String memo,
+		String imageUrl,
+		AnalyticsContext analyticsContext
+	) {
 		String storedImageUrl = processImageUpload(imageUrl);
 		Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
@@ -53,6 +61,16 @@ public class LinkFacade {
 		eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
 
 		return LinkRes.from(link);
+	}
+
+	public LinkRes createLink(
+		Member member,
+		String url,
+		String title,
+		String memo,
+		String imageUrl
+	) {
+		return createLink(member, url, title, memo, imageUrl, AnalyticsContext.of(null, null));
 	}
 
 	public LinkRes updateLink(Long linkId, Member member, String title, String memo, String imageUrl) {

@@ -66,7 +66,7 @@ public class ChatFacade {
 	}
 
 	@Transactional
-	public void generateAnswer(Long chatId, Member member, String message) {
+	public void generateAnswer(Long chatId, Member member, String message, String clientId) {
 
 		CompletableFuture<AnswerRes> task = ragChatService.generateAnswer(chatId, member, message);
 
@@ -95,6 +95,11 @@ public class ChatFacade {
 			log.error("AI 답변 생성 결과가 null 입니다 - chatId={}", chatId);
 			sendNotification(chatId, member, AnswerRes.error(chatId, message));
 		});
+	}
+
+	@Transactional
+	public void generateAnswer(Long chatId, Member member, String message) {
+		generateAnswer(chatId, member, message, null);
 	}
 
 	private void sendNotification(Long chatId, Member member, AnswerRes res) {
