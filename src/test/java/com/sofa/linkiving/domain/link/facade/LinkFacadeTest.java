@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +43,9 @@ import com.sofa.linkiving.domain.link.service.LinkService;
 import com.sofa.linkiving.domain.link.service.SummaryService;
 import com.sofa.linkiving.domain.link.util.OgTagCrawler;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
+import com.sofa.linkiving.global.analytics.Ga4Event;
+import com.sofa.linkiving.global.analytics.Ga4Publisher;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,10 +73,13 @@ class LinkFacadeTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private Ga4Publisher ga4Publisher;
+
 	@BeforeEach
 	void setUp() {
 		linkFacade = new LinkFacade(linkService, ogTagCrawler, summaryService, imageUploader, eventPublisher,
-			summaryClient);
+			summaryClient, ga4Publisher);
 	}
 
 	@Test
@@ -236,7 +243,8 @@ class LinkFacadeTest {
 		given(linkService.createLink(member, url, title, memo, storedImageUrl)).willReturn(savedLink);
 
 		// when
-		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl);
+		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl,
+			AnalyticsContext.of("1234567890.1234567890", "web"));
 
 		// then
 		assertThat(result).isNotNull();
@@ -245,6 +253,7 @@ class LinkFacadeTest {
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 		verify(linkService, times(1)).createLink(member, url, title, memo, storedImageUrl);
 		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
+		verify(ga4Publisher, times(2)).publish(eq("1234567890.1234567890"), any(), any());
 	}
 
 	@Test
@@ -256,9 +265,11 @@ class LinkFacadeTest {
 			.email("test@example.com")
 			.password("password")
 			.build();
+		ReflectionTestUtils.setField(member, "id", 1L);
 		String url = "https://example.com";
 		String originalImageUrl = "https://original.com/image.jpg";
 		String storedImageUrl = "https://s3-bucket.com/stored-image.jpg";
+		AnalyticsContext context = AnalyticsContext.of("1234567890.1234567890", "web");
 
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 		given(linkService.createLink(member, url, "테스트 링크", null, storedImageUrl))
@@ -266,12 +277,18 @@ class LinkFacadeTest {
 
 		// when & then
 		assertThatThrownBy(() -> linkFacade.createLink(
-			member, url, "테스트 링크", null, originalImageUrl
+			member, url, "테스트 링크", null, originalImageUrl, context
 		))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", LinkErrorCode.DUPLICATE_URL);
 
 		verify(eventPublisher, never()).publishEvent(any());
+		ArgumentCaptor<Ga4Event> captor = ArgumentCaptor.forClass(Ga4Event.class);
+		verify(ga4Publisher, times(2)).publish(eq("1234567890.1234567890"), eq("1"), captor.capture());
+		assertThat(captor.getAllValues()).extracting(Ga4Event::name)
+			.containsExactly("link_save_attempt", "link_save_fail");
+		assertThat(captor.getAllValues().get(1).params())
+			.containsEntry("error_type", LinkErrorCode.DUPLICATE_URL.getCode());
 	}
 
 	@Test
