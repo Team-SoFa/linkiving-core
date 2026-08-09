@@ -95,6 +95,10 @@ public class Member extends BaseEntity {
 	}
 
 	public void agreeTerms(String termsVersion, String privacyVersion) {
+		if (!needsTermsAgreement()) {
+			throw new BusinessException(MemberErrorCode.TERMS_ALREADY_AGREED);
+		}
+
 		LocalDateTime now = LocalDateTime.now();
 		this.termsAgreedAt = now;
 		this.privacyAgreedAt = now;

@@ -14,6 +14,8 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
+import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.security.jwt.JwtKeys;
@@ -66,6 +68,11 @@ public class StompHandler implements ChannelInterceptor {
 					if (jwtTokenProvider.validateAccessToken(token)) {
 
 						if (StompCommand.CONNECT.equals(command)) {
+							String memberStatus = jwtTokenProvider.getClaim(token, JwtKeys.Claims.MEMBER_STATUS);
+							if (MemberStatus.PENDING_TERMS.name().equals(memberStatus)) {
+								throw new BusinessException(MemberErrorCode.TERMS_AGREEMENT_REQUIRED);
+							}
+
 							Authentication authentication = jwtTokenProvider.getAuthentication(token);
 							accessor.setUser(authentication);
 						}

@@ -33,7 +33,8 @@ public final class AsyncTaskMetrics {
 	@RequiredArgsConstructor
 	public enum Task {
 		SUMMARY("summary"),
-		LINK_SYNC("link-sync");
+		LINK_SYNC("link-sync"),
+		MEMBER("member");
 
 		private final String value;
 	}

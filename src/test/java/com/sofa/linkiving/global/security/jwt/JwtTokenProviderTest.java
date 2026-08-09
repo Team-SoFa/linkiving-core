@@ -103,6 +103,7 @@ public class JwtTokenProviderTest {
 		// then
 		assertThat(payload.get(JwtKeys.Claims.MEMBER_STATUS)).isEqualTo(MemberStatus.PENDING_TERMS.name());
 		assertThat(payload.get(JwtKeys.Claims.TERMS_AGREED)).isEqualTo(false);
+		assertThat(provider.getClaim(token, JwtKeys.Claims.MEMBER_STATUS)).isEqualTo(MemberStatus.PENDING_TERMS.name());
 	}
 
 	@Test

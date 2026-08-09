@@ -3,6 +3,7 @@ package com.sofa.linkiving.domain.member.service;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,10 @@ public class MemberService {
 	private final MemberQueryService memberQueryService;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RedisService redisService;
+	@Value("${app.member.current-terms-version:2026-08-03}")
+	private String currentTermsVersion;
+	@Value("${app.member.current-privacy-version:2026-08-03}")
+	private String currentPrivacyVersion;
 
 	public TokenRes signup(SignupReq req) {
 
@@ -75,11 +80,20 @@ public class MemberService {
 	}
 
 	public TokenRes agreeTerms(Member member, TermsAgreementReq req) {
-		member.agreeTerms(req.termsVersion(), req.privacyVersion());
+		validateAgreementVersion(req);
 
-		String accessToken = jwtTokenProvider.createAccessToken(member);
-		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
+		Member managed = memberQueryService.getUser(member.getEmail());
+		managed.agreeTerms(req.termsVersion(), req.privacyVersion());
+
+		String accessToken = jwtTokenProvider.createAccessToken(managed);
+		String refreshToken = jwtTokenProvider.createRefreshToken(managed.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
+	}
+
+	private void validateAgreementVersion(TermsAgreementReq req) {
+		if (!currentTermsVersion.equals(req.termsVersion()) || !currentPrivacyVersion.equals(req.privacyVersion())) {
+			throw new BusinessException(MemberErrorCode.INVALID_TERMS_VERSION);
+		}
 	}
 }

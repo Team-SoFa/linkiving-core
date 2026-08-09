@@ -4,6 +4,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -15,8 +18,16 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
 	Optional<Member> findByEmail(String email);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		DELETE FROM Member m
+		WHERE m.status = :status
+			AND m.termsAgreedAt IS NULL
+			AND m.privacyAgreedAt IS NULL
+			AND m.createdAt < :createdAt
+		""")
 	long deleteByStatusAndTermsAgreedAtIsNullAndPrivacyAgreedAtIsNullAndCreatedAtBefore(
-		MemberStatus status,
-		LocalDateTime createdAt
+		@Param("status") MemberStatus status,
+		@Param("createdAt") LocalDateTime createdAt
 	);
 }
