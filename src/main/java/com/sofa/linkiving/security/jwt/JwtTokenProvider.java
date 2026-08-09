@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.WebUtils;
 
+import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
@@ -19,6 +20,7 @@ import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -55,7 +57,7 @@ public class JwtTokenProvider {
 		this.refreshTokenValidTime = jwtProperties.refreshTokenValidTime();
 	}
 
-	private String createJwtToken(String subject, long validityMillis, String tokenType) {
+	private JwtBuilder baseToken(String subject, long validityMillis, String tokenType) {
 		Date now = new Date();
 		Date exp = new Date(now.getTime() + validityMillis);
 
@@ -64,12 +66,22 @@ public class JwtTokenProvider {
 			.claim(JwtKeys.Claims.TOKEN_TYPE, tokenType)
 			.issuedAt(now)
 			.expiration(exp)
-			.signWith(secretKey, Jwts.SIG.HS256)
-			.compact();
+			.signWith(secretKey, Jwts.SIG.HS256);
+	}
+
+	private String createJwtToken(String subject, long validityMillis, String tokenType) {
+		return baseToken(subject, validityMillis, tokenType).compact();
 	}
 
 	public String createAccessToken(String id) {
 		return createJwtToken(id, accessTokenValidTime, JwtKeys.TokenType.ACCESS);
+	}
+
+	public String createAccessToken(Member member) {
+		return baseToken(member.getEmail(), accessTokenValidTime, JwtKeys.TokenType.ACCESS)
+			.claim(JwtKeys.Claims.MEMBER_STATUS, member.getStatus().name())
+			.claim(JwtKeys.Claims.TERMS_AGREED, member.hasAgreedTerms())
+			.compact();
 	}
 
 	public String createRefreshToken(String id) {
@@ -157,5 +169,9 @@ public class JwtTokenProvider {
 
 		String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
 		return JwtKeys.TokenType.ACCESS.equals(tokenType);
+	}
+
+	public String getClaim(String token, String claimName) {
+		return parseClaims(token).get(claimName, String.class);
 	}
 }

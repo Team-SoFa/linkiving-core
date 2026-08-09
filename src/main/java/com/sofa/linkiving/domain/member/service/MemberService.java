@@ -3,11 +3,13 @@ package com.sofa.linkiving.domain.member.service;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -27,6 +29,10 @@ public class MemberService {
 	private final MemberQueryService memberQueryService;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RedisService redisService;
+	@Value("${app.member.current-terms-version:2026-08-03}")
+	private String currentTermsVersion;
+	@Value("${app.member.current-privacy-version:2026-08-03}")
+	private String currentPrivacyVersion;
 
 	public TokenRes signup(SignupReq req) {
 
@@ -40,7 +46,7 @@ public class MemberService {
 
 		Member member = memberCommandService.addUser(req.email(), encoded);
 
-		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String accessToken = jwtTokenProvider.createAccessToken(member);
 		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
@@ -58,7 +64,7 @@ public class MemberService {
 			throw new BusinessException(MemberErrorCode.INCORRECT_PASSWORD);
 		}
 
-		String accessToken = jwtTokenProvider.createAccessToken(member.getEmail());
+		String accessToken = jwtTokenProvider.createAccessToken(member);
 		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
 
 		return TokenRes.of(accessToken, refreshToken);
@@ -71,5 +77,23 @@ public class MemberService {
 	@Transactional(readOnly = true)
 	public MemberProfileRes getProfile(Member member) {
 		return MemberProfileRes.from(member);
+	}
+
+	public TokenRes agreeTerms(Member member, TermsAgreementReq req) {
+		validateAgreementVersion(req);
+
+		Member managed = memberQueryService.getUser(member.getEmail());
+		managed.agreeTerms(req.termsVersion(), req.privacyVersion());
+
+		String accessToken = jwtTokenProvider.createAccessToken(managed);
+		String refreshToken = jwtTokenProvider.createRefreshToken(managed.getEmail());
+
+		return TokenRes.of(accessToken, refreshToken);
+	}
+
+	private void validateAgreementVersion(TermsAgreementReq req) {
+		if (!currentTermsVersion.equals(req.termsVersion()) || !currentPrivacyVersion.equals(req.privacyVersion())) {
+			throw new BusinessException(MemberErrorCode.INVALID_TERMS_VERSION);
+		}
 	}
 }

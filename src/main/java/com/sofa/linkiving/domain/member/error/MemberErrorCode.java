@@ -14,7 +14,10 @@ public enum MemberErrorCode implements ErrorCode {
 	INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "M-000", "유효하지 않은 이메일 형식입니다."),
 	DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "M-001", "이미 존재하는 이메일입니다."),
 	USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "M-002", "존재하지 않는 유저입니다."),
-	INCORRECT_PASSWORD(HttpStatus.BAD_REQUEST, "M-003", "잘못된 비밀번호입니다.");
+	INCORRECT_PASSWORD(HttpStatus.BAD_REQUEST, "M-003", "잘못된 비밀번호입니다."),
+	TERMS_AGREEMENT_REQUIRED(HttpStatus.FORBIDDEN, "M-004", "약관 동의가 필요합니다."),
+	TERMS_ALREADY_AGREED(HttpStatus.BAD_REQUEST, "M-005", "이미 약관 동의가 완료되었습니다."),
+	INVALID_TERMS_VERSION(HttpStatus.BAD_REQUEST, "M-006", "유효하지 않은 약관 버전입니다.");
 
 	private final HttpStatus status;
 	private final String code;

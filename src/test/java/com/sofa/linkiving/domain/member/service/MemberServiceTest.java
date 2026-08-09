@@ -17,12 +17,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
+import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.infra.redis.RedisService;
@@ -83,7 +86,7 @@ public class MemberServiceTest {
 		when(memberCommandService.addUser(eq(req.email()), eq(expectedEncoded)))
 			.thenReturn(saved);
 
-		given(jwtTokenProvider.createAccessToken(any())).willReturn("mock-access-token");
+		given(jwtTokenProvider.createAccessToken(any(Member.class))).willReturn("mock-access-token");
 		given(jwtTokenProvider.createRefreshToken(any())).willReturn("mock-refresh-token");
 
 		// when
@@ -112,7 +115,7 @@ public class MemberServiceTest {
 		Member member = Member.builder().email(email).password(encoded).build();
 		given(memberQueryService.getUser(email)).willReturn(member);
 
-		given(jwtTokenProvider.createAccessToken(any())).willReturn("mock-access-token");
+		given(jwtTokenProvider.createAccessToken(any(Member.class))).willReturn("mock-access-token");
 		given(jwtTokenProvider.createRefreshToken(any())).willReturn("mock-refresh-token");
 
 		// when
@@ -160,6 +163,67 @@ public class MemberServiceTest {
 
 		// then
 		verify(redisService, times(1)).delete(any(), eq(member.getEmail()));
+	}
+
+	@Test
+	void shouldAgreeTermsAndReturnTokens() {
+		// given
+		Member member = Member.builder()
+			.email("oauth@test.com")
+			.password("pw")
+			.status(MemberStatus.PENDING_TERMS)
+			.build();
+		Member managed = Member.builder()
+			.email("oauth@test.com")
+			.password("pw")
+			.status(MemberStatus.PENDING_TERMS)
+			.build();
+		TermsAgreementReq req = new TermsAgreementReq(true, true, "2026-08-03", "2026-08-03");
+
+		ReflectionTestUtils.setField(memberService, "currentTermsVersion", "2026-08-03");
+		ReflectionTestUtils.setField(memberService, "currentPrivacyVersion", "2026-08-03");
+		given(memberQueryService.getUser(member.getEmail())).willReturn(managed);
+		given(jwtTokenProvider.createAccessToken(managed)).willReturn("mock-access-token");
+		given(jwtTokenProvider.createRefreshToken(managed.getEmail())).willReturn("mock-refresh-token");
+
+		// when
+		TokenRes res = memberService.agreeTerms(member, req);
+
+		// then
+		assertThat(res.accessToken()).isEqualTo("mock-access-token");
+		assertThat(res.refreshToken()).isEqualTo("mock-refresh-token");
+		assertThat(member.getStatus()).isEqualTo(MemberStatus.PENDING_TERMS);
+		assertThat(managed.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+		assertThat(managed.needsTermsAgreement()).isFalse();
+		assertThat(managed.getTermsVersion()).isEqualTo("2026-08-03");
+		assertThat(managed.getPrivacyVersion()).isEqualTo("2026-08-03");
+		assertThat(managed.getTermsAgreedAt()).isNotNull();
+		assertThat(managed.getPrivacyAgreedAt()).isNotNull();
+
+		verify(memberQueryService).getUser(member.getEmail());
+		verify(jwtTokenProvider, times(1)).createAccessToken(managed);
+		verify(jwtTokenProvider, times(1)).createRefreshToken(managed.getEmail());
+	}
+
+	@Test
+	void shouldThrowWhenTermsVersionIsInvalid() {
+		// given
+		Member member = Member.builder()
+			.email("oauth-invalid-version@test.com")
+			.password("pw")
+			.status(MemberStatus.PENDING_TERMS)
+			.build();
+		TermsAgreementReq req = new TermsAgreementReq(true, true, "invalid", "2026-08-03");
+
+		ReflectionTestUtils.setField(memberService, "currentTermsVersion", "2026-08-03");
+		ReflectionTestUtils.setField(memberService, "currentPrivacyVersion", "2026-08-03");
+
+		// when & then
+		assertThatThrownBy(() -> memberService.agreeTerms(member, req))
+			.isInstanceOfSatisfying(BusinessException.class, ex ->
+				assertThat(ex.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_TERMS_VERSION));
+
+		verifyNoInteractions(jwtTokenProvider);
 	}
 
 	@Test

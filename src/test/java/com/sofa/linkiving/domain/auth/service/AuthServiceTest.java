@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sofa.linkiving.domain.auth.dto.internal.TokenDto;
+import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.security.jwt.JwtProperties;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
@@ -29,6 +31,9 @@ public class AuthServiceTest {
 	@Mock
 	private JwtProperties jwtProperties;
 
+	@Mock
+	private MemberQueryService memberQueryService;
+
 	@Test
 	@DisplayName("유효한 RefreshToken이 주어지면 새로운 토큰 쌍을 발급한다")
 	void shouldReissueTokensSuccessfully() {
@@ -38,9 +43,14 @@ public class AuthServiceTest {
 
 		String newAccessToken = "new-access-token";
 		String newRefreshToken = "new-refresh-token";
+		Member member = Member.builder()
+			.email("test@test.com")
+			.password("password")
+			.build();
 
 		given(jwtTokenProvider.validateRefreshToken(oldRefreshToken)).willReturn("test@test.com");
-		given(jwtTokenProvider.createAccessToken("test@test.com")).willReturn(newAccessToken);
+		given(memberQueryService.getUser("test@test.com")).willReturn(member);
+		given(jwtTokenProvider.createAccessToken(member)).willReturn(newAccessToken);
 		given(jwtTokenProvider.createRefreshToken("test@test.com")).willReturn(newRefreshToken);
 
 		// 1시간 = 3600000ms, 2주 = 1209600000ms
@@ -58,6 +68,7 @@ public class AuthServiceTest {
 		assertThat(result.refreshExp()).isEqualTo(1209600);
 
 		verify(jwtTokenProvider, times(1)).validateRefreshToken(oldRefreshToken);
+		verify(memberQueryService, times(1)).getUser("test@test.com");
 	}
 
 	@Test

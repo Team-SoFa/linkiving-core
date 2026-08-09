@@ -14,6 +14,8 @@ public final class JwtKeys {
 	@NoArgsConstructor(access = AccessLevel.PRIVATE)
 	public static final class Claims {
 		public static final String TOKEN_TYPE = "token_type";
+		public static final String MEMBER_STATUS = "memberStatus";
+		public static final String TERMS_AGREED = "termsAgreed";
 	}
 
 	@NoArgsConstructor(access = AccessLevel.PRIVATE)
