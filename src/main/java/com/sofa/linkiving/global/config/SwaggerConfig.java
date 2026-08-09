@@ -2,6 +2,8 @@ package com.sofa.linkiving.global.config;
 
 import org.springdoc.core.customizers.ParameterCustomizer;
 import org.springdoc.core.customizers.PropertyCustomizer;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,10 +11,25 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.global.config.annotation.DecodeHash;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.StringSchema;
 
 @Configuration
 public class SwaggerConfig {
+
+	@Bean
+	public OpenAPI openApi(ObjectProvider<BuildProperties> buildProperties) {
+		String version = buildProperties.stream()
+			.findFirst()
+			.map(BuildProperties::getVersion)
+			.orElse("0.1.0");
+
+		return new OpenAPI()
+			.info(new Info()
+				.title("Linkiving API")
+				.version(version));
+	}
 
 	@Bean
 	public ParameterCustomizer hashidParameterCustomizer() {

@@ -7,12 +7,20 @@ plugins {
 }
 
 group = 'com.sofa'
-version = '0.0.1-SNAPSHOT'
+version = '0.1.0'
+
+base {
+    archivesName = 'linkiving-core'
+}
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+}
+
+springBoot {
+    buildInfo()
 }
 
 configurations {
