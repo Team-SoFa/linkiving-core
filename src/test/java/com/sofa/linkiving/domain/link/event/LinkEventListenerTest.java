@@ -21,6 +21,7 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
@@ -41,10 +42,12 @@ class LinkEventListenerTest {
 	private LinkEventListener linkEventListener;
 	@Autowired
 	private SummaryQueue summaryQueue;
+	@Autowired
+	private SummaryAnalyticsPublisher summaryAnalyticsPublisher;
 
 	@BeforeEach
 	void setUp() {
-		reset(summaryQueue, eventPublisher, summaryWorkerFacade);
+		reset(summaryQueue, eventPublisher, summaryWorkerFacade, summaryAnalyticsPublisher);
 	}
 
 	@Test
@@ -52,13 +55,13 @@ class LinkEventListenerTest {
 	void shouldAddQueueAndNotRetry_WhenFirstAttemptSucceeds() {
 		// given
 		LinkCreatedEvent event = new LinkCreatedEvent(1L, "test@test.com");
-		doNothing().when(summaryQueue).addToQueue(anyLong());
+		doNothing().when(summaryQueue).addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when
 		linkEventListener.handleLinkCreated(event);
 
 		// then
-		verify(summaryQueue, times(1)).addToQueue(1L);
+		verify(summaryQueue, times(1)).addToQueue(eq(1L), isNull(), any(), anyLong());
 	}
 
 	@Test
@@ -68,7 +71,7 @@ class LinkEventListenerTest {
 		LinkCreatedEvent event1 = new LinkCreatedEvent(10L, "test1@test.com");
 		LinkCreatedEvent event2 = new LinkCreatedEvent(20L, "test2@test.com");
 		LinkCreatedEvent event3 = new LinkCreatedEvent(30L, "test3@test.com");
-		doNothing().when(summaryQueue).addToQueue(anyLong());
+		doNothing().when(summaryQueue).addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when
 		linkEventListener.handleLinkCreated(event1);
@@ -76,9 +79,9 @@ class LinkEventListenerTest {
 		linkEventListener.handleLinkCreated(event3);
 
 		// then
-		verify(summaryQueue, times(1)).addToQueue(10L);
-		verify(summaryQueue, times(1)).addToQueue(20L);
-		verify(summaryQueue, times(1)).addToQueue(30L);
+		verify(summaryQueue, times(1)).addToQueue(eq(10L), isNull(), any(), anyLong());
+		verify(summaryQueue, times(1)).addToQueue(eq(20L), isNull(), any(), anyLong());
+		verify(summaryQueue, times(1)).addToQueue(eq(30L), isNull(), any(), anyLong());
 	}
 
 	@Test
@@ -90,13 +93,13 @@ class LinkEventListenerTest {
 		doThrow(new RuntimeException("Queue full"))
 			.doThrow(new RuntimeException("Queue full"))
 			.doNothing()
-			.when(summaryQueue).addToQueue(anyLong());
+			.when(summaryQueue).addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when & then
 		assertThatCode(() -> linkEventListener.handleLinkCreated(event))
 			.doesNotThrowAnyException();
 
-		verify(summaryQueue, times(3)).addToQueue(1L);
+		verify(summaryQueue, times(3)).addToQueue(eq(1L), isNull(), any(), anyLong());
 	}
 
 	@Test
@@ -105,13 +108,14 @@ class LinkEventListenerTest {
 		// given
 		LinkCreatedEvent event = new LinkCreatedEvent(2L, "test2@test.com");
 
-		doThrow(new RuntimeException("Queue full")).when(summaryQueue).addToQueue(anyLong());
+		doThrow(new RuntimeException("Queue full")).when(summaryQueue)
+			.addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when
 		linkEventListener.handleLinkCreated(event);
 
 		// then
-		verify(summaryQueue, times(3)).addToQueue(2L);
+		verify(summaryQueue, times(3)).addToQueue(eq(2L), isNull(), any(), anyLong());
 	}
 
 	@Test
@@ -119,7 +123,8 @@ class LinkEventListenerTest {
 	void shouldPublishFailedEvent_WhenAllRetriesFail() {
 		// given
 		LinkCreatedEvent event = new LinkCreatedEvent(2L, "fail@test.com");
-		doThrow(new RuntimeException("Queue Full")).when(summaryQueue).addToQueue(anyLong());
+		doThrow(new RuntimeException("Queue Full")).when(summaryQueue)
+			.addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when
 		linkEventListener.handleLinkCreated(event);
@@ -142,9 +147,10 @@ class LinkEventListenerTest {
 
 		// Facade를 통한 DB 상태 업데이트가 호출되었는지 검증
 		verify(summaryWorkerFacade, times(1)).updateSummaryStatus(2L, SummaryStatus.FAILED);
+		verify(summaryAnalyticsPublisher, times(1)).publishComplete(any(), isNull(), eq(2L), eq(true), anyLong());
 
 		// 큐 적재 로직이 3회 시도되었는지 검증
-		verify(summaryQueue, times(3)).addToQueue(2L);
+		verify(summaryQueue, times(3)).addToQueue(eq(2L), isNull(), any(), anyLong());
 	}
 
 	@Test
@@ -152,7 +158,7 @@ class LinkEventListenerTest {
 	void shouldPublishPendingEvent_WhenQueueSucceeds() {
 		// given
 		LinkCreatedEvent event = new LinkCreatedEvent(1L, "test@test.com");
-		doNothing().when(summaryQueue).addToQueue(anyLong());
+		doNothing().when(summaryQueue).addToQueue(anyLong(), any(), any(), anyLong());
 
 		// when
 		linkEventListener.handleLinkCreated(event);
@@ -191,11 +197,18 @@ class LinkEventListenerTest {
 		}
 
 		@Bean
+		public SummaryAnalyticsPublisher summaryAnalyticsPublisher() {
+			return mock(SummaryAnalyticsPublisher.class);
+		}
+
+		@Bean
 		public LinkEventListener linkEventListener(SummaryQueue summaryQueue,
 			ApplicationEventPublisher eventPublisher,
 			SummaryWorkerFacade summaryWorkerFacade,
+			SummaryAnalyticsPublisher summaryAnalyticsPublisher,
 			ObjectProvider<LinkEventListener> selfProvider) {
 			return new LinkEventListener(summaryQueue, eventPublisher, summaryWorkerFacade, selfProvider,
+				summaryAnalyticsPublisher,
 				meterRegistry());
 		}
 	}

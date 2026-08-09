@@ -21,6 +21,30 @@ class Ga4PublisherTest {
 	}
 
 	@Test
+	void publishWithContext_sendsEventToMeasurementProtocolClient() {
+		Ga4MeasurementProtocolClient client = mock(Ga4MeasurementProtocolClient.class);
+		Ga4Publisher publisher = new Ga4Publisher(client);
+		Ga4Event event = new Ga4Event("link_save_success", Map.of("source", "web"));
+
+		publisher.publish(AnalyticsContext.of("123.456", "web"), 42L, event);
+
+		verify(client).send("123.456", "42", event);
+	}
+
+	@Test
+	void publishWithContext_skipsWhenClientIdIsMissing() {
+		Ga4MeasurementProtocolClient client = mock(Ga4MeasurementProtocolClient.class);
+		Ga4Publisher publisher = new Ga4Publisher(client);
+		Ga4Event event = new Ga4Event("link_save_success", Map.of("source", "web"));
+
+		publisher.publish(AnalyticsContext.of(null, "web"), 42L, event);
+		publisher.publish(AnalyticsContext.of(" ", "web"), 42L, event);
+		publisher.publish(null, 42L, event);
+
+		then(client).shouldHaveNoInteractions();
+	}
+
+	@Test
 	void publish_doesNotPropagateClientException() {
 		Ga4MeasurementProtocolClient client = mock(Ga4MeasurementProtocolClient.class);
 		Ga4Event event = new Ga4Event("link_save_success", Map.of("source", "web"));

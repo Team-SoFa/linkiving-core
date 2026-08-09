@@ -21,6 +21,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
+import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
@@ -30,6 +31,7 @@ import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,6 +53,8 @@ class SummaryWorkerTest {
 	private ObjectProvider<SummaryWorker> selfProvider;
 	@Mock
 	private SummaryDeadLetterService summaryDeadLetterService;
+	@Mock
+	private SummaryAnalyticsPublisher summaryAnalyticsPublisher;
 
 	private SummaryWorker summaryWorker;
 	private Link mockLink;
@@ -60,7 +64,7 @@ class SummaryWorkerTest {
 		MeterRegistry meterRegistry = new SimpleMeterRegistry();
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
 		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher,
-			selfProvider, meterRegistry, summaryDeadLetterService);
+			selfProvider, meterRegistry, summaryDeadLetterService, summaryAnalyticsPublisher);
 
 		mockLink = mock(Link.class);
 		Member mockMember = mock(Member.class);
@@ -80,7 +84,7 @@ class SummaryWorkerTest {
 	}
 
 	private SummaryTask task(Long linkId) {
-		return new SummaryTask(linkId, Map.of());
+		return new SummaryTask(linkId, 100L, AnalyticsContext.of("123.456", "web"), System.nanoTime(), Map.of());
 	}
 
 	@Test
@@ -275,6 +279,13 @@ class SummaryWorkerTest {
 
 		assertThat(captor.getAllValues().get(0).response().status()).isEqualTo(SummaryStatus.PROCESSING);
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.COMPLETED);
+		verify(summaryAnalyticsPublisher, timeout(1000)).publishComplete(
+			any(AnalyticsContext.class),
+			eq(100L),
+			eq(1L),
+			eq(false),
+			anyLong()
+		);
 	}
 
 	@Test
@@ -301,6 +312,13 @@ class SummaryWorkerTest {
 		assertThat(captor.getAllValues().get(1).response().status()).isEqualTo(SummaryStatus.FAILED);
 		assertThat(captor.getAllValues().get(1).response().errorMessage())
 			.contains("Retry limit exceeded");
+		verify(summaryAnalyticsPublisher, timeout(1000)).publishComplete(
+			any(AnalyticsContext.class),
+			eq(100L),
+			eq(1L),
+			eq(true),
+			anyLong()
+		);
 	}
 
 	@Test
@@ -357,6 +375,13 @@ class SummaryWorkerTest {
 		verify(eventPublisher, after(300).times(1)).publishEvent(captor.capture());
 
 		assertThat(captor.getValue().response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		verify(summaryAnalyticsPublisher, timeout(1000)).publishComplete(
+			any(AnalyticsContext.class),
+			eq(100L),
+			eq(1L),
+			eq(true),
+			anyLong()
+		);
 	}
 
 	@Test

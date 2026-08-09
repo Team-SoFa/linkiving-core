@@ -67,7 +67,14 @@ public class LinkFacade {
 			String storedImageUrl = processImageUpload(imageUrl);
 			Link link = linkService.createLink(member, url, title, memo, storedImageUrl);
 
-			eventPublisher.publishEvent(new LinkCreatedEvent(link.getId(), member.getEmail(), LogContext.snapshot()));
+			eventPublisher.publishEvent(new LinkCreatedEvent(
+				link.getId(),
+				member.getId(),
+				member.getEmail(),
+				LogContext.snapshot(),
+				analyticsContext,
+				System.nanoTime()
+			));
 			eventPublisher.publishEvent(LinkSyncEvent.createEvent(link));
 			publishLinkSaveSuccess(member, analyticsContext, link);
 
@@ -205,11 +212,7 @@ public class LinkFacade {
 
 	private void publishLinkEvent(Member member, AnalyticsContext analyticsContext, String eventName,
 		Map<String, Object> params) {
-		if (analyticsContext == null || analyticsContext.clientId() == null || analyticsContext.clientId().isBlank()) {
-			return;
-		}
-		String userId = member.getId() == null ? null : String.valueOf(member.getId());
-		ga4Publisher.publish(analyticsContext.clientId(), userId, new Ga4Event(eventName, params));
+		ga4Publisher.publish(analyticsContext, member.getId(), new Ga4Event(eventName, params));
 	}
 
 	private String analyticsSource(AnalyticsContext analyticsContext) {
@@ -245,7 +248,7 @@ public class LinkFacade {
 
 	public void retrySummary(Long id, Member member) {
 		linkService.resetSummaryStatusForRetry(id, member);
-		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getEmail(), LogContext.snapshot()));
+		eventPublisher.publishEvent(new LinkCreatedEvent(id, member.getId(), member.getEmail(), LogContext.snapshot()));
 	}
 
 	@Transactional(readOnly = true)
