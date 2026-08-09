@@ -20,6 +20,7 @@ import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.global.logging.AuditLogger;
 import com.sofa.linkiving.security.jwt.JwtKeys;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
+import com.sofa.linkiving.security.jwt.error.CustomJwtException;
 import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
 
 import lombok.RequiredArgsConstructor;
@@ -65,17 +66,18 @@ public class StompHandler implements ChannelInterceptor {
 						throw new BusinessException(JwtErrorCode.EMPTY_TOKEN);
 					}
 
-					if (jwtTokenProvider.validateAccessToken(token)) {
+					if (!jwtTokenProvider.validateAccessToken(token)) {
+						throw new CustomJwtException(JwtErrorCode.INVALID_JWT_TOKEN);
+					}
 
-						if (StompCommand.CONNECT.equals(command)) {
-							String memberStatus = jwtTokenProvider.getClaim(token, JwtKeys.Claims.MEMBER_STATUS);
-							if (MemberStatus.PENDING_TERMS.name().equals(memberStatus)) {
-								throw new BusinessException(MemberErrorCode.TERMS_AGREEMENT_REQUIRED);
-							}
-
-							Authentication authentication = jwtTokenProvider.getAuthentication(token);
-							accessor.setUser(authentication);
+					if (StompCommand.CONNECT.equals(command)) {
+						String memberStatus = jwtTokenProvider.getClaim(token, JwtKeys.Claims.MEMBER_STATUS);
+						if (MemberStatus.PENDING_TERMS.name().equals(memberStatus)) {
+							throw new BusinessException(MemberErrorCode.TERMS_AGREEMENT_REQUIRED);
 						}
+
+						Authentication authentication = jwtTokenProvider.getAuthentication(token);
+						accessor.setUser(authentication);
 					}
 
 				} catch (BusinessException e) {
