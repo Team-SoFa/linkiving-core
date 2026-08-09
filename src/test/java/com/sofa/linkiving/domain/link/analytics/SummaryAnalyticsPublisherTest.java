@@ -30,7 +30,7 @@ class SummaryAnalyticsPublisherTest {
 
 		Ga4Event event = eventCaptor.getValue();
 		assertThat(event.name()).isEqualTo("summary_complete");
-		assertThat(event.params()).containsEntry("bookmark_id", 1L);
+		assertThat(event.params()).containsEntry("link_id", 1L);
 		assertThat(event.params()).containsEntry("is_error", false);
 		assertThat(event.params()).containsKey("latency_ms");
 	}

@@ -25,7 +25,7 @@ public class SummaryAnalyticsPublisher {
 		long startedAtNanos
 	) {
 		Map<String, Object> params = new HashMap<>();
-		params.put("bookmark_id", linkId);
+		params.put("link_id", linkId);
 		params.put("is_error", isError);
 		params.put("latency_ms", elapsedMillis(startedAtNanos));
 
