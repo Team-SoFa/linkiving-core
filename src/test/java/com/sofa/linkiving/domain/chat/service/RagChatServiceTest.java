@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +28,8 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.Ga4Event;
+import com.sofa.linkiving.global.analytics.Ga4Publisher;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RagChatService 단위 테스트")
@@ -46,6 +49,8 @@ public class RagChatServiceTest {
 	private LinkQueryService linkQueryService;
 	@Mock
 	private ChatQueryService chatQueryService;
+	@Mock
+	private Ga4Publisher ga4Publisher;
 	private Member member;
 	private Chat chat;
 
@@ -98,11 +103,11 @@ public class RagChatServiceTest {
 		Message answerMsg = mock(Message.class);
 		given(answerMsg.getId()).willReturn(51L);
 		given(answerMsg.getContent()).willReturn("AI 답변입니다.");
-		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyList()))
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
 			.willReturn(answerMsg);
 
 		// when
-		CompletableFuture<AnswerRes> future = ragChatService.generateAnswer(chatId, member, userMessage);
+		CompletableFuture<AnswerRes> future = ragChatService.generateAnswer(chatId, member, userMessage, null);
 
 		// then
 		AnswerRes result = future.get();
@@ -116,7 +121,7 @@ public class RagChatServiceTest {
 		verify(messageCommandService).saveUserMessage(chat, userMessage);
 		verify(answerClient).generateAnswer(any(RagAnswerReq.class));
 		verify(linkQueryService).findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member));
-		verify(messageCommandService).saveAiMessage(chat, "AI 답변입니다.", List.of(link1));
+		verify(messageCommandService).saveAiMessage(eq(chat), eq("AI 답변입니다."), anyString(), eq(List.of(link1)));
 	}
 
 	@Test
@@ -127,11 +132,12 @@ public class RagChatServiceTest {
 			.willThrow(new RuntimeException("Chat Not Found"));
 
 		// when & then
-		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage))
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, "123.456"))
 			.isInstanceOf(RuntimeException.class)
 			.hasMessage("Chat Not Found");
 
 		verifyNoInteractions(answerClient);
+		verifyNoInteractions(ga4Publisher);
 	}
 
 	@Test
@@ -151,8 +157,109 @@ public class RagChatServiceTest {
 			.willThrow(new RuntimeException("AI Service Unavailable"));
 
 		// when & then
-		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage))
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, null))
 			.isInstanceOf(RuntimeException.class)
 			.hasMessage("AI Service Unavailable");
+	}
+
+	@Test
+	void shouldPublishQueryAnalyticsEvents_WhenClientIdExists()
+		throws ExecutionException, InterruptedException {
+		// given
+		String clientId = "123.456";
+		given(linkQueryService.countByMemberAndIsDeleteFalse(member)).willReturn(7L);
+		given(chatQueryService.findChat(chatId, member)).willReturn(chat);
+
+		Message questionMsg = mock(Message.class);
+		given(questionMsg.getId()).willReturn(50L);
+		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+
+		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(50L, chat))
+			.willReturn(Collections.emptyList());
+
+		RagAnswerRes ragRes = new RagAnswerRes(
+			"AI answer",
+			List.of("10", "20"),
+			List.of(new RagAnswerRes.ReasoningStep("reasoning", List.of("10"))),
+			List.of("10", "20"),
+			false,
+			9,
+			2,
+			0.91
+		);
+		given(answerClient.generateAnswer(any(RagAnswerReq.class))).willReturn(ragRes);
+
+		LinkDto linkDto1 = mock(LinkDto.class);
+		Link link1 = mock(Link.class);
+		given(linkDto1.link()).willReturn(link1);
+		given(linkQueryService.findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member)))
+			.willReturn(List.of(linkDto1));
+
+		Message answerMsg = mock(Message.class);
+		given(answerMsg.getId()).willReturn(51L);
+		given(answerMsg.getContent()).willReturn("AI answer");
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
+			.willReturn(answerMsg);
+
+		// when
+		ragChatService.generateAnswer(chatId, member, userMessage, clientId).get();
+
+		// then
+		ArgumentCaptor<Ga4Event> eventCaptor = ArgumentCaptor.forClass(Ga4Event.class);
+		verify(ga4Publisher, times(2)).publish(eq(clientId), eq("100"), eventCaptor.capture());
+
+		List<Ga4Event> events = eventCaptor.getAllValues();
+		Ga4Event submit = events.get(0);
+		Ga4Event complete = events.get(1);
+
+		assertThat(submit.name()).isEqualTo("query_submit");
+		assertThat(submit.params()).containsEntry("link_count_at_query", 7L);
+		assertThat(complete.name()).isEqualTo("query_response_complete");
+		assertThat(complete.params()).containsEntry("is_error", false);
+		assertThat(complete.params()).containsEntry("retrieved_count", 9);
+		assertThat(complete.params()).containsEntry("selected_count", 2);
+		assertThat(complete.params()).containsEntry("top_similarity", 0.91);
+		assertThat(complete.params()).containsKey("latency_ms");
+		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		assertThat(complete.params()).doesNotContainValue(userMessage);
+		assertThat(complete.params()).doesNotContainValue("AI answer");
+	}
+
+	@Test
+	void shouldPublishErrorQueryAnalyticsEvent_WhenAiClientFails() {
+		// given
+		String clientId = "123.456";
+		given(linkQueryService.countByMemberAndIsDeleteFalse(member)).willReturn(7L);
+		given(chatQueryService.findChat(chatId, member)).willReturn(chat);
+
+		Message questionMsg = mock(Message.class);
+		given(questionMsg.getId()).willReturn(50L);
+		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+
+		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(anyLong(), any()))
+			.willReturn(Collections.emptyList());
+
+		given(answerClient.generateAnswer(any()))
+			.willThrow(new RuntimeException("AI Service Unavailable"));
+
+		// when & then
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, clientId))
+			.isInstanceOf(RuntimeException.class)
+			.hasMessage("AI Service Unavailable");
+
+		ArgumentCaptor<Ga4Event> eventCaptor = ArgumentCaptor.forClass(Ga4Event.class);
+		verify(ga4Publisher, times(2)).publish(eq(clientId), eq("100"), eventCaptor.capture());
+
+		List<Ga4Event> events = eventCaptor.getAllValues();
+		Ga4Event submit = events.get(0);
+		Ga4Event complete = events.get(1);
+
+		assertThat(submit.name()).isEqualTo("query_submit");
+		assertThat(complete.name()).isEqualTo("query_response_complete");
+		assertThat(complete.params()).containsEntry("is_error", true);
+		assertThat(complete.params()).containsEntry("error_type", "UNKNOWN");
+		assertThat(complete.params()).containsKey("latency_ms");
+		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		assertThat(complete.params()).doesNotContainValue(userMessage);
 	}
 }

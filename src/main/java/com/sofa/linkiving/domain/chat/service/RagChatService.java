@@ -1,8 +1,11 @@
 package com.sofa.linkiving.domain.chat.service;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.scheduling.annotation.Async;
@@ -21,6 +24,9 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.service.LinkQueryService;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.global.analytics.Ga4Event;
+import com.sofa.linkiving.global.analytics.Ga4Publisher;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.global.logging.LogContext;
 
 import lombok.RequiredArgsConstructor;
@@ -35,42 +41,64 @@ public class RagChatService {
 	private final MessageQueryService messageQueryService;
 	private final LinkQueryService linkQueryService;
 	private final ChatQueryService chatQueryService;
+	private final Ga4Publisher ga4Publisher;
 
 	@Async("aiTaskExecutor")
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	public CompletableFuture<AnswerRes> generateAnswer(Long chatId, Member member, String userMessage) {
-		try (LogContext.MdcScope memberScope = LogContext.withMemberId(member.getId());
+	public CompletableFuture<AnswerRes> generateAnswer(
+		Long chatId,
+		Member member,
+		String userMessage,
+		String clientId
+	) {
+		String queryId = UUID.randomUUID().toString();
+		long startNanos = System.nanoTime();
+		Long memberId = Objects.requireNonNull(member.getId(), "memberId must not be null");
+
+		try (LogContext.MdcScope memberScope = LogContext.withMemberId(memberId);
 			LogContext.MdcScope chatScope = LogContext.withChatId(chatId)) {
 
 			Chat chat = chatQueryService.findChat(chatId, member);
 
-			Message question = messageCommandService.saveUserMessage(chat, userMessage);
-			List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
-				question.getId(), chat);
-			Collections.reverse(history);
+			try {
+				if (hasAnalyticsClient(clientId)) {
+					long linkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
+					publishQuerySubmit(member, clientId, queryId, linkCountAtQuery);
+				}
 
-			RagAnswerReq request = RagAnswerReq.of(
-				member.getId(),
-				userMessage,
-				history,
-				Mode.DETAILED
-			);
+				Message question = messageCommandService.saveUserMessage(chat, userMessage);
+				List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
+					question.getId(), chat);
+				Collections.reverse(history);
 
-			RagAnswerRes res = answerClient.generateAnswer(request);
+				RagAnswerReq request = RagAnswerReq.of(
+					memberId,
+					userMessage,
+					history,
+					Mode.DETAILED
+				);
 
-			String fullAnswer = res.answer();
+				RagAnswerRes res = answerClient.generateAnswer(request);
 
-			List<Long> linkIds = parseLinkIds(res.linkIds());
-			List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
-			List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
+				String fullAnswer = res.answer();
 
-			List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
+				List<Long> linkIds = parseLinkIds(res.linkIds());
+				List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
+				List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
 
-			Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, links);
+				List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
 
-			AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
+				Message answer = messageCommandService.saveAiMessage(chat, fullAnswer, queryId, links);
 
-			return CompletableFuture.completedFuture(payload);
+				AnswerRes payload = AnswerRes.of(chat.getId(), answer, steps, linkDtos);
+				publishQueryResponseComplete(member, clientId, queryId, startNanos, false, null, res, linkDtos);
+
+				return CompletableFuture.completedFuture(payload);
+			} catch (RuntimeException exception) {
+				publishQueryResponseComplete(member, clientId, queryId, startNanos, true,
+					analyticsErrorType(exception), null, List.of());
+				throw exception;
+			}
 		}
 
 	}
@@ -90,5 +118,70 @@ public class RagChatService {
 			})
 			.filter(Objects::nonNull)
 			.toList();
+	}
+
+	private void publishQuerySubmit(Member member, String clientId, String queryId, long linkCountAtQuery) {
+		publishQueryEvent(member, clientId, "query_submit", Map.of(
+			"query_id", queryId,
+			"link_count_at_query", linkCountAtQuery
+		));
+	}
+
+	private void publishQueryResponseComplete(
+		Member member,
+		String clientId,
+		String queryId,
+		long startNanos,
+		boolean isError,
+		String errorType,
+		RagAnswerRes ragAnswer,
+		List<LinkDto> selectedLinks
+	) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("query_id", queryId);
+		params.put("is_error", isError);
+		params.put("latency_ms", elapsedMillis(startNanos));
+
+		if (ragAnswer != null) {
+			params.put("selected_count", firstNonNull(ragAnswer.selectedCount(), selectedLinks.size()));
+			putIfPresent(params, "retrieved_count", ragAnswer.retrievedCount());
+			putIfPresent(params, "top_similarity", ragAnswer.topSimilarity());
+		}
+		putIfPresent(params, "error_type", errorType);
+
+		publishQueryEvent(member, clientId, "query_response_complete", params);
+	}
+
+	private void publishQueryEvent(Member member, String clientId, String eventName, Map<String, Object> params) {
+		if (!hasAnalyticsClient(clientId)) {
+			return;
+		}
+		String userId = String.valueOf(Objects.requireNonNull(member.getId(), "memberId must not be null"));
+		ga4Publisher.publish(clientId, userId, new Ga4Event(eventName, params));
+	}
+
+	private String analyticsErrorType(RuntimeException exception) {
+		if (exception instanceof BusinessException businessException) {
+			return businessException.getErrorCode().getCode();
+		}
+		return "UNKNOWN";
+	}
+
+	private boolean hasAnalyticsClient(String clientId) {
+		return clientId != null && !clientId.isBlank();
+	}
+
+	private void putIfPresent(Map<String, Object> params, String key, Object value) {
+		if (value != null) {
+			params.put(key, value);
+		}
+	}
+
+	private Integer firstNonNull(Integer value, int fallback) {
+		return value == null ? fallback : value;
+	}
+
+	private long elapsedMillis(long startNanos) {
+		return (System.nanoTime() - startNanos) / 1_000_000;
 	}
 }

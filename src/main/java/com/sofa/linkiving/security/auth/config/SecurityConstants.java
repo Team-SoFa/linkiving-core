@@ -25,7 +25,10 @@ public abstract class SecurityConstants {
 		"/oauth2/**",
 
 		/* auth */
-		"/v1/auth/reissue"
+		"/v1/auth/reissue",
+
+		/* websocket handshake */
+		"/ws/chat/**", "/ws/link/**"
 	};
 
 	public static final String[] ADMIN_URLS = {

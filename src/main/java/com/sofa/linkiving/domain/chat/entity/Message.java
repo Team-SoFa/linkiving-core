@@ -38,6 +38,9 @@ public class Message extends BaseEntity {
 	@Column(columnDefinition = "text", nullable = false)
 	private String content;
 
+	@Column(name = "query_id")
+	private String queryId;
+
 	@ManyToMany(fetch = FetchType.LAZY)
 	@JoinTable(
 		name = "message_link",
@@ -50,10 +53,11 @@ public class Message extends BaseEntity {
 	private Feedback feedback;
 
 	@Builder
-	public Message(Chat chat, Type type, String content, List<Link> links) {
+	public Message(Chat chat, Type type, String content, String queryId, List<Link> links) {
 		this.chat = chat;
 		this.type = type;
 		this.content = content;
+		this.queryId = queryId;
 		this.links = (links != null) ? links : new ArrayList<>();
 	}
 

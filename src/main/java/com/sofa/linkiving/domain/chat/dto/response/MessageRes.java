@@ -23,6 +23,10 @@ public record MessageRes(
 	@Schema(description = "메시지 내용")
 	String content,
 
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@Schema(description = "GA query_id")
+	String queryId,
+
 	@Schema(description = "발신자 타입 (USER / AI)")
 	Type type,
 
@@ -43,6 +47,7 @@ public record MessageRes(
 		return new MessageRes(
 			message.getId(),
 			message.getContent(),
+			message.getQueryId(),
 			message.getType(),
 			message.getSentimentOrDefault(),
 			message.getCreatedAt(),
