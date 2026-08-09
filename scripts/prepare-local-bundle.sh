@@ -13,7 +13,7 @@ BUNDLE_DIR="${DIST_DIR}/${BUNDLE_NAME}"
 ARCHIVE_PATH="${DIST_DIR}/${BUNDLE_NAME}.zip"
 CHECKSUM_PATH="${ARCHIVE_PATH}.sha256"
 
-APP_JAR="$(find "${REPO_ROOT}/build/libs" -maxdepth 1 -type f -name '*.jar' ! -name '*plain.jar' | head -n 1)"
+APP_JAR="$(find "${REPO_ROOT}/build/libs" -maxdepth 1 -type f -name 'linkiving-core-*.jar' ! -name '*plain.jar' | head -n 1)"
 
 if [ -z "${APP_JAR}" ]; then
   echo "Built jar not found in build/libs" >&2
