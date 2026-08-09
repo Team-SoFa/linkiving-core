@@ -133,6 +133,14 @@ public class SummaryWorker {
 						false,
 						task.startedAtNanos()
 					);
+				} else {
+					summaryAnalyticsPublisher.publishComplete(
+						task.analyticsContext(),
+						firstNonNull(task.memberId(), memberId),
+						linkId,
+						true,
+						task.startedAtNanos()
+					);
 				}
 			} catch (Exception e) {
 				generateFailureCounter.increment();

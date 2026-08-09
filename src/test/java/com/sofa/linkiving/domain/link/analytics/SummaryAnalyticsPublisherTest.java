@@ -19,13 +19,14 @@ class SummaryAnalyticsPublisherTest {
 	void publishComplete_publishesSummaryCompleteEvent() {
 		// given
 		long startedAtNanos = System.nanoTime() - 1_000_000;
+		AnalyticsContext context = AnalyticsContext.of("123.456", "web");
 
 		// when
-		publisher.publishComplete(AnalyticsContext.of("123.456", "web"), 100L, 1L, false, startedAtNanos);
+		publisher.publishComplete(context, 100L, 1L, false, startedAtNanos);
 
 		// then
 		ArgumentCaptor<Ga4Event> eventCaptor = ArgumentCaptor.forClass(Ga4Event.class);
-		verify(ga4Publisher).publish(eq("123.456"), eq("100"), eventCaptor.capture());
+		verify(ga4Publisher).publish(eq(context), eq(100L), eventCaptor.capture());
 
 		Ga4Event event = eventCaptor.getValue();
 		assertThat(event.name()).isEqualTo("summary_complete");
@@ -35,11 +36,11 @@ class SummaryAnalyticsPublisherTest {
 	}
 
 	@Test
-	void publishComplete_skipsWhenClientIdIsMissing() {
+	void publishComplete_delegatesClientIdPolicyToGa4Publisher() {
 		// when
 		publisher.publishComplete(AnalyticsContext.of(null, "web"), 100L, 1L, true, System.nanoTime());
 
 		// then
-		then(ga4Publisher).shouldHaveNoInteractions();
+		then(ga4Publisher).should().publish(any(AnalyticsContext.class), eq(100L), any(Ga4Event.class));
 	}
 }

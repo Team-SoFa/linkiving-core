@@ -212,11 +212,7 @@ public class LinkFacade {
 
 	private void publishLinkEvent(Member member, AnalyticsContext analyticsContext, String eventName,
 		Map<String, Object> params) {
-		if (analyticsContext == null || analyticsContext.clientId() == null || analyticsContext.clientId().isBlank()) {
-			return;
-		}
-		String userId = member.getId() == null ? null : String.valueOf(member.getId());
-		ga4Publisher.publish(analyticsContext.clientId(), userId, new Ga4Event(eventName, params));
+		ga4Publisher.publish(analyticsContext, member.getId(), new Ga4Event(eventName, params));
 	}
 
 	private String analyticsSource(AnalyticsContext analyticsContext) {

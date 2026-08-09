@@ -375,6 +375,13 @@ class SummaryWorkerTest {
 		verify(eventPublisher, after(300).times(1)).publishEvent(captor.capture());
 
 		assertThat(captor.getValue().response().status()).isEqualTo(SummaryStatus.PROCESSING);
+		verify(summaryAnalyticsPublisher, timeout(1000)).publishComplete(
+			any(AnalyticsContext.class),
+			eq(100L),
+			eq(1L),
+			eq(true),
+			anyLong()
+		);
 	}
 
 	@Test

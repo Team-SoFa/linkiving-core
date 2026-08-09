@@ -228,6 +228,8 @@ class LinkFacadeTest {
 			.email("test@example.com")
 			.password("password")
 			.build();
+		ReflectionTestUtils.setField(member, "id", 1L);
+		AnalyticsContext analyticsContext = AnalyticsContext.of("1234567890.1234567890", "web");
 
 		given(imageUploader.uploadFromUrl(originalImageUrl)).willReturn(storedImageUrl);
 
@@ -243,8 +245,7 @@ class LinkFacadeTest {
 		given(linkService.createLink(member, url, title, memo, storedImageUrl)).willReturn(savedLink);
 
 		// when
-		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl,
-			AnalyticsContext.of("1234567890.1234567890", "web"));
+		LinkRes result = linkFacade.createLink(member, url, title, memo, originalImageUrl, analyticsContext);
 
 		// then
 		assertThat(result).isNotNull();
@@ -252,8 +253,14 @@ class LinkFacadeTest {
 
 		verify(imageUploader, times(1)).uploadFromUrl(originalImageUrl);
 		verify(linkService, times(1)).createLink(member, url, title, memo, storedImageUrl);
-		verify(eventPublisher, times(1)).publishEvent(any(LinkCreatedEvent.class));
-		verify(ga4Publisher, times(2)).publish(eq("1234567890.1234567890"), any(), any());
+		ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+		verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
+
+		LinkCreatedEvent createdEvent = (LinkCreatedEvent)eventCaptor.getAllValues().get(0);
+		assertThat(createdEvent.analyticsContext()).isEqualTo(analyticsContext);
+		assertThat(createdEvent.memberId()).isEqualTo(1L);
+
+		verify(ga4Publisher, times(2)).publish(eq(analyticsContext), eq(1L), any(Ga4Event.class));
 	}
 
 	@Test
@@ -284,7 +291,7 @@ class LinkFacadeTest {
 
 		verify(eventPublisher, never()).publishEvent(any());
 		ArgumentCaptor<Ga4Event> captor = ArgumentCaptor.forClass(Ga4Event.class);
-		verify(ga4Publisher, times(2)).publish(eq("1234567890.1234567890"), eq("1"), captor.capture());
+		verify(ga4Publisher, times(2)).publish(eq(context), eq(1L), captor.capture());
 		assertThat(captor.getAllValues()).extracting(Ga4Event::name)
 			.containsExactly("link_save_attempt", "link_save_fail");
 		assertThat(captor.getAllValues().get(1).params())
