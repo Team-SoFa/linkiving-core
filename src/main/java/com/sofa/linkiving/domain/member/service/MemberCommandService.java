@@ -27,7 +27,7 @@ public class MemberCommandService {
 	}
 
 	public Member createOrUpdate(String email, String name, String profileImageUrl) {
-		return memberRepository.findByEmail(email)
+		return memberRepository.findByEmailForUpdate(email)
 			.map(member -> {
 				member.updateProfile(name, profileImageUrl);
 				return member;
@@ -43,5 +43,9 @@ public class MemberCommandService {
 
 				return memberRepository.save(newMember);
 			});
+	}
+
+	public void delete(Member member) {
+		memberRepository.delete(member);
 	}
 }

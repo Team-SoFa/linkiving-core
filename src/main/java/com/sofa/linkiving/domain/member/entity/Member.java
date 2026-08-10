@@ -106,4 +106,21 @@ public class Member extends BaseEntity {
 		this.privacyVersion = privacyVersion;
 		this.status = MemberStatus.ACTIVE;
 	}
+
+	public boolean isWithdrawing() {
+		return getStatus() == MemberStatus.WITHDRAWING
+			|| getStatus() == MemberStatus.WITHDRAWAL_ANALYTICS_SENT;
+	}
+
+	public void beginWithdrawal() {
+		this.status = MemberStatus.WITHDRAWING;
+	}
+
+	public boolean claimWithdrawalAnalytics() {
+		if (getStatus() != MemberStatus.WITHDRAWING) {
+			return false;
+		}
+		this.status = MemberStatus.WITHDRAWAL_ANALYTICS_SENT;
+		return true;
+	}
 }

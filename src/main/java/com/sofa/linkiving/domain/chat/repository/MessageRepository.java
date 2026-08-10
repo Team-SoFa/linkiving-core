@@ -39,4 +39,15 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 	List<Message> findAllByChat(Chat chat);
 
 	List<Message> findTop7ByChatAndIdLessThanOrderByIdDesc(Chat chat, Long id);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "DELETE FROM message_link WHERE message_id IN "
+		+ "(SELECT m.id FROM messages m WHERE m.chat_id IN "
+		+ "(SELECT c.id FROM chats c WHERE c.member_id = :memberId))", nativeQuery = true)
+	void deleteLinkMappingsByMemberId(@Param("memberId") Long memberId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "DELETE FROM messages WHERE chat_id IN "
+		+ "(SELECT c.id FROM chats c WHERE c.member_id = :memberId)", nativeQuery = true)
+	void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

@@ -202,6 +202,14 @@ class LinkEventListenerTest {
 		}
 
 		@Bean
+		public com.sofa.linkiving.domain.member.service.MemberQueryService memberQueryService() {
+			com.sofa.linkiving.domain.member.service.MemberQueryService service =
+				mock(com.sofa.linkiving.domain.member.service.MemberQueryService.class);
+			org.mockito.Mockito.when(service.isActive(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+			return service;
+		}
+
+		@Bean
 		public LinkEventListener linkEventListener(SummaryQueue summaryQueue,
 			ApplicationEventPublisher eventPublisher,
 			SummaryWorkerFacade summaryWorkerFacade,
@@ -209,7 +217,7 @@ class LinkEventListenerTest {
 			ObjectProvider<LinkEventListener> selfProvider) {
 			return new LinkEventListener(summaryQueue, eventPublisher, summaryWorkerFacade, selfProvider,
 				summaryAnalyticsPublisher,
-				meterRegistry());
+				meterRegistry(), memberQueryService());
 		}
 	}
 }

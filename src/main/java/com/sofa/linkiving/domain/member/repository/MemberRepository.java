@@ -1,6 +1,8 @@
 package com.sofa.linkiving.domain.member.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +19,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 	boolean existsMemberByEmail(String email);
 
 	Optional<Member> findByEmail(String email);
+
+	@Query(value = "SELECT * FROM member WHERE email = :email FOR UPDATE", nativeQuery = true)
+	Optional<Member> findByEmailForUpdate(@Param("email") String email);
+
+	boolean existsByIdAndStatus(Long id, MemberStatus status);
+
+	List<Member> findAllByStatusInAndUpdatedAtBefore(Collection<MemberStatus> statuses, LocalDateTime updatedAt);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""

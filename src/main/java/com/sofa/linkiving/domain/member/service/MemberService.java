@@ -5,9 +5,11 @@ import java.util.Base64;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
+import com.sofa.linkiving.domain.member.dto.request.MemberWithdrawalReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
@@ -29,6 +31,7 @@ public class MemberService {
 	private final MemberQueryService memberQueryService;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RedisService redisService;
+	private final MemberWithdrawalService memberWithdrawalService;
 	@Value("${app.member.current-terms-version:2026-08-03}")
 	private String currentTermsVersion;
 	@Value("${app.member.current-privacy-version:2026-08-03}")
@@ -52,9 +55,12 @@ public class MemberService {
 		return TokenRes.of(accessToken, refreshToken);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public TokenRes login(LoginReq req) {
-		Member member = memberQueryService.getUser(req.email());
+		Member member = memberQueryService.getUserForUpdate(req.email());
+		if (member.isWithdrawing()) {
+			throw new BusinessException(MemberErrorCode.WITHDRAWAL_IN_PROGRESS);
+		}
 
 		// TODO: 추후 PasswordEncoder(BCrypt)로 변경 권장
 		String encoded = Base64.getEncoder()
@@ -72,6 +78,11 @@ public class MemberService {
 
 	public void logout(Member member) {
 		redisService.delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());
+	}
+
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	public void withdraw(Member member, MemberWithdrawalReq req) {
+		memberWithdrawalService.withdraw(member.getId(), member.getEmail(), req.clientId(), req.deleteReason());
 	}
 
 	@Transactional(readOnly = true)

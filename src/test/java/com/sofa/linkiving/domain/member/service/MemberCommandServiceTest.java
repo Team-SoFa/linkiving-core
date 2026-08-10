@@ -71,7 +71,7 @@ class MemberCommandServiceTest {
 			.profileImageUrl("https://old.example.com/profile.png")
 			.build();
 
-		when(memberRepository.findByEmail(email)).thenReturn(Optional.of(existing));
+		when(memberRepository.findByEmailForUpdate(email)).thenReturn(Optional.of(existing));
 
 		// when
 		Member result = memberCommandService.createOrUpdate(
@@ -85,7 +85,7 @@ class MemberCommandServiceTest {
 		assertThat(result.getName()).isEqualTo("new-name");
 		assertThat(result.getProfileImageUrl()).isEqualTo("https://new.example.com/profile.png");
 
-		verify(memberRepository, times(1)).findByEmail(email);
+		verify(memberRepository, times(1)).findByEmailForUpdate(email);
 		verify(memberRepository, never()).save(any(Member.class));
 		verifyNoMoreInteractions(memberRepository);
 	}
@@ -95,7 +95,7 @@ class MemberCommandServiceTest {
 	void shouldCreateOAuthMemberWithProfile() {
 		// given
 		String email = "oauth-new@test.com";
-		when(memberRepository.findByEmail(email)).thenReturn(Optional.empty());
+		when(memberRepository.findByEmailForUpdate(email)).thenReturn(Optional.empty());
 		when(memberRepository.save(any(Member.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// when
@@ -111,7 +111,7 @@ class MemberCommandServiceTest {
 		assertThat(result.getName()).isEqualTo("google-name");
 		assertThat(result.getProfileImageUrl()).isEqualTo("https://googleusercontent.com/profile.png");
 
-		verify(memberRepository, times(1)).findByEmail(email);
+		verify(memberRepository, times(1)).findByEmailForUpdate(email);
 		verify(memberRepository, times(1)).save(any(Member.class));
 		verifyNoMoreInteractions(memberRepository);
 	}

@@ -19,4 +19,8 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 	void deleteAllByChat(@Param("chat") Chat chat);
 
 	Optional<Feedback> findByMessage(Message message);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Feedback f WHERE f.message.chat.member.id = :memberId")
+	void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

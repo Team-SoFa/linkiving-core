@@ -49,7 +49,7 @@ public class AuthServiceTest {
 			.build();
 
 		given(jwtTokenProvider.validateRefreshToken(oldRefreshToken)).willReturn("test@test.com");
-		given(memberQueryService.getUser("test@test.com")).willReturn(member);
+		given(memberQueryService.getUserForUpdate("test@test.com")).willReturn(member);
 		given(jwtTokenProvider.createAccessToken(member)).willReturn(newAccessToken);
 		given(jwtTokenProvider.createRefreshToken("test@test.com")).willReturn(newRefreshToken);
 
@@ -68,7 +68,7 @@ public class AuthServiceTest {
 		assertThat(result.refreshExp()).isEqualTo(1209600);
 
 		verify(jwtTokenProvider, times(1)).validateRefreshToken(oldRefreshToken);
-		verify(memberQueryService, times(1)).getUser("test@test.com");
+		verify(memberQueryService, times(1)).getUserForUpdate("test@test.com");
 	}
 
 	@Test

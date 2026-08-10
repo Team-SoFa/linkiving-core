@@ -39,4 +39,8 @@ public class SummaryQueue {
 	public Optional<SummaryTask> pollTaskFromQueue() {
 		return Optional.ofNullable(summaryQueue.poll());
 	}
+
+	public void removeForMember(Long memberId) {
+		summaryQueue.removeIf(task -> memberId.equals(task.memberId()));
+	}
 }

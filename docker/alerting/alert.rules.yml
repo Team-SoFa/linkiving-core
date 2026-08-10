@@ -56,6 +56,28 @@ groups:
           summary: "AI 호출 실패율 높음: {{ $labels.client }}"
           description: "AI 클라이언트 '{{ $labels.client }}' 실패율이 5분간 20%를 초과했습니다 (현재 {{ $value | humanizePercentage }})."
 
+      # ── 회원 탈퇴 벡터 삭제 실패 ──────────────────────────
+      # 탈퇴는 계속 처리하되, 남은 벡터를 운영자가 확인할 수 있도록 즉시 알림.
+      - alert: MemberWithdrawalVectorDeletionFailure
+        expr: increase(member_withdrawal_vector_deletion_failures_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "회원 탈퇴 중 AI 벡터 삭제 실패"
+          description: "최근 10분 내 AI 벡터 삭제 실패가 발생했습니다. 애플리케이션 로그를 확인해 잔존 벡터를 정리해야 합니다."
+
+      # ── 회원 탈퇴 refresh token 삭제 실패 ────────────────
+      # 탈퇴는 계속 처리하되, Redis에 남은 인증 데이터를 운영자가 확인할 수 있도록 즉시 알림.
+      - alert: MemberWithdrawalRefreshTokenDeletionFailure
+        expr: increase(member_withdrawal_refresh_token_deletion_failures_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "회원 탈퇴 중 refresh token 삭제 실패"
+          description: "최근 10분 내 Redis refresh token 삭제 실패가 발생했습니다. 애플리케이션 로그와 Redis 잔존 키를 확인해야 합니다."
+
       # ── 비동기 작업 최종 실패 ──────────────────────────────
       # 재시도 소진 후 최종 실패가 발생하면 즉시 알림 (수동 복구 필요 신호)
       # async.task.failures 태그 키셋은 task·action 으로 통일되어 action 은 항상 존재한다.

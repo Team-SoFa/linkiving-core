@@ -13,6 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.sofa.linkiving.domain.link.ai.LinkSyncClient;
 import com.sofa.linkiving.domain.link.enums.SyncAction;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.global.logging.LogContext;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
@@ -31,6 +32,7 @@ public class LinkSyncEventListener {
 
 	private final LinkSyncClient linkSyncClient;
 	private final MeterRegistry meterRegistry;
+	private final MemberQueryService memberQueryService;
 
 	private final Map<SyncAction, Counter> failureCounters = new EnumMap<>(SyncAction.class);
 
@@ -58,6 +60,11 @@ public class LinkSyncEventListener {
 	)
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkSyncEvent(LinkSyncEvent event) {
+		if (event.req().userId() != null && !memberQueryService.isActive(event.req().userId())) {
+			log.info("Skipping link sync for inactive member - memberId={}, linkId={}",
+				event.req().userId(), event.req().linkId());
+			return;
+		}
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
 			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(event.req().linkId())) {
 			log.info("AI 서버 동기화 비동기 실행 시도 - action: {}, linkId: {}", event.action(), event.req().linkId());

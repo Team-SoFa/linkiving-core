@@ -14,6 +14,7 @@ import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.global.logging.LogContext;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
@@ -40,6 +41,7 @@ public class LinkEventListener {
 	private final ObjectProvider<LinkEventListener> selfProvider;
 	private final SummaryAnalyticsPublisher summaryAnalyticsPublisher;
 	private final MeterRegistry meterRegistry;
+	private final MemberQueryService memberQueryService;
 	private Counter enqueueFailureCounter;
 
 	@PostConstruct
@@ -52,6 +54,11 @@ public class LinkEventListener {
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkCreated(LinkCreatedEvent event) {
+		if (event.memberId() != null && !memberQueryService.isActive(event.memberId())) {
+			log.info("Skipping summary enqueue for inactive member - memberId={}, linkId={}",
+				event.memberId(), event.linkId());
+			return;
+		}
 		try (LogContext.MdcScope ignored = LogContext.restore(event.logContext());
 			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(event.linkId())) {
 			eventPublisher.publishEvent(new SummaryStatusEvent(

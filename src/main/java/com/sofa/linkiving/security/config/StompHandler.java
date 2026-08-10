@@ -22,6 +22,7 @@ import com.sofa.linkiving.security.jwt.JwtKeys;
 import com.sofa.linkiving.security.jwt.JwtTokenProvider;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
 import com.sofa.linkiving.security.jwt.error.JwtErrorCode;
+import com.sofa.linkiving.security.userdetails.CustomMemberDetail;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,8 +76,14 @@ public class StompHandler implements ChannelInterceptor {
 						if (MemberStatus.PENDING_TERMS.name().equals(memberStatus)) {
 							throw new BusinessException(MemberErrorCode.TERMS_AGREEMENT_REQUIRED);
 						}
+					}
 
-						Authentication authentication = jwtTokenProvider.getAuthentication(token);
+					Authentication authentication = jwtTokenProvider.getAuthentication(token);
+					if (authentication.getPrincipal() instanceof CustomMemberDetail detail
+						&& detail.member().isWithdrawing()) {
+						throw new BusinessException(MemberErrorCode.WITHDRAWAL_IN_PROGRESS);
+					}
+					if (StompCommand.CONNECT.equals(command)) {
 						accessor.setUser(authentication);
 					}
 
