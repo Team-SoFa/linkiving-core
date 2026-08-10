@@ -7,6 +7,11 @@ on:
         description: 'Release tag (for example, v0.1.1)'
         required: true
         type: string
+      allow_existing_tag_mismatch:
+        description: 'Allow deploying the selected ref with an existing tag that points to another commit'
+        required: true
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -35,6 +40,7 @@ jobs:
         shell: bash
         env:
           TAG_NAME: ${{ env.RELEASE_TAG }}
+          ALLOW_EXISTING_TAG_MISMATCH: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_existing_tag_mismatch || false }}
         run: |
           if [[ ! "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "Invalid release tag: ${TAG_NAME}" >&2
@@ -46,8 +52,12 @@ jobs:
             HEAD_SHA="$(git rev-parse HEAD)"
 
             if [ "${TAG_SHA}" != "${HEAD_SHA}" ]; then
-              echo "Tag ${TAG_NAME} already points to ${TAG_SHA}, not ${HEAD_SHA}." >&2
-              exit 1
+              if [ "${ALLOW_EXISTING_TAG_MISMATCH}" != "true" ]; then
+                echo "Tag ${TAG_NAME} already points to ${TAG_SHA}, not ${HEAD_SHA}." >&2
+                exit 1
+              fi
+
+              echo "::warning::Deploying ${HEAD_SHA} with existing tag ${TAG_NAME}, which points to ${TAG_SHA}."
             fi
           fi
 
