@@ -23,7 +23,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: backend-release-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+  group: backend-production-release
   cancel-in-progress: false
 
 jobs:
@@ -177,6 +177,8 @@ jobs:
       - name: ✨ 배포 스크립트 실행
         env:
           IMAGE_TAG: ${{ env.RELEASE_TAG }}
+          TRAFFIC_CHECK_URL: ${{ vars.TRAFFIC_CHECK_URL }}
+          TRAFFIC_CHECK_HOST: ${{ vars.TRAFFIC_CHECK_HOST }}
         run: |
           chmod +x deploy.sh
           ./deploy.sh

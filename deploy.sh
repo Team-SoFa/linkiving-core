@@ -4,165 +4,389 @@
 
 set -euo pipefail
 
-echo "=== Blue-Green 배포 시작 ==="
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${SCRIPT_DIR}"
 COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 
 PROJECT="linkiving-core"
 DEPLOY_IMAGE_TAG="${IMAGE_TAG:-latest}"
+DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-/var/lock/linkiving-core-deploy.lock}"
+NGINX_UPSTREAM_FILE="${NGINX_UPSTREAM_FILE:-/etc/nginx/conf.d/service-url.inc}"
+TRAFFIC_CHECK_URL="${TRAFFIC_CHECK_URL:-http://127.0.0.1/health-check}"
+TRAFFIC_CHECK_HOST="${TRAFFIC_CHECK_HOST:-}"
+TRAFFIC_CHECK_EXPECTED_BODY="${TRAFFIC_CHECK_EXPECTED_BODY:-OK}"
+TRAFFIC_CHECK_CONNECT_TIMEOUT="${TRAFFIC_CHECK_CONNECT_TIMEOUT:-5}"
+TRAFFIC_CHECK_MAX_TIME="${TRAFFIC_CHECK_MAX_TIME:-10}"
+TRAFFIC_SWITCH_DELAY_SECONDS="${TRAFFIC_SWITCH_DELAY_SECONDS:-5}"
+PREVIOUS_STOP_DELAY_SECONDS="${PREVIOUS_STOP_DELAY_SECONDS:-30}"
+HEALTH_CHECK_MAX_RETRY="${HEALTH_CHECK_MAX_RETRY:-30}"
+HEALTH_CHECK_RETRY_INTERVAL_SECONDS="${HEALTH_CHECK_RETRY_INTERVAL_SECONDS:-10}"
+
+NGINX_BACKUP_FILE=""
+CANDIDATE_COLOR=""
+ROLLBACK_REQUIRED=false
+DEPLOYMENT_COMMITTED=false
 
 compose() {
     sudo IMAGE_TAG="${DEPLOY_IMAGE_TAG}" docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
 }
 
-# compose 파일 존재 확인
-if [ ! -f "${COMPOSE_FILE}" ]; then
-  echo "❌ Compose file not found: ${COMPOSE_FILE}"
-  echo "현재 위치: $(pwd)"
-  echo "스크립트 위치: ${SCRIPT_DIR}"
-  exit 1
-fi
+container_is_running() {
+    local color="$1"
+    [ -n "$(compose ps -q --status running "${color}")" ]
+}
 
-echo "✅ Using compose file: ${COMPOSE_FILE}"
-echo "✅ Using project name: ${PROJECT}"
-echo "✅ Using image tag: ${DEPLOY_IMAGE_TAG}"
+color_for_port() {
+    case "$1" in
+        8080) printf 'blue\n' ;;
+        8081) printf 'green\n' ;;
+        *) return 1 ;;
+    esac
+}
 
-echo "이미지 업데이트 중..."
-if ! compose pull; then
-    echo "❌ Docker 이미지 pull 실패! GitHub Actions 빌드를 확인해주세요."
-    echo "❌ 배포를 중단합니다."
-    exit 1
-fi
-echo "✅ 새로운 이미지가 성공적으로 pull되었습니다."
+port_for_color() {
+    case "$1" in
+        blue) printf '8080\n' ;;
+        green) printf '8081\n' ;;
+        *) return 1 ;;
+    esac
+}
 
-# Prometheus & Grafana 실행 (설정 변경 시 자동 반영)
-echo "모니터링 서비스 시작 중..."
-compose up -d prometheus grafana alertmanager
-echo "✅ Prometheus & Grafana & Alertmanager가 시작되었습니다."
+opposite_color() {
+    case "$1" in
+        blue) printf 'green\n' ;;
+        green) printf 'blue\n' ;;
+        *) return 1 ;;
+    esac
+}
 
-echo "사용하지 않는 이미지 정리 중..."
-sudo docker image prune -f
+read_nginx_upstream_port() {
+    local file="$1"
+    local ports
 
-# 현재 활성화된 컨테이너 확인
-EXIST_BLUE=$(sudo docker ps --filter "name=blue" --filter "status=running" -q)
+    ports=$(awk '
+        /^[[:space:]]*#/ { next }
+        /^[[:space:]]*(set[[:space:]]+\$[[:alnum:]_]+[[:space:]]+https?:\/\/|proxy_pass[[:space:]]+https?:\/\/|server[[:space:]]+)127\.0\.0\.1:808[01]([\/$;[:space:]]|$)/ {
+            if (match($0, /127\.0\.0\.1:808[01]/)) {
+                print substr($0, RSTART + 10, 4)
+            }
+        }
+    ' "${file}")
 
-if [ -z "$EXIST_BLUE" ]; then
-    echo "BLUE 컨테이너 실행"
-    compose up -d blue
-    BEFORE_COLOR="green"
-    AFTER_COLOR="blue"
-    BEFORE_PORT=8081
-    AFTER_PORT=8080
-else
-    echo "GREEN 컨테이너 실행"
-    compose up -d green
-    BEFORE_COLOR="blue"
-    AFTER_COLOR="green"
-    BEFORE_PORT=8080
-    AFTER_PORT=8081
-fi
-
-echo "${AFTER_COLOR} server up (port:${AFTER_PORT})"
-
-# 서버 응답 확인 (헬스체크)
-echo "서버 헬스체크 시작..."
-HEALTH_CHECK_COUNT=0
-MAX_RETRY=30  # 최대 5분 대기 (10초 * 30회)
-
-HEALTH_URL="http://127.0.0.1:${AFTER_PORT}/health-check"
-
-while [ $HEALTH_CHECK_COUNT -lt $MAX_RETRY ]; do
-    HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT + 1))
-    echo "서버 응답 확인중 (${HEALTH_CHECK_COUNT}/${MAX_RETRY})"
-
-    # curl로 헬스체크 (타임아웃 5초, 실패 시 failed 문자열로 치환)
-    UP=$(curl -s --connect-timeout 5 --max-time 10 "${HEALTH_URL}" 2>/dev/null || echo "failed")
-
-    if echo "${UP}" | grep -q "OK"; then
-        echo "✅ 서버가 정상적으로 구동되었습니다!"
-        break
-    else
-        echo "⏳ 서버 응답 대기 중... (${UP})"
-        sleep 10
-    fi
-done
-
-# 헬스체크 실패 시 롤백
-if [ $HEALTH_CHECK_COUNT -eq $MAX_RETRY ]; then
-    echo "❌ 서버가 정상적으로 구동되지 않았습니다. 롤백을 시작합니다."
-    compose stop "${AFTER_COLOR}"
-    compose rm -f "${AFTER_COLOR}"
-
-    # 이전 컨테이너가 있다면 다시 시작
-    if [ "${BEFORE_COLOR}" != "" ]; then
-        echo "이전 ${BEFORE_COLOR} 컨테이너를 다시 시작합니다."
-        compose up -d "${BEFORE_COLOR}"
+    if [ "$(printf '%s\n' "${ports}" | awk 'NF { count++ } END { print count + 0 }')" -ne 1 ]; then
+        return 1
     fi
 
-    echo "❌ 배포 실패 - 롤백 완료"
-    exit 1
-fi
+    printf '%s\n' "${ports}"
+}
 
-# Nginx 설정 파일 백업
-if [ -f /etc/nginx/conf.d/service-url.inc ]; then
-    sudo cp /etc/nginx/conf.d/service-url.inc /etc/nginx/conf.d/service-url.inc.backup
-fi
+http_check() {
+    local url="$1"
+    local expected_body="$2"
+    local hostname="${3:-}"
+    local request_url="${url}"
+    local response trimmed scheme remainder authority connect_host connect_port path
+    local curl_args=(
+        --fail
+        --silent
+        --show-error
+        --connect-timeout "${TRAFFIC_CHECK_CONNECT_TIMEOUT}"
+        --max-time "${TRAFFIC_CHECK_MAX_TIME}"
+    )
 
-# Nginx 설정 업데이트
-echo "Nginx 설정 업데이트 중..."
-if [ -f /etc/nginx/conf.d/service-url.inc ]; then
-    sudo sed -i "s/${BEFORE_PORT}/${AFTER_PORT}/g" /etc/nginx/conf.d/service-url.inc
+    if [ -n "${hostname}" ]; then
+        if [[ ! "${url}" =~ ^https?:// ]] || [[ "${hostname}" == *:* ]] || [[ "${hostname}" == */* ]]; then
+            echo "TRAFFIC_CHECK_HOST에는 포트나 경로가 없는 호스트명을 설정해야 합니다." >&2
+            return 1
+        fi
 
-    # Nginx 설정 문법 검사
-    if sudo nginx -t; then
-        sudo nginx -s reload
-        echo "✅ Nginx 설정이 성공적으로 업데이트되었습니다."
+        scheme="${url%%://*}"
+        remainder="${url#*://}"
+        authority="${remainder%%/*}"
+        connect_host="${authority%%:*}"
+        if [[ "${authority}" == *:* ]]; then
+            connect_port="${authority##*:}"
+        elif [ "${scheme}" = "https" ]; then
+            connect_port=443
+        else
+            connect_port=80
+        fi
+
+        if [[ "${remainder}" == */* ]]; then
+            path="/${remainder#*/}"
+        else
+            path=""
+        fi
+
+        request_url="${scheme}://${hostname}:${connect_port}${path}"
+        curl_args+=(--resolve "${hostname}:${connect_port}:${connect_host}")
+    fi
+
+    if ! response=$(curl "${curl_args[@]}" "${request_url}" 2>&1); then
+        echo "  curl: ${response:-응답 없음}" >&2
+        return 1
+    fi
+
+    trimmed=$(printf '%s' "${response}" | awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); printf "%s", $0 }')
+    [[ "${trimmed}" == "${expected_body}" ]]
+}
+
+remove_candidate_container() {
+    local color="$1"
+
+    compose stop "${color}" >/dev/null 2>&1 || true
+    compose rm -f "${color}" >/dev/null 2>&1 || true
+}
+
+create_nginx_backup() {
+    local directory basename
+    directory=$(dirname "${NGINX_UPSTREAM_FILE}")
+    basename=$(basename "${NGINX_UPSTREAM_FILE}")
+    NGINX_BACKUP_FILE=$(sudo mktemp "${directory}/.${basename}.backup.XXXXXX")
+    sudo cp --preserve=all "${NGINX_UPSTREAM_FILE}" "${NGINX_BACKUP_FILE}"
+}
+
+replace_nginx_file_atomically() {
+    local source="$1"
+    local directory basename temporary
+    directory=$(dirname "${NGINX_UPSTREAM_FILE}")
+    basename=$(basename "${NGINX_UPSTREAM_FILE}")
+    temporary=$(sudo mktemp "${directory}/.${basename}.new.XXXXXX")
+
+    if ! sudo cp --preserve=all "${source}" "${temporary}"; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+
+    if ! sudo mv -f "${temporary}" "${NGINX_UPSTREAM_FILE}"; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+}
+
+write_nginx_upstream_port() {
+    local expected_port="$1"
+    local target_port="$2"
+    local current_port directory basename temporary
+
+    current_port=$(read_nginx_upstream_port "${NGINX_UPSTREAM_FILE}") || return 1
+    [ "${current_port}" = "${expected_port}" ] || return 1
+    [ "${current_port}" != "${target_port}" ] || return 0
+
+    directory=$(dirname "${NGINX_UPSTREAM_FILE}")
+    basename=$(basename "${NGINX_UPSTREAM_FILE}")
+    temporary=$(sudo mktemp "${directory}/.${basename}.new.XXXXXX")
+    if ! sudo cp --preserve=all "${NGINX_UPSTREAM_FILE}" "${temporary}"; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+
+    if ! sudo sed -i -E "/^[[:space:]]*#/! {/^[[:space:]]*(set[[:space:]]+\\\$[[:alnum:]_]+[[:space:]]+https?:\\/\\/|proxy_pass[[:space:]]+https?:\\/\\/|server[[:space:]]+)127\\.0\\.0\\.1:${expected_port}([\\/$;[:space:]]|$)/ s/127\\.0\\.0\\.1:${expected_port}/127.0.0.1:${target_port}/}" "${temporary}"; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+
+    if [ "$(read_nginx_upstream_port "${temporary}")" != "${target_port}" ]; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+
+    if ! sudo mv -f "${temporary}" "${NGINX_UPSTREAM_FILE}"; then
+        sudo rm -f "${temporary}" || true
+        return 1
+    fi
+}
+
+restore_nginx_upstream() {
+    if [ -z "${NGINX_BACKUP_FILE}" ] || ! sudo test -f "${NGINX_BACKUP_FILE}"; then
+        echo "❌ 복원할 Nginx upstream 백업이 없습니다."
+        return 1
+    fi
+
+    if ! replace_nginx_file_atomically "${NGINX_BACKUP_FILE}"; then
+        echo "❌ Nginx upstream 백업 복원에 실패했습니다."
+        return 1
+    fi
+
+    if ! sudo nginx -t || ! sudo nginx -s reload; then
+        echo "❌ 복원된 Nginx 설정 적용에 실패했습니다."
+        return 1
+    fi
+
+    echo "✅ Nginx upstream을 이전 설정으로 복원했습니다."
+}
+
+cleanup_nginx_backup() {
+    if [ -z "${NGINX_BACKUP_FILE}" ]; then
+        return 0
+    fi
+
+    if sudo rm -f "${NGINX_BACKUP_FILE}"; then
+        NGINX_BACKUP_FILE=""
+        return 0
+    fi
+
+    echo "⚠️ Nginx 백업 삭제에 실패했습니다: ${NGINX_BACKUP_FILE}" >&2
+    return 1
+}
+
+handle_exit() {
+    local status="$1"
+    trap - EXIT INT TERM
+
+    if [ "${status}" -ne 0 ] && [ "${ROLLBACK_REQUIRED}" = true ] && [ "${DEPLOYMENT_COMMITTED}" != true ]; then
+        echo "❌ 완료 전 배포가 중단되어 Nginx upstream을 롤백합니다."
+        if restore_nginx_upstream; then
+            [ -z "${CANDIDATE_COLOR}" ] || remove_candidate_container "${CANDIDATE_COLOR}"
+            cleanup_nginx_backup || true
+        else
+            echo "❌ 자동 롤백에 실패했습니다. 이전/후보 컨테이너와 백업 ${NGINX_BACKUP_FILE}을 유지합니다."
+        fi
+    elif [ "${status}" -ne 0 ] && [ -n "${CANDIDATE_COLOR}" ] && [ "${DEPLOYMENT_COMMITTED}" != true ]; then
+        remove_candidate_container "${CANDIDATE_COLOR}"
+    fi
+
+    if [ "${DEPLOYMENT_COMMITTED}" = true ] && [ -n "${NGINX_BACKUP_FILE}" ]; then
+        cleanup_nginx_backup || true
+    elif [ "${status}" -ne 0 ] && [ -n "${NGINX_BACKUP_FILE}" ]; then
+        echo "⚠️ 장애 확인을 위해 Nginx 백업을 보존합니다: ${NGINX_BACKUP_FILE}"
+    fi
+
+    exit "${status}"
+}
+
+acquire_deploy_lock() {
+    sudo touch "${DEPLOY_LOCK_FILE}"
+    sudo chown "$(id -u):$(id -g)" "${DEPLOY_LOCK_FILE}"
+    exec 9>"${DEPLOY_LOCK_FILE}"
+    if ! flock -n 9; then
+        echo "❌ 다른 배포가 진행 중입니다."
+        return 1
+    fi
+}
+
+select_deployment_plan() {
+    local upstream_port="$1"
+    local active_running="$2"
+    local standby_running="$3"
+    local active_color standby_color standby_port
+    active_color=$(color_for_port "${upstream_port}") || return 1
+    standby_color=$(opposite_color "${active_color}")
+    standby_port=$(port_for_color "${standby_color}")
+
+    if [ "${active_running}" = true ]; then
+        printf '%s %s %s %s %s\n' "${active_color}" "${upstream_port}" "${standby_color}" "${standby_port}" true
+    elif [ "${standby_running}" = false ]; then
+        printf '%s %s %s %s %s\n' none "${upstream_port}" "${active_color}" "${upstream_port}" false
     else
-        echo "❌ Nginx 설정 오류. 백업 파일로 복원합니다."
-        sudo cp /etc/nginx/conf.d/service-url.inc.backup /etc/nginx/conf.d/service-url.inc
-        sudo nginx -s reload
+        return 1
+    fi
+}
+
+main() {
+    trap 'handle_exit $?' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    acquire_deploy_lock
+    echo "=== Blue-Green 배포 시작 ==="
+
+    if [ ! -f "${COMPOSE_FILE}" ]; then
+        echo "❌ Compose file not found: ${COMPOSE_FILE}"
         exit 1
     fi
-else
-    echo "⚠️  Nginx 설정 파일을 찾을 수 없습니다: /etc/nginx/conf.d/service-url.inc"
+    if [ ! -f "${NGINX_UPSTREAM_FILE}" ]; then
+        echo "❌ Nginx 설정 파일을 찾을 수 없습니다: ${NGINX_UPSTREAM_FILE}"
+        exit 1
+    fi
+
+    local upstream_port active_color standby_color active_running standby_running
+    local before_color before_port after_color after_port switch_required server_healthy count health_url
+    upstream_port=$(read_nginx_upstream_port "${NGINX_UPSTREAM_FILE}") || {
+        echo "❌ Nginx upstream 대상은 지원되는 directive에 정확히 하나만 있어야 합니다."
+        exit 1
+    }
+    active_color=$(color_for_port "${upstream_port}")
+    standby_color=$(opposite_color "${active_color}")
+    active_running=false
+    standby_running=false
+    container_is_running "${active_color}" && active_running=true
+    container_is_running "${standby_color}" && standby_running=true
+
+    if ! read -r before_color before_port after_color after_port switch_required \
+        < <(select_deployment_plan "${upstream_port}" "${active_running}" "${standby_running}"); then
+        echo "❌ Nginx upstream(${active_color})과 실행 중인 컨테이너(${standby_color})가 일치하지 않습니다."
+        echo "❌ 자동 변경 없이 배포를 중단합니다."
+        exit 1
+    fi
+    if [ "${before_color}" = none ]; then
+        echo "실행 중인 컨테이너가 없어 현재 upstream 슬롯을 복구합니다."
+        before_color=""
+    fi
+
+    CANDIDATE_COLOR="${after_color}"
+
+    echo "Docker 이미지 pull..."
+    compose pull
+    sudo docker image prune -f
+
+    echo "${after_color} 컨테이너 실행"
+    compose up -d "${after_color}"
+    echo "${after_color} server up (port:${after_port})"
+
+    server_healthy=false
+    count=0
+    health_url="http://127.0.0.1:${after_port}/health-check"
+    echo "서버 헬스체크 시작..."
+    while [ "${count}" -lt "${HEALTH_CHECK_MAX_RETRY}" ]; do
+        count=$((count + 1))
+        echo "서버 응답 확인중 (${count}/${HEALTH_CHECK_MAX_RETRY})"
+        if http_check "${health_url}" "OK"; then
+            server_healthy=true
+            break
+        fi
+        sleep "${HEALTH_CHECK_RETRY_INTERVAL_SECONDS}"
+    done
+    if [ "${server_healthy}" != true ]; then
+        echo "❌ 후보 서버가 정상적으로 구동되지 않았습니다."
+        exit 1
+    fi
+
+    create_nginx_backup
+    ROLLBACK_REQUIRED=true
+
+    if [ "${switch_required}" = true ]; then
+        echo "Nginx upstream을 ${before_port}에서 ${after_port}로 전환합니다."
+        write_nginx_upstream_port "${before_port}" "${after_port}"
+        sudo nginx -t
+        sudo nginx -s reload
+    else
+        echo "Nginx upstream은 이미 복구 슬롯(${after_port})을 가리키고 있습니다."
+    fi
+
+    sleep "${TRAFFIC_SWITCH_DELAY_SECONDS}"
+    if ! http_check "${TRAFFIC_CHECK_URL}" "${TRAFFIC_CHECK_EXPECTED_BODY}" "${TRAFFIC_CHECK_HOST}"; then
+        echo "❌ Nginx 경유 트래픽 확인에 실패했습니다."
+        exit 1
+    fi
+
+    if [ -n "${before_color}" ]; then
+        echo "이전 컨테이너 종료 전 ${PREVIOUS_STOP_DELAY_SECONDS}초 대기..."
+        sleep "${PREVIOUS_STOP_DELAY_SECONDS}"
+        DEPLOYMENT_COMMITTED=true
+        ROLLBACK_REQUIRED=false
+        compose stop "${before_color}" >/dev/null 2>&1 || true
+        compose rm -f "${before_color}" >/dev/null 2>&1 || true
+    else
+        DEPLOYMENT_COMMITTED=true
+        ROLLBACK_REQUIRED=false
+    fi
+
+    echo "✅ Active Container: ${after_color} (Port: ${after_port})"
+    sudo docker ps --filter "name=blue" --filter "name=green" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+    echo "=== 배포 완료 ==="
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
 fi
-
-# 트래픽 전환 확인 (Nginx 기준 헬스체크)
-echo "트래픽 전환 확인 중..."
-sleep 5
-NGINX_CHECK=$(curl -s --connect-timeout 5 http://127.0.0.1/health-check 2>/dev/null || echo "failed")
-if echo "${NGINX_CHECK}" | grep -q "OK"; then
-    echo "✅ 트래픽이 성공적으로 전환되었습니다."
-else
-    echo "⚠️ 트래픽 전환 확인 실패. 수동으로 확인해주세요."
-fi
-
-# 이전 컨테이너 종료 (안전하게)
-if [ "${BEFORE_COLOR}" != "" ]; then
-    echo "${BEFORE_COLOR} server down (port:${BEFORE_PORT})"
-
-    # 잠시 대기 후 이전 컨테이너 종료
-    echo "이전 컨테이너 종료 전 30초 대기..."
-    sleep 30
-
-    compose stop "${BEFORE_COLOR}" 2>/dev/null || true
-    compose rm -f "${BEFORE_COLOR}" 2>/dev/null || true
-    echo "✅ 이전 ${BEFORE_COLOR} 컨테이너가 종료되었습니다."
-fi
-
-# 배포 완료
-echo ""
-echo "🎉 Deploy Completed!!"
-echo "✅ Active Container: ${AFTER_COLOR} (Port: ${AFTER_PORT})"
-echo "✅ Deployment Time: $(date)"
-echo ""
-
-# 최종 상태 확인
-echo "=== 배포 후 상태 확인 ==="
-echo "실행 중인 컨테이너:"
-sudo docker ps --filter "name=blue" --filter "name=green" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-echo ""
-echo "=== 배포 완료 ==="

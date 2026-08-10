@@ -7,6 +7,26 @@ on:
     branches: [ main ]
 
 jobs:
+  deploy-script-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
+      - name: 🔍 ShellCheck 설치
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: 🔍 배포 스크립트 정적 분석
+        run: shellcheck deploy.sh
+
+      - name: 🧪 배포 스크립트 테스트
+        run: bash tests/deploy_test.sh
+
   ci:
     runs-on: ubuntu-latest
     permissions:
