@@ -43,6 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				objectMapper.writeValue(response.getWriter(), BaseResponse.error(CommonErrorCode.FORBIDDEN));
 				return;
 			}
+			if (isWithdrawingMember(authentication) && !isWithdrawalRetryAllowed(request)) {
+				response.setStatus(CommonErrorCode.FORBIDDEN.getStatus().value());
+				response.setContentType("application/json;charset=UTF-8");
+				objectMapper.writeValue(response.getWriter(), BaseResponse.error(CommonErrorCode.FORBIDDEN));
+				return;
+			}
 		}
 
 		filterChain.doFilter(request, response);
@@ -57,6 +63,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		String path = request.getRequestURI();
 		return Arrays.stream(SecurityConstants.PENDING_TERMS_ALLOWED_URLS)
 			.anyMatch(pattern -> pathMatcher.match(pattern, path));
+	}
+
+	private boolean isWithdrawingMember(Authentication authentication) {
+		return authentication.getPrincipal() instanceof CustomMemberDetail memberDetail
+			&& memberDetail.member().isWithdrawing();
+	}
+
+	private boolean isWithdrawalRetryAllowed(HttpServletRequest request) {
+		return "DELETE".equals(request.getMethod()) && "/v1/member".equals(request.getRequestURI());
 	}
 
 	@Override

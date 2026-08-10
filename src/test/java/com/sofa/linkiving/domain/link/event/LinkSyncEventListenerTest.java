@@ -136,8 +136,16 @@ class LinkSyncEventListenerTest {
 		}
 
 		@Bean
+		public com.sofa.linkiving.domain.member.service.MemberQueryService memberQueryService() {
+			com.sofa.linkiving.domain.member.service.MemberQueryService service =
+				mock(com.sofa.linkiving.domain.member.service.MemberQueryService.class);
+			org.mockito.Mockito.when(service.isActive(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+			return service;
+		}
+
+		@Bean
 		public LinkSyncEventListener linkSyncEventListener(LinkSyncClient linkSyncClient, MeterRegistry meterRegistry) {
-			return new LinkSyncEventListener(linkSyncClient, meterRegistry);
+			return new LinkSyncEventListener(linkSyncClient, meterRegistry, memberQueryService());
 		}
 	}
 }

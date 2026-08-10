@@ -31,6 +31,7 @@ import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.global.analytics.AnalyticsContext;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
 
@@ -55,6 +56,8 @@ class SummaryWorkerTest {
 	private SummaryDeadLetterService summaryDeadLetterService;
 	@Mock
 	private SummaryAnalyticsPublisher summaryAnalyticsPublisher;
+	@Mock
+	private MemberQueryService memberQueryService;
 
 	private SummaryWorker summaryWorker;
 	private Link mockLink;
@@ -64,7 +67,8 @@ class SummaryWorkerTest {
 		MeterRegistry meterRegistry = new SimpleMeterRegistry();
 		SummaryWorkerProperties properties = new SummaryWorkerProperties(Duration.ofMillis(10));
 		summaryWorker = new SummaryWorker(summaryQueue, properties, summaryWorkerFacade, summaryClient, eventPublisher,
-			selfProvider, meterRegistry, summaryDeadLetterService, summaryAnalyticsPublisher);
+			selfProvider, meterRegistry, summaryDeadLetterService, summaryAnalyticsPublisher, memberQueryService);
+		lenient().when(memberQueryService.isActive(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
 
 		mockLink = mock(Link.class);
 		Member mockMember = mock(Member.class);
@@ -400,6 +404,39 @@ class SummaryWorkerTest {
 		// then
 		verify(eventPublisher, after(500).never()).publishEvent(any());
 		verify(summaryQueue, timeout(1000).atLeast(2)).pollTaskFromQueue();
+	}
+
+	@Test
+	@DisplayName("탈퇴가 AI 요청 전에 시작되면 요약 생성과 후속 이벤트를 중단한다")
+	void shouldStopBeforeAiCallWhenWithdrawalStarts() {
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
+			.willReturn(Optional.empty());
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+		given(memberQueryService.isActive(100L)).willReturn(true, false);
+
+		summaryWorker.startWorker();
+
+		verify(summaryWorkerFacade, timeout(1000)).updateSummaryStatus(1L, SummaryStatus.PROCESSING);
+		verify(summaryClient, after(300).never()).initialSummary(anyLong(), anyLong(), any(), any(), any());
+		verify(summaryAnalyticsPublisher, never()).publishComplete(any(), any(), any(), anyBoolean(), anyLong());
+	}
+
+	@Test
+	@DisplayName("활성 상태는 dequeue 직후와 AI 호출 직전에만 확인한다")
+	void shouldCheckMemberStateOnlyAtRaceReducingBoundaries() {
+		given(summaryQueue.pollTaskFromQueue())
+			.willReturn(Optional.of(task(1L)))
+			.willReturn(Optional.empty());
+		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
+		RagInitialSummaryRes response = mock(RagInitialSummaryRes.class);
+		given(response.summary()).willReturn("summary");
+		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(response);
+
+		summaryWorker.startWorker();
+
+		verify(summaryWorkerFacade, timeout(1000)).createInitialSummaryAndUpdateStatus(1L, "summary");
+		verify(memberQueryService, times(2)).isActive(100L);
 	}
 
 	@Test

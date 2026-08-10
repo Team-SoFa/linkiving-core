@@ -85,4 +85,11 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 	);
 
 	Long countByMemberAndIsDeleteFalse(Member member);
+
+	@Query("SELECT l FROM Link l JOIN FETCH l.member WHERE l.member.id = :memberId")
+	List<Link> findAllByMemberIdWithMember(@Param("memberId") Long memberId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Link l WHERE l.member.id = :memberId")
+	void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

@@ -1,5 +1,7 @@
 package com.sofa.linkiving.security.jwt;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.WebUtils;
 
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.error.MemberErrorCode;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.infra.redis.RedisKeyRegistry;
 import com.sofa.linkiving.infra.redis.RedisService;
 import com.sofa.linkiving.security.jwt.error.CustomJwtException;
@@ -173,5 +177,15 @@ public class JwtTokenProvider {
 
 	public String getClaim(String token, String claimName) {
 		return parseClaims(token).get(claimName, String.class);
+	}
+
+	public void requireRecentlyIssuedAccessToken(HttpServletRequest request, Duration maxAge) {
+		Claims claims = validateToken(resolveToken(request));
+		String tokenType = claims.get(JwtKeys.Claims.TOKEN_TYPE, String.class);
+		Date issuedAt = claims.getIssuedAt();
+		if (!JwtKeys.TokenType.ACCESS.equals(tokenType) || issuedAt == null
+			|| issuedAt.toInstant().isBefore(Instant.now().minus(maxAge))) {
+			throw new BusinessException(MemberErrorCode.RECENT_AUTH_REQUIRED);
+		}
 	}
 }

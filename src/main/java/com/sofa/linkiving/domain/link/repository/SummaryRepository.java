@@ -29,4 +29,8 @@ public interface SummaryRepository extends JpaRepository<Summary, Long> {
 
 	@Query("SELECT s FROM Summary s WHERE s.link IN :links AND s.selected = true")
 	List<Summary> findAllByLinkInAndSelectedTrue(@Param("links") List<Link> links);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Summary s WHERE s.link.member.id = :memberId")
+	void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

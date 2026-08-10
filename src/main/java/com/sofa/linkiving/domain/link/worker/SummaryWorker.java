@@ -21,6 +21,7 @@ import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.event.SummaryStatusEvent;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
 import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
+import com.sofa.linkiving.domain.member.service.MemberQueryService;
 import com.sofa.linkiving.global.logging.LogContext;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
@@ -49,6 +50,7 @@ public class SummaryWorker {
 	private final MeterRegistry meterRegistry;
 	private final SummaryDeadLetterService summaryDeadLetterService;
 	private final SummaryAnalyticsPublisher summaryAnalyticsPublisher;
+	private final MemberQueryService memberQueryService;
 	private Counter generateFailureCounter;
 	private volatile boolean running = true;
 	private Thread workerThread;
@@ -95,6 +97,11 @@ public class SummaryWorker {
 		}
 
 		SummaryTask task = taskOpt.get();
+		if (isInactive(task.memberId())) {
+			log.info("Skipping summary task for inactive member - memberId={}, linkId={}",
+				task.memberId(), task.linkId());
+			return;
+		}
 		Long linkId = task.linkId();
 		try (LogContext.MdcScope ignored = LogContext.restore(task.logContext());
 			LogContext.MdcScope ignoredLinkScope = LogContext.withLinkId(linkId)) {
@@ -118,6 +125,11 @@ public class SummaryWorker {
 					SummaryStatusRes.of(linkId, SummaryStatus.PROCESSING)
 				));
 
+				if (isInactive(memberId)) {
+					log.info("Skipping AI summary request for inactive member - memberId={}, linkId={}",
+						memberId, linkId);
+					return;
+				}
 				RagInitialSummaryRes res = selfProvider.getObject().callAiServerWithRetry(link);
 
 				Summary summary = summaryWorkerFacade.createInitialSummaryAndUpdateStatus(link.getId(), res.summary());
@@ -154,7 +166,6 @@ public class SummaryWorker {
 				} catch (Exception innerEx) {
 					log.error("Failed to update status to FAILED - linkId: {}", linkId, innerEx);
 				}
-
 				recordDeadLetter(linkId, failedMemberId, e);
 
 				if (userEmail != null) {
@@ -175,6 +186,10 @@ public class SummaryWorker {
 				);
 			}
 		}
+	}
+
+	private boolean isInactive(Long memberId) {
+		return memberId != null && !memberQueryService.isActive(memberId);
 	}
 
 	private Long firstNonNull(Long value, Long fallback) {

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -26,4 +27,8 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 	Optional<Chat> findByIdAndMember(Long id, Member member);
 
 	Boolean existsByIdAndMember(Long id, Member member);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Chat c WHERE c.member.id = :memberId")
+	void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

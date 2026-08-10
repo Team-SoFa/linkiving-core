@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.domain.member.service.MemberCommandService;
+import com.sofa.linkiving.global.error.exception.BusinessException;
 import com.sofa.linkiving.security.auth.info.GoogleOAuth2User;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			googleUser.name(),
 			googleUser.picture()
 		);
+		if (member.isWithdrawing()) {
+			throw new BusinessException(MemberErrorCode.WITHDRAWAL_IN_PROGRESS);
+		}
 
 		return new DefaultOAuth2User(
 			Collections.singleton(new SimpleGrantedAuthority("ROLE_" + member.getRole().name())),

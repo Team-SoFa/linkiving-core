@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MemberStatus implements CodeEnum<Integer> {
 
-	PENDING_TERMS(1), ACTIVE(2);
+	PENDING_TERMS(1), ACTIVE(2), WITHDRAWING(3), WITHDRAWAL_ANALYTICS_SENT(4);
 
 	private final Integer code;
 

@@ -20,11 +20,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sofa.linkiving.domain.member.dto.request.LoginReq;
+import com.sofa.linkiving.domain.member.dto.request.MemberWithdrawalReq;
 import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.MemberDeleteReason;
 import com.sofa.linkiving.domain.member.enums.MemberStatus;
 import com.sofa.linkiving.domain.member.error.MemberErrorCode;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -40,6 +42,8 @@ public class MemberServiceTest {
 	JwtTokenProvider jwtTokenProvider;
 	@Mock
 	RedisService redisService;
+	@Mock
+	MemberWithdrawalService memberWithdrawalService;
 	@InjectMocks
 	MemberService memberService;
 	@Mock
@@ -113,7 +117,7 @@ public class MemberServiceTest {
 		LoginReq req = new LoginReq(email, raw);
 
 		Member member = Member.builder().email(email).password(encoded).build();
-		given(memberQueryService.getUser(email)).willReturn(member);
+		given(memberQueryService.getUserForUpdate(email)).willReturn(member);
 
 		given(jwtTokenProvider.createAccessToken(any(Member.class))).willReturn("mock-access-token");
 		given(jwtTokenProvider.createRefreshToken(any())).willReturn("mock-refresh-token");
@@ -126,7 +130,7 @@ public class MemberServiceTest {
 		assertThat(res.accessToken()).isNotNull();
 		assertThat(res.refreshToken()).isNotNull();
 
-		verify(memberQueryService, times(1)).getUser(email);
+		verify(memberQueryService, times(1)).getUserForUpdate(email);
 	}
 
 	@Test
@@ -141,7 +145,7 @@ public class MemberServiceTest {
 		LoginReq req = new LoginReq(email, incorrect);
 
 		Member member = Member.builder().email(email).password(encodedCorrect).build();
-		given(memberQueryService.getUser(email)).willReturn(member);
+		given(memberQueryService.getUserForUpdate(email)).willReturn(member);
 
 		// when & then
 		assertThatThrownBy(() -> memberService.login(req))
@@ -149,7 +153,7 @@ public class MemberServiceTest {
 				AssertionsForClassTypes.assertThat(ex.getErrorCode()).isEqualTo(MemberErrorCode.INCORRECT_PASSWORD)
 			);
 
-		verify(memberQueryService, times(1)).getUser(email);
+		verify(memberQueryService, times(1)).getUserForUpdate(email);
 	}
 
 	@Test
@@ -163,6 +167,19 @@ public class MemberServiceTest {
 
 		// then
 		verify(redisService, times(1)).delete(any(), eq(member.getEmail()));
+	}
+
+	@Test
+	@DisplayName("회원 탈퇴를 회원 식별자와 이메일로 위임")
+	void shouldDelegateWithdrawal() {
+		Member member = mock(Member.class);
+		given(member.getId()).willReturn(42L);
+		given(member.getEmail()).willReturn("withdraw@test.com");
+
+		MemberWithdrawalReq req = new MemberWithdrawalReq(true, MemberDeleteReason.OTHER, "123.456");
+		memberService.withdraw(member, req);
+
+		verify(memberWithdrawalService).withdraw(42L, "withdraw@test.com", "123.456", MemberDeleteReason.OTHER);
 	}
 
 	@Test

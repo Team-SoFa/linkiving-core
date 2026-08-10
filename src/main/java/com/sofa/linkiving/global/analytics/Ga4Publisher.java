@@ -27,6 +27,17 @@ public class Ga4Publisher {
 		doSend(clientId, userId, event);
 	}
 
+	/**
+	 * 회원 하드 삭제 전에 이벤트 전송을 시도할 수 있도록 호출 스레드에서 동기 실행한다.
+	 * 전송 실패는 {@link #doSend(String, String, Ga4Event)}에서 흡수한다.
+	 */
+	public void publishBestEffort(String clientId, String userId, Ga4Event event) {
+		if (!StringUtils.hasText(clientId)) {
+			return;
+		}
+		doSend(clientId, userId, event);
+	}
+
 	private void doSend(String clientId, String userId, Ga4Event event) {
 		try {
 			client.send(clientId, userId, event);
