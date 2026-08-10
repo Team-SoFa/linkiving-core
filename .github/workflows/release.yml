@@ -1,15 +1,24 @@
 name: 🚀 Linkiving backend release deploy 🚀
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (for example, v0.1.1)'
+        required: true
+        type: string
   push:
     tags:
       - 'v*'
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
 permissions:
   contents: write
 
 concurrency:
-  group: backend-release-${{ github.ref }}
+  group: backend-release-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -19,11 +28,33 @@ jobs:
     steps:
       - name: ✨ Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ✅ Validate release tag
+        shell: bash
+        env:
+          TAG_NAME: ${{ env.RELEASE_TAG }}
+        run: |
+          if [[ ! "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: ${TAG_NAME}" >&2
+            exit 1
+          fi
+
+          if git rev-parse --verify --quiet "refs/tags/${TAG_NAME}" >/dev/null; then
+            TAG_SHA="$(git rev-list -n 1 "${TAG_NAME}")"
+            HEAD_SHA="$(git rev-parse HEAD)"
+
+            if [ "${TAG_SHA}" != "${HEAD_SHA}" ]; then
+              echo "Tag ${TAG_NAME} already points to ${TAG_SHA}, not ${HEAD_SHA}." >&2
+              exit 1
+            fi
+          fi
 
       - name: 📝 Build release notes from changelog
         shell: bash
         env:
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ env.RELEASE_TAG }}
         run: |
           awk -v tag="${TAG_NAME}" '
             $0 == "## [" tag "]" || $0 ~ "^## \\[" tag "\\] " {
@@ -104,7 +135,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:${{ github.ref_name }}
+            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:${{ env.RELEASE_TAG }}
             ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
 
   backend-docker-pull-and-run:
@@ -135,7 +166,7 @@ jobs:
 
       - name: ✨ 배포 스크립트 실행
         env:
-          IMAGE_TAG: ${{ github.ref_name }}
+          IMAGE_TAG: ${{ env.RELEASE_TAG }}
         run: |
           chmod +x deploy.sh
           ./deploy.sh
@@ -154,4 +185,5 @@ jobs:
       - name: 📝 Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           body_path: release-notes.md
