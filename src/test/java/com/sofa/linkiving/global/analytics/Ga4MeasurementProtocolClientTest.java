@@ -1,5 +1,6 @@
 package com.sofa.linkiving.global.analytics;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.client.ExpectedCount.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
