@@ -62,12 +62,13 @@ public class MessageCommandServiceTest {
 		// given
 		Chat chat = mock(Chat.class);
 		String content = "유저 질문";
+		String queryId = "query-123";
 
 		// save 호출 시 입력된 객체를 그대로 반환하도록 설정
 		given(messageRepository.save(any(Message.class))).willAnswer(invocation -> invocation.getArgument(0));
 
 		// when
-		Message savedMessage = messageCommandService.saveUserMessage(chat, content);
+		Message savedMessage = messageCommandService.saveUserMessage(chat, content, queryId);
 
 		// then
 		ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
@@ -77,6 +78,7 @@ public class MessageCommandServiceTest {
 		assertThat(captured.getChat()).isEqualTo(chat);
 		assertThat(captured.getContent()).isEqualTo(content);
 		assertThat(captured.getType()).isEqualTo(Type.USER);
+		assertThat(captured.getQueryId()).isEqualTo(queryId);
 	}
 
 	@Test

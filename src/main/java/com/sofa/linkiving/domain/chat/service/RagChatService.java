@@ -66,7 +66,7 @@ public class RagChatService {
 					publishQuerySubmit(member, clientId, queryId, linkCountAtQuery);
 				}
 
-				Message question = messageCommandService.saveUserMessage(chat, userMessage);
+				Message question = messageCommandService.saveUserMessage(chat, userMessage, queryId);
 				List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
 					question.getId(), chat);
 				Collections.reverse(history);

@@ -73,7 +73,7 @@ public class RagChatServiceTest {
 		// 2. 유저 메시지 저장
 		Message questionMsg = mock(Message.class);
 		given(questionMsg.getId()).willReturn(50L);
-		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
 		// 3. 과거 대화 내역 조회
 		Message historyMsg = mock(Message.class);
@@ -118,7 +118,7 @@ public class RagChatServiceTest {
 		assertThat(result.links()).hasSize(1);
 
 		// 순서대로 호출되었는지 검증
-		verify(messageCommandService).saveUserMessage(chat, userMessage);
+		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage), anyString());
 		verify(answerClient).generateAnswer(any(RagAnswerReq.class));
 		verify(linkQueryService).findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member));
 		verify(messageCommandService).saveAiMessage(eq(chat), eq("AI 답변입니다."), anyString(), eq(List.of(link1)));
@@ -148,7 +148,7 @@ public class RagChatServiceTest {
 
 		Message questionMsg = mock(Message.class);
 		given(questionMsg.getId()).willReturn(50L);
-		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
 		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(anyLong(), any()))
 			.willReturn(Collections.emptyList());
@@ -172,7 +172,7 @@ public class RagChatServiceTest {
 
 		Message questionMsg = mock(Message.class);
 		given(questionMsg.getId()).willReturn(50L);
-		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
 		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(50L, chat))
 			.willReturn(Collections.emptyList());
@@ -221,6 +221,10 @@ public class RagChatServiceTest {
 		assertThat(complete.params()).containsEntry("top_similarity", 0.91);
 		assertThat(complete.params()).containsKey("latency_ms");
 		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
+			eq((String)submit.params().get("query_id")));
+		verify(messageCommandService).saveAiMessage(eq(chat), eq("AI answer"),
+			eq((String)submit.params().get("query_id")), eq(List.of(link1)));
 		assertThat(complete.params()).doesNotContainValue(userMessage);
 		assertThat(complete.params()).doesNotContainValue("AI answer");
 	}
@@ -234,7 +238,7 @@ public class RagChatServiceTest {
 
 		Message questionMsg = mock(Message.class);
 		given(questionMsg.getId()).willReturn(50L);
-		given(messageCommandService.saveUserMessage(chat, userMessage)).willReturn(questionMsg);
+		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
 		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(anyLong(), any()))
 			.willReturn(Collections.emptyList());
@@ -260,6 +264,8 @@ public class RagChatServiceTest {
 		assertThat(complete.params()).containsEntry("error_type", "UNKNOWN");
 		assertThat(complete.params()).containsKey("latency_ms");
 		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
+			eq((String)submit.params().get("query_id")));
 		assertThat(complete.params()).doesNotContainValue(userMessage);
 	}
 }
