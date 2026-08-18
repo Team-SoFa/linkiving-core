@@ -25,11 +25,12 @@ public class MessageCommandService {
 		return messageRepository.save(message);
 	}
 
-	public Message saveUserMessage(Chat chat, String content) {
+	public Message saveUserMessage(Chat chat, String content, String queryId) {
 		Message message = Message.builder()
 			.chat(chat)
 			.type(Type.USER)
 			.content(content)
+			.queryId(queryId)
 			.build();
 
 		return messageRepository.save(message);

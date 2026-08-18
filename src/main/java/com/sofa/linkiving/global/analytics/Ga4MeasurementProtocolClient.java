@@ -30,10 +30,14 @@ public class Ga4MeasurementProtocolClient {
 		}
 
 		Map<String, Object> payload = new HashMap<>();
+		Map<String, Object> eventParams = new HashMap<>(event.params());
+		if (properties.debugMode()) {
+			eventParams.put("debug_mode", true);
+		}
 		payload.put("client_id", clientId);
 		payload.put("events", List.of(Map.of(
 				"name", event.name(),
-				"params", event.params()
+				"params", eventParams
 		)));
 
 		if (userId != null && !userId.isBlank()) {

@@ -8,7 +8,8 @@ public record Ga4Properties(
 	boolean enabled,
 	String measurementId,
 	String apiSecret,
-	String endpoint
+	String endpoint,
+	boolean debugMode
 ) {
 	private static final String DEFAULT_ENDPOINT = "https://www.google-analytics.com";
 
@@ -24,7 +25,7 @@ public record Ga4Properties(
 
 	@Override
 	public String toString() {
-		return "Ga4Properties[enabled=%s, measurementId=%s, apiSecret=****, endpoint=%s]"
-			.formatted(enabled, measurementId, endpoint);
+		return "Ga4Properties[enabled=%s, measurementId=%s, apiSecret=****, endpoint=%s, debugMode=%s]"
+			.formatted(enabled, measurementId, endpoint, debugMode);
 	}
 }
