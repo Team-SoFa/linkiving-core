@@ -7,6 +7,10 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 
 ## [Unreleased]
 
+### Changed
+- 링크 저장·중복 확인·메타데이터 수집 시 URL의 공백과 중복 프로토콜을 자동으로 정리하고, 프로토콜이 없으면 `https://`를 보완해 같은 링크를 일관되게 처리합니다.
+- 기존 `http://` 주소와 path·query·fragment는 그대로 유지하며, 유효하지 않은 URL은 저장 전에 오류로 안내합니다.
+
 ### Removed
 - BREAKING: 자체 회원가입·로그인 API(`POST /v1/member/signup`, `POST /v1/member/login`)를 제거했습니다. 인증 진입점은 Google OAuth(`/oauth2/**`)와 토큰 재발급(`/v1/auth/reissue`)으로 단일화되며, 제거된 두 경로는 공개 URL 목록에서도 빠져 401을 응답합니다.
 - 자체 로그인 전용 에러코드 `M-001`(중복 이메일)과 `M-003`(비밀번호 불일치)를 제거했습니다. Swagger User 태그의 회원가입·로그인 문서도 함께 사라집니다.
