@@ -74,7 +74,6 @@ class FeedbackIntegrationTest {
 	void setUp() {
 		Member member = memberRepository.save(Member.builder()
 			.email("feedback_user@test.com")
-			.password("password")
 			.build());
 		testUserDetails = new CustomMemberDetail(member, Role.USER);
 

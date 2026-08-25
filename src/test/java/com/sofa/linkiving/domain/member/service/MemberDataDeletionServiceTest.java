@@ -1,10 +1,8 @@
 package com.sofa.linkiving.domain.member.service;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +39,7 @@ class MemberDataDeletionServiceTest {
 
 	@Test
 	void shouldDeleteDependentsBeforeMember() {
-		Member member = Member.builder().email("member@test.com").password("pw").build();
+		Member member = Member.builder().email("member@test.com").build();
 		ReflectionTestUtils.setField(member, "id", 1L);
 		member.beginWithdrawal();
 		given(memberQueryService.getUserForUpdate(member.getEmail())).willReturn(member);
@@ -63,7 +61,7 @@ class MemberDataDeletionServiceTest {
 
 	@Test
 	void shouldRejectMismatchedMemberIdentity() {
-		Member member = Member.builder().email("member@test.com").password("pw").build();
+		Member member = Member.builder().email("member@test.com").build();
 		ReflectionTestUtils.setField(member, "id", 2L);
 		member.beginWithdrawal();
 		given(memberQueryService.getUserForUpdate(member.getEmail())).willReturn(member);
@@ -76,7 +74,7 @@ class MemberDataDeletionServiceTest {
 
 	@Test
 	void shouldPersistWithdrawingStateBeforeExternalDeletion() {
-		Member member = Member.builder().email("member@test.com").password("pw").status(MemberStatus.ACTIVE).build();
+		Member member = Member.builder().email("member@test.com").status(MemberStatus.ACTIVE).build();
 		ReflectionTestUtils.setField(member, "id", 1L);
 		given(memberQueryService.getUserForUpdate(member.getEmail())).willReturn(member);
 

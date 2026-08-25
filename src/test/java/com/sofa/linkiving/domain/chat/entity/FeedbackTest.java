@@ -31,7 +31,6 @@ public class FeedbackTest {
 		Member member = Member
 			.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 		em.persist(member);
 

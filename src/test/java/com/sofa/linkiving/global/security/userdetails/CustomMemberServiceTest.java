@@ -33,11 +33,9 @@ class CustomMemberServiceTest {
 	@DisplayName("이메일로 Member를 조회해 CustomMemberDetail 반환")
 	void shouldLoadUserByUsernameAndReturnCustomMemberDetail() {
 		String email = "example@example.com";
-		String password = "password";
 
 		Member member = Member.builder()
 			.email(email)
-			.password(password)
 			.build();
 		given(memberQueryService.getUser(email)).willReturn(member);
 
@@ -48,7 +46,7 @@ class CustomMemberServiceTest {
 		assertThat(userDetails).isInstanceOf(CustomMemberDetail.class);
 		CustomMemberDetail detail = (CustomMemberDetail)userDetails;
 		assertThat(detail.getUsername()).isEqualTo(email);
-		assertThat(detail.getPassword()).isEqualTo(password);
+		assertThat(detail.getPassword()).isEmpty();
 		assertThat(detail.getAuthorities())
 			.extracting(GrantedAuthority::getAuthority)
 			.containsExactly("ROLE_" + member.getRole().name());

@@ -30,8 +30,7 @@ public class MemberQueryServiceTest {
 	void shouldGetUserByEmail() {
 		// given
 		String email = "test@test.com";
-		String password = "test";
-		Member member = Member.builder().email(email).password(password).build();
+		Member member = Member.builder().email(email).build();
 		given(memberRepository.findByEmail(email)).willReturn(Optional.of(member));
 
 		// when

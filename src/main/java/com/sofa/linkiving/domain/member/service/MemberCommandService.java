@@ -13,15 +13,6 @@ import lombok.RequiredArgsConstructor;
 public class MemberCommandService {
 	private final MemberRepository memberRepository;
 
-	public Member addUser(String email, String password) {
-		Member member = Member.builder()
-			.email(email)
-			.password(password)
-			.build();
-
-		return memberRepository.save(member);
-	}
-
 	public Member createOrUpdate(String email) {
 		return createOrUpdate(email, null, null);
 	}
@@ -35,7 +26,6 @@ public class MemberCommandService {
 			.orElseGet(() -> {
 				Member newMember = Member.builder()
 					.email(email)
-					.password(email)
 					.name(name)
 					.profileImageUrl(profileImageUrl)
 					.status(MemberStatus.PENDING_TERMS)

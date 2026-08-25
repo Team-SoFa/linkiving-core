@@ -34,7 +34,6 @@ public class SummaryRepositoryTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("pw")
 			.build();
 		em.persist(member);
 
@@ -97,7 +96,6 @@ public class SummaryRepositoryTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("pw")
 			.build();
 		em.persist(member);
 
@@ -128,7 +126,6 @@ public class SummaryRepositoryTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("pw")
 			.build();
 		em.persist(member);
 		Link link = Link.builder()

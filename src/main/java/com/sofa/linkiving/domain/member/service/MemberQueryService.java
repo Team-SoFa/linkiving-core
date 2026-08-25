@@ -15,10 +15,6 @@ import lombok.RequiredArgsConstructor;
 public class MemberQueryService {
 	private final MemberRepository memberRepository;
 
-	boolean existsMemberByEmail(String email) {
-		return memberRepository.existsMemberByEmail(email);
-	}
-
 	public Member getUser(String email) {
 
 		return memberRepository.findByEmail(email).orElseThrow(

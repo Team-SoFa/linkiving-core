@@ -16,8 +16,6 @@ import com.sofa.linkiving.domain.member.enums.MemberStatus;
 
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
-	boolean existsMemberByEmail(String email);
-
 	Optional<Member> findByEmail(String email);
 
 	@Query(value = "SELECT * FROM member WHERE email = :email FOR UPDATE", nativeQuery = true)

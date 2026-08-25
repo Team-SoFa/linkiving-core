@@ -24,7 +24,6 @@ public class ChatTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 		em.persist(member);
 

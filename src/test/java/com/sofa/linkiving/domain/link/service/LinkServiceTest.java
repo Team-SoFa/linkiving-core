@@ -75,7 +75,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -110,7 +109,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(true);
@@ -136,7 +134,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link originalLink = Link.builder()
@@ -170,7 +167,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link originalLink = Link.builder()
@@ -207,7 +203,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link originalLink = Link.builder()
@@ -244,7 +239,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -269,7 +263,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -351,7 +344,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.of(123L));
@@ -371,7 +363,6 @@ class LinkServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.empty());

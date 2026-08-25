@@ -64,11 +64,9 @@ public class AdminSummaryDeadLetterApiIntegrationTest {
 	void setUp() {
 		adminMember = memberRepository.save(Member.builder()
 			.email("admin@test.com")
-			.password("password")
 			.build());
 		Member normalMember = memberRepository.save(Member.builder()
 			.email("user@test.com")
-			.password("password")
 			.build());
 		adminDetails = new CustomMemberDetail(adminMember, Role.ADMIN);
 		userDetails = new CustomMemberDetail(normalMember, Role.USER);

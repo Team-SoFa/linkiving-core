@@ -40,7 +40,6 @@ public class ChatRepositoryTest {
 	void setUp() {
 		member = memberRepository.save(Member.builder()
 			.email("test@example.com")
-			.password("test")
 			.build());
 
 		em.flush();
@@ -102,7 +101,6 @@ public class ChatRepositoryTest {
 		Member me = memberRepository.save(
 			Member.builder()
 				.email("me@test.com")
-				.password("password")
 				.build());
 
 		Chat myChat = chatRepository.save(
@@ -125,12 +123,10 @@ public class ChatRepositoryTest {
 		Member me = memberRepository.save(
 			Member.builder()
 				.email("me@test.com")
-				.password("password")
 				.build());
 		Member other = memberRepository.save(
 			Member.builder()
 				.email("other@test.com")
-				.password("password")
 				.build());
 
 		Chat othersChat = chatRepository.save(
@@ -152,7 +148,6 @@ public class ChatRepositoryTest {
 		// given
 		Member me = memberRepository.save(Member.builder()
 			.email("me@test.com")
-			.password("password")
 			.build());
 
 		Chat myChat = chatRepository.save(Chat.builder()
@@ -173,12 +168,10 @@ public class ChatRepositoryTest {
 		// given
 		Member me = memberRepository.save(Member.builder()
 			.email("me@test.com")
-			.password("password")
 			.build());
 
 		Member other = memberRepository.save(Member.builder()
 			.email("other@test.com")
-			.password("password")
 			.build());
 
 		Chat othersChat = chatRepository.save(Chat.builder()
@@ -199,7 +192,6 @@ public class ChatRepositoryTest {
 		// given
 		Member me = memberRepository.save(Member.builder()
 			.email("me@test.com")
-			.password("password")
 			.build());
 
 		Long nonExistentChatId = 9999L;

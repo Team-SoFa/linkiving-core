@@ -19,7 +19,7 @@ public abstract class SecurityConstants {
 		"/h2-console/**",
 
 		/* temp */
-		"/v1/member/signup", "/v1/member/login", "/mock/**",
+		"/mock/**",
 
 		/* oauth2 */
 		"/oauth2/**",

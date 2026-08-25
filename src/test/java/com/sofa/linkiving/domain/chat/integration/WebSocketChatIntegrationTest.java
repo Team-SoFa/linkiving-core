@@ -111,7 +111,6 @@ public class WebSocketChatIntegrationTest {
 		// 1. 데이터 초기화
 		testMember = memberRepository.save(Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build());
 
 		testChat = chatRepository.save(Chat.builder()

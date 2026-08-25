@@ -91,7 +91,6 @@ public class JwtTokenProviderTest {
 		JwtTokenProvider provider = createProvider(mock(RedisService.class), null);
 		Member member = Member.builder()
 			.email("pending@test.com")
-			.password("password")
 			.status(MemberStatus.PENDING_TERMS)
 			.build();
 

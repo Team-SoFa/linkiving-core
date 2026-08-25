@@ -92,7 +92,6 @@ public class ChatApiIntegrationTest {
 	void setUp() {
 		testMember = memberRepository.save(Member.builder()
 			.email("chatuser@test.com")
-			.password("password")
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);

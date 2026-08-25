@@ -40,7 +40,6 @@ class LinkQueryServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -66,7 +65,6 @@ class LinkQueryServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		given(linkRepository.findByIdAndMember(999L, member)).willReturn(Optional.empty());
@@ -83,7 +81,6 @@ class LinkQueryServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		given(linkRepository.existsByMemberAndUrlAndIsDeleteFalse(member, "https://example.com"))

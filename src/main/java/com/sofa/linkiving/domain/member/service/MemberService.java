@@ -1,16 +1,11 @@
 package com.sofa.linkiving.domain.member.service;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sofa.linkiving.domain.member.dto.request.LoginReq;
 import com.sofa.linkiving.domain.member.dto.request.MemberWithdrawalReq;
-import com.sofa.linkiving.domain.member.dto.request.SignupReq;
 import com.sofa.linkiving.domain.member.dto.request.TermsAgreementReq;
 import com.sofa.linkiving.domain.member.dto.response.MemberProfileRes;
 import com.sofa.linkiving.domain.member.dto.response.TokenRes;
@@ -27,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 @RequiredArgsConstructor
 public class MemberService {
-	private final MemberCommandService memberCommandService;
 	private final MemberQueryService memberQueryService;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RedisService redisService;
@@ -36,45 +30,6 @@ public class MemberService {
 	private String currentTermsVersion;
 	@Value("${app.member.current-privacy-version:2026-08-03}")
 	private String currentPrivacyVersion;
-
-	public TokenRes signup(SignupReq req) {
-
-		if (memberQueryService.existsMemberByEmail(req.email())) {
-			throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
-		}
-
-		// TODO: Change this when Security dependency is added later
-		String encoded = Base64.getEncoder()
-			.encodeToString(req.password().getBytes(StandardCharsets.UTF_8));
-
-		Member member = memberCommandService.addUser(req.email(), encoded);
-
-		String accessToken = jwtTokenProvider.createAccessToken(member);
-		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
-
-		return TokenRes.of(accessToken, refreshToken);
-	}
-
-	@Transactional
-	public TokenRes login(LoginReq req) {
-		Member member = memberQueryService.getUserForUpdate(req.email());
-		if (member.isWithdrawing()) {
-			throw new BusinessException(MemberErrorCode.WITHDRAWAL_IN_PROGRESS);
-		}
-
-		// TODO: 추후 PasswordEncoder(BCrypt)로 변경 권장
-		String encoded = Base64.getEncoder()
-			.encodeToString(req.password().getBytes(StandardCharsets.UTF_8));
-
-		if (!member.verifyPassword(encoded)) {
-			throw new BusinessException(MemberErrorCode.INCORRECT_PASSWORD);
-		}
-
-		String accessToken = jwtTokenProvider.createAccessToken(member);
-		String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail());
-
-		return TokenRes.of(accessToken, refreshToken);
-	}
 
 	public void logout(Member member) {
 		redisService.delete(RedisKeyRegistry.REFRESH_TOKEN, member.getEmail());

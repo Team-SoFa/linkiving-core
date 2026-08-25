@@ -13,29 +13,24 @@ public class MemberTest {
 	void shouldCreateMemberWithValidEmail() {
 		// given
 		String email = "test@test.com";
-		String password = "test";
 
 		// when
 		Member member = Member.builder()
 			.email(email)
-			.password(password)
 			.build();
 
 		// then
 		assertThat(member.getEmail()).isEqualTo(email);
-		assertThat(member.getPassword()).isEqualTo(password);
 	}
 
 	@Test
 	void shouldThrowExceptionForInvalidEmail() {
 		// given
 		String invalidEmail = "test";
-		String password = "test";
 
 		// when & then
 		assertThatThrownBy(() -> Member.builder()
 			.email(invalidEmail)
-			.password(password)
 			.build()
 		)
 			.isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -48,7 +43,6 @@ public class MemberTest {
 		// given
 		Member member = Member.builder()
 			.email("oauth@test.com")
-			.password("oauth@test.com")
 			.status(MemberStatus.PENDING_TERMS)
 			.build();
 
