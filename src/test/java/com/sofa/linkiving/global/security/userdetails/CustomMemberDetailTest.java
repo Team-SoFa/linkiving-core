@@ -21,7 +21,6 @@ public class CustomMemberDetailTest {
 		Role role = Role.ADMIN;
 		Member member = Member.builder()
 			.email("admin@example.com")
-			.password("pw")
 			.build();
 		CustomMemberDetail detail = new CustomMemberDetail(member, role);
 
@@ -35,20 +34,18 @@ public class CustomMemberDetailTest {
 	}
 
 	@Test
-	@DisplayName("UserDetails username/password가 Member의 email/password와 연결된다")
+	@DisplayName("username은 Member email을 반환하고 password는 빈 문자열을 반환함")
 	void shouldExposeUsernameAndPasswordFromMember() {
 		// given
 		String email = "test@test.com";
-		String password = "test";
 		Member member = Member.builder()
 			.email(email)
-			.password(password)
 			.build();
 		CustomMemberDetail detail = new CustomMemberDetail(member, member.getRole());
 
 		// when & then
 		assertThat(detail.getUsername()).isEqualTo(email);
-		assertThat(detail.getPassword()).isEqualTo(password); // 실제 운영에선 인코딩 적용됨
+		assertThat(detail.getPassword()).isEmpty();
 	}
 
 	@Test
@@ -57,7 +54,6 @@ public class CustomMemberDetailTest {
 		// given
 		Member member = Member.builder()
 			.email("user@example.com")
-			.password("pw")
 			.build();
 		CustomMemberDetail detail = new CustomMemberDetail(member, member.getRole());
 

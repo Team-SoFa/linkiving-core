@@ -16,7 +16,6 @@ public class LinkTest {
 	void shouldCreateLinkWithRequiredFields() {
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 		String url = "https://example.com";
 		String title = "Example Title";
@@ -36,7 +35,6 @@ public class LinkTest {
 	void shouldCreateLinkWithAllFields() {
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 		String url = "https://example.com";
 		String title = "Example Title";
@@ -64,7 +62,6 @@ public class LinkTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -90,7 +87,6 @@ public class LinkTest {
 		Member member = Member
 			.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -113,7 +109,6 @@ public class LinkTest {
 		Member member = Member
 			.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -136,7 +131,6 @@ public class LinkTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -157,7 +151,6 @@ public class LinkTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()

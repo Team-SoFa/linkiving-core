@@ -7,6 +7,13 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 
 ## [Unreleased]
 
+### Removed
+- BREAKING: 자체 회원가입·로그인 API(`POST /v1/member/signup`, `POST /v1/member/login`)를 제거했습니다. 인증 진입점은 Google OAuth(`/oauth2/**`)와 토큰 재발급(`/v1/auth/reissue`)으로 단일화되며, 제거된 두 경로는 공개 URL 목록에서도 빠져 401을 응답합니다.
+- 자체 로그인 전용 에러코드 `M-001`(중복 이메일)과 `M-003`(비밀번호 불일치)를 제거했습니다. Swagger User 태그의 회원가입·로그인 문서도 함께 사라집니다.
+
+### Security
+- 회원 정보에서 비밀번호 필드를 제거했습니다. Base64로 인코딩해 저장하던 비밀번호와 OAuth 가입 시 이메일 평문을 더미 비밀번호로 저장하던 동작이 없어집니다.
+
 ## [v0.1.0] - 2026-08-10
 
 ### Added

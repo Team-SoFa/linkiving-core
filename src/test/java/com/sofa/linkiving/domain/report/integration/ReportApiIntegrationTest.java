@@ -52,7 +52,6 @@ public class ReportApiIntegrationTest {
 	void setUp() {
 		testMember = memberRepository.save(Member.builder()
 			.email("reportUser@test.com")
-			.password("password")
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);

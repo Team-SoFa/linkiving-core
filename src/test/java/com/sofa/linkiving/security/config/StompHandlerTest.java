@@ -113,7 +113,6 @@ class StompHandlerTest {
 	private Authentication withdrawingAuthentication() {
 		Member member = Member.builder()
 			.email("member@test.com")
-			.password("password")
 			.status(MemberStatus.WITHDRAWING)
 			.build();
 		CustomMemberDetail detail = new CustomMemberDetail(member, Role.USER);

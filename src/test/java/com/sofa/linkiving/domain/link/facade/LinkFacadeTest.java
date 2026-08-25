@@ -226,7 +226,6 @@ class LinkFacadeTest {
 		Member member = Member
 			.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		ReflectionTestUtils.setField(member, "id", 1L);
 		AnalyticsContext analyticsContext = AnalyticsContext.of("1234567890.1234567890", "web");
@@ -270,7 +269,6 @@ class LinkFacadeTest {
 		Member member = Member
 			.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		ReflectionTestUtils.setField(member, "id", 1L);
 		String url = "https://example.com";
@@ -305,7 +303,6 @@ class LinkFacadeTest {
 		Long linkId = 1L;
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		Link updatedLink = Link.builder()
 			.member(member)
@@ -339,7 +336,6 @@ class LinkFacadeTest {
 		Long linkId = 1L;
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		Link updatedLink = Link.builder()
 			.member(member)
@@ -366,7 +362,6 @@ class LinkFacadeTest {
 		Long linkId = 1L;
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		Link updatedLink = Link.builder()
 			.member(member)
@@ -414,7 +409,6 @@ class LinkFacadeTest {
 		Member member = Member
 			.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		Link link = Link.builder()
 			.member(member)
@@ -530,7 +524,6 @@ class LinkFacadeTest {
 		Member member = Member
 			.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		String url = "https://example.com";
 
@@ -551,7 +544,6 @@ class LinkFacadeTest {
 		Member member = Member
 			.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 		given(linkService.getLinkTotalCount(member)).willReturn(15L);
 

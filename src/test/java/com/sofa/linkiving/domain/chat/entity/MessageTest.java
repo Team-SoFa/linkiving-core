@@ -32,7 +32,6 @@ public class MessageTest {
 		Member member = Member
 			.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 		em.persist(member);
 

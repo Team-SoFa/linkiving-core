@@ -45,7 +45,6 @@ public class AuthServiceTest {
 		String newRefreshToken = "new-refresh-token";
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		given(jwtTokenProvider.validateRefreshToken(oldRefreshToken)).willReturn("test@test.com");

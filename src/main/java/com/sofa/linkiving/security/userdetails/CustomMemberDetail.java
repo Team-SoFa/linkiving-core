@@ -18,7 +18,7 @@ public record CustomMemberDetail(Member member, Role role) implements UserDetail
 
 	@Override
 	public String getPassword() {
-		return member.getPassword() == null ? "" : member.getPassword();
+		return "";
 	}
 
 	@Override

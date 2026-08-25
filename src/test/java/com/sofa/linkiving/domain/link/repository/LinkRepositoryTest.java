@@ -40,7 +40,6 @@ class LinkRepositoryTest {
 	void setUp() {
 		testMember = Member.builder()
 			.email("test@example.com")
-			.password("password123")
 			.build();
 		entityManager.persist(testMember);
 		entityManager.flush();
@@ -207,7 +206,6 @@ class LinkRepositoryTest {
 		// given
 		Member otherMember = Member.builder()
 			.email("other@test.com")
-			.password("password")
 			.build();
 		entityManager.persist(otherMember);
 

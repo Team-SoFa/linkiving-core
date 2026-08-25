@@ -31,7 +31,6 @@ class LinkCommandServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -65,7 +64,6 @@ class LinkCommandServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link originalLink = Link.builder()
@@ -98,7 +96,6 @@ class LinkCommandServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()

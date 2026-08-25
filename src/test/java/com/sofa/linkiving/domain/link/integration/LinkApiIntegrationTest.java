@@ -79,12 +79,10 @@ public class LinkApiIntegrationTest {
 	void setUp() {
 		testMember = memberRepository.save(Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build());
 
 		otherMember = memberRepository.save(Member.builder()
 			.email("other@test.com")
-			.password("password")
 			.build());
 
 		testUserDetails = new CustomMemberDetail(testMember, Role.USER);

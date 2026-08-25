@@ -41,7 +41,6 @@ public class ChatDomainRepositoryTest {
 		Member member = memberRepository.save(Member
 			.builder()
 			.email("test@test.com")
-			.password("test")
 			.build());
 
 		Chat chat = chatRepository.save(Chat.builder()
@@ -63,7 +62,6 @@ public class ChatDomainRepositoryTest {
 		// given
 		Member member = memberRepository.save(Member.builder()
 			.email("test@test.com")
-			.password("test")
 			.build());
 
 		Chat chat = chatRepository.save(Chat.builder()
@@ -91,7 +89,6 @@ public class ChatDomainRepositoryTest {
 		// given
 		Member member = memberRepository.save(Member.builder()
 			.email("feed@test.com")
-			.password("test")
 			.build());
 
 		Chat chat = chatRepository.save(Chat.builder()
@@ -129,7 +126,6 @@ public class ChatDomainRepositoryTest {
 		// given
 		Member member = memberRepository.save(Member.builder()
 			.email("empty@test.com")
-			.password("test")
 			.build());
 
 		Chat emptyChat = chatRepository.save(Chat.builder()

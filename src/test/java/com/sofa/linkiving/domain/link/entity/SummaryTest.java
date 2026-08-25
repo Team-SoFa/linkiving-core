@@ -14,7 +14,6 @@ public class SummaryTest {
 		// given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
@@ -44,7 +43,6 @@ public class SummaryTest {
 		//given
 		Member member = Member.builder()
 			.email("test@test.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()

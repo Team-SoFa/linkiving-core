@@ -26,8 +26,6 @@ public class Member extends BaseEntity {
 
 	@Column(nullable = false, unique = true)
 	private String email;
-	@Column(nullable = false)
-	private String password;
 	@Column
 	private String name;
 	@Column(length = 2048)
@@ -46,12 +44,11 @@ public class Member extends BaseEntity {
 	private String privacyVersion;
 
 	@Builder
-	public Member(String email, String password, String name, String profileImageUrl, MemberStatus status) {
+	public Member(String email, String name, String profileImageUrl, MemberStatus status) {
 		if (!isValidEmail(email)) {
 			throw new BusinessException(MemberErrorCode.INVALID_EMAIL_FORMAT);
 		}
 		this.email = email;
-		this.password = password;
 		this.name = name;
 		this.profileImageUrl = profileImageUrl;
 		this.role = Role.USER;
@@ -71,10 +68,6 @@ public class Member extends BaseEntity {
 		if (status == null) {
 			status = MemberStatus.ACTIVE;
 		}
-	}
-
-	public boolean verifyPassword(String rawPassword) {
-		return this.password.equals(rawPassword);
 	}
 
 	public void updateProfile(String name, String profileImageUrl) {

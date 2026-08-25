@@ -50,7 +50,6 @@ public class AuthApiIntegrationTest {
 	void setUp() {
 		testMember = memberRepository.save(Member.builder()
 			.email("auth@test.com")
-			.password("password")
 			.build());
 	}
 

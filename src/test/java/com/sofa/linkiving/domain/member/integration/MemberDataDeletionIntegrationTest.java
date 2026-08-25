@@ -1,6 +1,6 @@
 package com.sofa.linkiving.domain.member.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 
@@ -54,7 +54,7 @@ class MemberDataDeletionIntegrationTest {
 	@Test
 	void shouldHardDeleteEveryMemberOwnedRecord() {
 		Member member = memberRepository.save(Member.builder()
-			.email("withdraw@test.com").password("pw").build());
+			.email("withdraw@test.com").build());
 		Link link = linkRepository.save(Link.create(member, "https://example.com", "title", "memo", null));
 		summaryRepository.save(Summary.builder().link(link).format(Format.CONCISE).content("summary")
 			.selected(true).build());

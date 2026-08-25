@@ -1,9 +1,8 @@
 package com.sofa.linkiving.domain.member.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.*;
 
 import java.time.Duration;
 import java.util.List;
@@ -89,7 +88,6 @@ class MemberWithdrawalCleanupSchedulerTest {
 	private Member member(Long id, MemberStatus status) {
 		Member member = Member.builder()
 			.email("member" + id + "@test.com")
-			.password("password")
 			.status(status)
 			.build();
 		ReflectionTestUtils.setField(member, "id", id);

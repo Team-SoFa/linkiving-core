@@ -48,7 +48,6 @@ class MessageRepositoryTest {
 	void setUp() {
 		member = memberRepository.save(Member.builder()
 			.email("test@repo.com")
-			.password("password")
 			.build());
 
 		chat = chatRepository.save(Chat.builder()

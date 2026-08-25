@@ -32,7 +32,6 @@ public class SummaryServiceTest {
 		// given
 		Member member = Member.builder()
 			.email("test@example.com")
-			.password("password")
 			.build();
 
 		Link link = Link.builder()
