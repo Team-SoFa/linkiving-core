@@ -9,6 +9,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.util.UrlNormalizer;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -22,13 +23,15 @@ public class LinkService {
 
 	private final LinkCommandService linkCommandService;
 	private final LinkQueryService linkQueryService;
+	private final UrlNormalizer urlNormalizer;
 
 	public Link createLink(Member member, String url, String title, String memo, String imageUrl) {
-		if (linkQueryService.existsByUrl(member, url)) {
+		String normalizedUrl = urlNormalizer.normalize(url);
+		if (linkQueryService.existsByUrl(member, normalizedUrl)) {
 			throw new BusinessException(LinkErrorCode.DUPLICATE_URL);
 		}
 
-		Link link = linkCommandService.saveLink(member, url, title, memo, imageUrl);
+		Link link = linkCommandService.saveLink(member, normalizedUrl, title, memo, imageUrl);
 		log.info("Link created - id={}, memberId={}", link.getId(), member.getId());
 
 		return link;
@@ -104,7 +107,8 @@ public class LinkService {
 	}
 
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
-		return linkQueryService.findIdByUrl(member, url);
+		String normalizedUrl = urlNormalizer.normalize(url);
+		return linkQueryService.findIdByUrl(member, normalizedUrl);
 	}
 
 	public void updateSummaryStatus(Long linkId, SummaryStatus status) {

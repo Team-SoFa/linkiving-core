@@ -8,24 +8,24 @@ import org.springframework.stereotype.Component;
 
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class OgTagCrawler {
 
 	private static final int TIMEOUT_MS = 5000;
 	private final UrlValidator urlValidator;
-
-	public OgTagCrawler(UrlValidator urlValidator) {
-		this.urlValidator = urlValidator;
-	}
+	private final UrlNormalizer urlNormalizer;
 
 	public OgTagDto crawl(String url) {
-		urlValidator.validateSafeUrl(url);
+		String normalizedUrl = urlNormalizer.normalize(url);
+		urlValidator.validateSafeUrl(normalizedUrl);
 
 		try {
-			Document document = Jsoup.connect(url)
+			Document document = Jsoup.connect(normalizedUrl)
 				.timeout(TIMEOUT_MS)
 				.userAgent("Mozilla/5.0")
 				.get();
@@ -38,7 +38,7 @@ public class OgTagCrawler {
 				.build();
 
 		} catch (IOException e) {
-			log.warn("OG 태그 크롤링 실패 - url={}, reason={}", url, e.getMessage());
+			log.warn("OG 태그 크롤링 실패 - url={}, reason={}", normalizedUrl, e.getMessage());
 			return OgTagDto.EMPTY;
 		}
 	}

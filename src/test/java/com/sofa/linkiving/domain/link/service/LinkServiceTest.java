@@ -21,6 +21,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
+import com.sofa.linkiving.domain.link.util.UrlNormalizer;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -36,6 +37,9 @@ class LinkServiceTest {
 
 	@Mock
 	private LinkQueryService linkQueryService;
+
+	@Mock
+	private UrlNormalizer urlNormalizer;
 
 	@Test
 	@DisplayName("회원 정보 없이 링크 ID만으로 링크를 단건 조회할 수 있다")
@@ -83,6 +87,7 @@ class LinkServiceTest {
 			.title("테스트 링크")
 			.build();
 
+		given(urlNormalizer.normalize(" example.com ")).willReturn("https://example.com");
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(false);
 		given(linkCommandService.saveLink(any(), any(), any(), any(), any()))
 			.willReturn(link);
@@ -90,7 +95,7 @@ class LinkServiceTest {
 		// when
 		Link save = linkService.createLink(
 			member,
-			"https://example.com",
+			" example.com ",
 			"테스트 링크",
 			"메모",
 			null
@@ -100,7 +105,7 @@ class LinkServiceTest {
 		assertThat(save).isNotNull();
 		assertThat(save.getUrl()).isEqualTo("https://example.com");
 		verify(linkQueryService, times(1)).existsByUrl(member, "https://example.com");
-		verify(linkCommandService, times(1)).saveLink(any(), any(), any(), any(), any());
+		verify(linkCommandService, times(1)).saveLink(member, "https://example.com", "테스트 링크", "메모", null);
 	}
 
 	@Test
@@ -111,12 +116,13 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
+		given(urlNormalizer.normalize("https://https://example.com")).willReturn("https://example.com");
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(true);
 
 		// when & then
 		assertThatThrownBy(() -> linkService.createLink(
 			member,
-			"https://example.com",
+			"https://https://example.com",
 			"테스트 링크",
 			null,
 			null
@@ -346,10 +352,11 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
+		given(urlNormalizer.normalize("example.com")).willReturn("https://example.com");
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.of(123L));
 
 		// when
-		Optional<Long> result = linkService.findLinkIdByUrl(member, "https://example.com");
+		Optional<Long> result = linkService.findLinkIdByUrl(member, "example.com");
 
 		// then
 		assertThat(result).isPresent();
@@ -365,14 +372,15 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
-		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.empty());
+		given(urlNormalizer.normalize("www.example.com")).willReturn("https://www.example.com");
+		given(linkQueryService.findIdByUrl(member, "https://www.example.com")).willReturn(java.util.Optional.empty());
 
 		// when
-		Optional<Long> result = linkService.findLinkIdByUrl(member, "https://example.com");
+		Optional<Long> result = linkService.findLinkIdByUrl(member, "www.example.com");
 
 		// then
 		assertThat(result).isEmpty();
-		verify(linkQueryService, times(1)).findIdByUrl(member, "https://example.com");
+		verify(linkQueryService, times(1)).findIdByUrl(member, "https://www.example.com");
 	}
 
 	@Test
