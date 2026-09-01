@@ -23,7 +23,7 @@ public class SwaggerConfig {
 		String version = buildProperties.stream()
 			.findFirst()
 			.map(BuildProperties::getVersion)
-			.orElse("0.1.0");
+			.orElse("0.1.1");
 
 		return new OpenAPI()
 			.info(new Info()
