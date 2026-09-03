@@ -157,12 +157,6 @@ jobs:
       - name: ✨ Checkout repository
         uses: actions/checkout@v5
 
-      - name: 🗂️ Grafana 환경변수 설정
-        run: |
-          echo "GRAFANA_ADMIN_USER=admin" > ./docker/.env
-          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> ./docker/.env
-        shell: bash
-
       - name: 🗂️ Alertmanager 알림 채널 설정
         shell: bash
         env:
@@ -177,6 +171,10 @@ jobs:
       - name: ✨ 배포 스크립트 실행
         env:
           IMAGE_TAG: ${{ env.RELEASE_TAG }}
+          GRAFANA_ADMIN_USER: admin
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          APP_MEMBER_WITHDRAWAL_ENABLED: "true"
+          APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET: ${{ secrets.APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET }}
           TRAFFIC_CHECK_URL: ${{ vars.TRAFFIC_CHECK_URL }}
           TRAFFIC_CHECK_HOST: ${{ vars.TRAFFIC_CHECK_HOST }}
         run: |
