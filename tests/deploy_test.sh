@@ -18,6 +18,44 @@ assert_equals() {
     [ "${expected}" = "${actual}" ] || fail "${message} (expected=${expected}, actual=${actual})"
 }
 
+test_compose_preserves_only_required_runtime_environment() {
+    local output
+    sudo() { printf '%s\n' "$*"; }
+
+    output=$(compose config)
+
+    [[ "${output}" == --preserve-env=GRAFANA_ADMIN_USER,GRAFANA_ADMIN_PASSWORD,APP_MEMBER_WITHDRAWAL_ENABLED,APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET\ IMAGE_TAG=* ]] \
+        || fail "Compose 실행은 필요한 운영 환경변수만 sudo에 유지해야 합니다."
+    [[ "${output}" != *"APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET="* ]] \
+        || fail "탈퇴 내부 secret 값을 프로세스 인자로 전달하면 안 됩니다."
+}
+
+test_member_withdrawal_configuration_requires_enabled_feature() {
+    if (
+        APP_MEMBER_WITHDRAWAL_ENABLED=false
+        APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET=abcdefghijklmnopqrstuvwxyzABCDEF
+        validate_member_withdrawal_configuration >/dev/null 2>&1
+    ); then
+        fail "운영 배포에서 회원 탈퇴 기능이 비활성화되어 있으면 중단해야 합니다."
+    fi
+}
+
+test_member_withdrawal_configuration_requires_safe_secret() {
+    if (
+        APP_MEMBER_WITHDRAWAL_ENABLED=true
+        APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET=too-short
+        validate_member_withdrawal_configuration >/dev/null 2>&1
+    ); then
+        fail "짧거나 안전하지 않은 탈퇴 내부 secret은 거부해야 합니다."
+    fi
+
+    (
+        APP_MEMBER_WITHDRAWAL_ENABLED=true
+        APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET=abcdefghijklmnopqrstuvwxyzABCDEF
+        validate_member_withdrawal_configuration
+    ) || fail "유효한 회원 탈퇴 운영 설정은 허용해야 합니다."
+}
+
 test_http_check_requires_exact_trimmed_body() {
     curl() { printf ' \nOK\n '; }
     http_check "http://health.test/health-check" "OK" || fail "공백을 제거한 정확한 응답은 성공해야 합니다."
@@ -169,6 +207,9 @@ test_committed_switch_does_not_roll_back() {
 }
 
 test_http_check_requires_exact_trimmed_body
+test_compose_preserves_only_required_runtime_environment
+test_member_withdrawal_configuration_requires_enabled_feature
+test_member_withdrawal_configuration_requires_safe_secret
 test_http_check_uses_resolve_for_https_sni
 test_http_check_rejects_curl_failure
 test_read_nginx_upstream_port_requires_one_target

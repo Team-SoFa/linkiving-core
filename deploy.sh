@@ -28,7 +28,20 @@ ROLLBACK_REQUIRED=false
 DEPLOYMENT_COMMITTED=false
 
 compose() {
-    sudo IMAGE_TAG="${DEPLOY_IMAGE_TAG}" docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
+    sudo --preserve-env=GRAFANA_ADMIN_USER,GRAFANA_ADMIN_PASSWORD,APP_MEMBER_WITHDRAWAL_ENABLED,APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET \
+        IMAGE_TAG="${DEPLOY_IMAGE_TAG}" docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}" "$@"
+}
+
+validate_member_withdrawal_configuration() {
+    if [ "${APP_MEMBER_WITHDRAWAL_ENABLED:-}" != true ]; then
+        echo "APP_MEMBER_WITHDRAWAL_ENABLED must be true for a production deployment." >&2
+        return 1
+    fi
+
+    if [[ ! "${APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET:-}" =~ ^[A-Za-z0-9_-]{32,}$ ]]; then
+        echo "APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET must be a URL-safe secret of at least 32 characters." >&2
+        return 1
+    fi
 }
 
 container_is_running() {
@@ -288,6 +301,7 @@ main() {
     trap 'exit 130' INT
     trap 'exit 143' TERM
 
+    validate_member_withdrawal_configuration
     acquire_deploy_lock
     echo "=== Blue-Green 배포 시작 ==="
 
