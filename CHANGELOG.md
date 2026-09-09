@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 Before creating a release tag, add a section whose heading matches the tag name.
 For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 
+## [Unreleased]
+
+### Fixed
+- 운영 배포에서 GA4 DebugView 설정이 서버 컨테이너에 전달되지 않던 문제를 수정했습니다. GitHub Actions Secret `ANALYTICS_GA4_DEBUG_MODE=true`를 설정하고 배포하면 서버 GA 이벤트에 `debug_mode`가 포함되어 클라이언트 연동 QA에 활용할 수 있습니다. 미설정 시 기본값은 `false`입니다.
+- DebugView 확인에는 기존 GA 수집 설정과 요청의 `clientId`가 필요하며, 브라우저 이벤트의 디버그 설정은 별도로 적용해야 합니다. 클라이언트 요청·응답 형식은 유지됩니다.
+
 ## [v0.1.1] - 2026-09-01
 
 ### Added
