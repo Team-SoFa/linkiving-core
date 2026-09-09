@@ -21,7 +21,7 @@ public record AnswerRes(
 	@JsonSerialize(using = HashidsSerializer.class)
 	Long messageId,
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	@Schema(description = "GA query_id")
+	@Schema(description = "질의 추적 ID")
 	String queryId,
 	@Schema(description = "답변 내용")
 	String content,

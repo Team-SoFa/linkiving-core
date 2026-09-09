@@ -251,11 +251,13 @@ public class RagChatServiceTest {
 		assertThat(complete.params()).containsKey("latency_ms");
 		assertThat(complete.params()).containsEntry("is_fallback", false);
 		assertThat(complete.params()).doesNotContainKeys("is_model_used", "execution_path", "is_embedding_used");
-		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		assertThat(submit.params()).containsKey("app_query_id").doesNotContainKey("query_id");
+		assertThat(complete.params()).containsKey("app_query_id").doesNotContainKey("query_id");
+		assertThat(complete.params().get("app_query_id")).isEqualTo(submit.params().get("app_query_id"));
 		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
-			eq((String)submit.params().get("query_id")));
+			eq((String)submit.params().get("app_query_id")));
 		verify(messageCommandService).saveAiMessage(eq(chat), eq("AI answer"),
-			eq((String)submit.params().get("query_id")), eq(List.of(link1)));
+			eq((String)submit.params().get("app_query_id")), eq(List.of(link1)));
 		assertThat(complete.params()).doesNotContainValue(userMessage);
 		assertThat(complete.params()).doesNotContainValue("AI answer");
 	}
@@ -295,9 +297,11 @@ public class RagChatServiceTest {
 		assertThat(complete.params()).containsEntry("error_type", "UNKNOWN");
 		assertThat(complete.params()).doesNotContainKeys("is_model_used", "execution_path", "is_fallback");
 		assertThat(complete.params()).containsKey("latency_ms");
-		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
+		assertThat(submit.params()).containsKey("app_query_id").doesNotContainKey("query_id");
+		assertThat(complete.params()).containsKey("app_query_id").doesNotContainKey("query_id");
+		assertThat(complete.params().get("app_query_id")).isEqualTo(submit.params().get("app_query_id"));
 		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
-			eq((String)submit.params().get("query_id")));
+			eq((String)submit.params().get("app_query_id")));
 		assertThat(complete.params()).doesNotContainValue(userMessage);
 	}
 

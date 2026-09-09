@@ -16,6 +16,9 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 ### Changed
 - RAG 요청의 이전 답변에 소유권을 검증한 링크 맥락을 함께 전달하고, 답변 카드가 검색 결과의 선택 순서를 유지하도록 개선했습니다. 저장되지 않은 과거 카드 순서는 추정하지 않습니다.
 - RAG 요약·재요약·링크 동기화 요청에 최초 저장 시각과 요약 상태를 전달합니다. 제목이나 메모를 수정해도 최초 저장일이 바뀌지 않습니다.
+- 서버 GA 이벤트 `query_submit`, `query_response_complete`의 질의 연결 키를 `query_id`에서 `app_query_id`로 변경했습니다. GA 웹 태그의 내부 식별자와 충돌하지 않도록 하며, API/WebSocket의 `queryId` 필드와 값은 유지됩니다.
+- 클라이언트의 `query_result_click`, `query_feedback`도 응답의 `queryId`를 `app_query_id`로 전송해야 네 질의 이벤트를 연결할 수 있습니다. 백엔드 배포 시 클라이언트에도 변경된 연결 키가 함께 적용되어야 합니다.
+- 질의별 GA 분석·리포트의 연결 기준도 `app_query_id`로 맞춰야 합니다.
 
 ### Fixed
 - 운영 배포에서 GA4 DebugView 설정이 서버 컨테이너에 전달되지 않던 문제를 수정했습니다. GitHub Actions Secret `ANALYTICS_GA4_DEBUG_MODE=true`를 설정하고 배포하면 서버 GA 이벤트에 `debug_mode`가 포함되어 클라이언트 연동 QA에 활용할 수 있습니다. 미설정 시 기본값은 `false`입니다.
