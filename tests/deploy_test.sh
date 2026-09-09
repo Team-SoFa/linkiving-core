@@ -24,8 +24,10 @@ test_compose_preserves_only_required_runtime_environment() {
 
     output=$(compose config)
 
-    [[ "${output}" == --preserve-env=GRAFANA_ADMIN_USER,GRAFANA_ADMIN_PASSWORD,APP_MEMBER_WITHDRAWAL_ENABLED,APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET\ IMAGE_TAG=* ]] \
+    [[ "${output}" == --preserve-env=GRAFANA_ADMIN_USER,GRAFANA_ADMIN_PASSWORD,ANALYTICS_GA4_DEBUG_MODE,APP_MEMBER_WITHDRAWAL_ENABLED,APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET\ IMAGE_TAG=* ]] \
         || fail "Compose 실행은 필요한 운영 환경변수만 sudo에 유지해야 합니다."
+    [[ "${output}" != *"ANALYTICS_GA4_DEBUG_MODE="* ]] \
+        || fail "GA4 debug mode 값을 프로세스 인자로 전달하면 안 됩니다."
     [[ "${output}" != *"APP_MEMBER_WITHDRAWAL_INTERNAL_SECRET="* ]] \
         || fail "탈퇴 내부 secret 값을 프로세스 인자로 전달하면 안 됩니다."
 }
