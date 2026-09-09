@@ -122,7 +122,7 @@ public class RagChatService {
 
 	private void publishQuerySubmit(Member member, String clientId, String queryId, long linkCountAtQuery) {
 		publishQueryEvent(member, clientId, "query_submit", Map.of(
-			"query_id", queryId,
+			"app_query_id", queryId,
 			"link_count_at_query", linkCountAtQuery
 		));
 	}
@@ -138,7 +138,7 @@ public class RagChatService {
 		List<LinkDto> selectedLinks
 	) {
 		Map<String, Object> params = new HashMap<>();
-		params.put("query_id", queryId);
+		params.put("app_query_id", queryId);
 		params.put("is_error", isError);
 		params.put("latency_ms", elapsedMillis(startNanos));
 

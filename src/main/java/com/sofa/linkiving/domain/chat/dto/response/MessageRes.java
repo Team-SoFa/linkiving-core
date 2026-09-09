@@ -24,7 +24,7 @@ public record MessageRes(
 	String content,
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	@Schema(description = "GA query_id")
+	@Schema(description = "질의 추적 ID")
 	String queryId,
 
 	@Schema(description = "발신자 타입 (USER / AI)")
