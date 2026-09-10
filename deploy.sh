@@ -44,6 +44,40 @@ validate_member_withdrawal_configuration() {
     fi
 }
 
+refresh_monitoring() {
+    # Validate the new mounts before replacing the running monitoring containers.
+    compose run --rm --no-deps --entrypoint /bin/promtool prometheus \
+        check config /etc/prometheus/prometheus.yml || return 1
+    compose run --rm --no-deps --entrypoint /bin/amtool alertmanager \
+        check-config /etc/alertmanager/alertmanager.yml || return 1
+
+    # Recreate to remount files replaced by checkout or Secret installation.
+    compose up -d --no-deps --force-recreate alertmanager prometheus || return 1
+
+    local service port count ready
+    for service in alertmanager prometheus; do
+        case "${service}" in
+            alertmanager) port=9093 ;;
+            prometheus) port=9090 ;;
+        esac
+        count=0
+        ready=false
+        while [ "${count}" -lt 30 ]; do
+            if compose exec -T "${service}" wget -q -T 5 -O /dev/null \
+                "http://127.0.0.1:${port}/-/ready"; then
+                ready=true
+                break
+            fi
+            count=$((count + 1))
+            sleep 2
+        done
+        if [ "${ready}" != true ]; then
+            echo "❌ ${service} 준비 상태 확인에 실패했습니다. 앱 전환을 중단합니다." >&2
+            return 1
+        fi
+    done
+}
+
 container_is_running() {
     local color="$1"
     [ -n "$(compose ps -q --status running "${color}")" ]
@@ -342,6 +376,7 @@ main() {
 
     echo "Docker 이미지 pull..."
     compose pull
+    refresh_monitoring
     sudo docker image prune -f
 
     echo "${after_color} 컨테이너 실행"

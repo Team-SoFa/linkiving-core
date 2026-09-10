@@ -58,6 +58,56 @@ test_member_withdrawal_configuration_requires_safe_secret() {
     ) || fail "유효한 회원 탈퇴 운영 설정은 허용해야 합니다."
 }
 
+test_monitoring_refresh_validates_recreates_and_waits() {
+    local directory calls
+    directory=$(mktemp -d)
+    calls="${directory}/calls"
+    (
+        compose() { printf '%s\n' "$*" >> "${calls}"; }
+        refresh_monitoring
+    ) || fail "유효한 모니터링 설정은 재생성하고 준비 상태를 확인해야 합니다."
+    assert_equals $'run --rm --no-deps --entrypoint /bin/promtool prometheus check config /etc/prometheus/prometheus.yml\nrun --rm --no-deps --entrypoint /bin/amtool alertmanager check-config /etc/alertmanager/alertmanager.yml\nup -d --no-deps --force-recreate alertmanager prometheus\nexec -T alertmanager wget -q -T 5 -O /dev/null http://127.0.0.1:9093/-/ready\nexec -T prometheus wget -q -T 5 -O /dev/null http://127.0.0.1:9090/-/ready' \
+        "$(<"${calls}")" "설정 검증 후 파일을 다시 마운트하고 두 서비스의 준비 상태를 확인해야 합니다."
+    rm -rf "${directory}"
+}
+
+test_monitoring_refresh_stops_on_invalid_configuration() {
+    local directory calls validator
+    directory=$(mktemp -d)
+    calls="${directory}/calls"
+    for validator in /bin/promtool /bin/amtool; do
+        : > "${calls}"
+        if (
+            compose() {
+                printf '%s\n' "$*" >> "${calls}"
+                [[ " $* " != *" ${validator} "* ]]
+            }
+            refresh_monitoring
+        ); then
+            fail "모니터링 설정 검증 실패 시 배포를 중단해야 합니다."
+        fi
+        if grep -q '^up ' "${calls}"; then
+            fail "유효하지 않은 설정으로 기존 모니터링 컨테이너를 교체하면 안 됩니다."
+        fi
+    done
+    rm -rf "${directory}"
+}
+
+test_monitoring_refresh_rejects_unready_service() {
+    local unavailable
+    for unavailable in alertmanager prometheus; do
+        if (
+            compose() {
+                [[ " $* " != *" exec -T ${unavailable} "* ]]
+            }
+            sleep() { :; }
+            refresh_monitoring >/dev/null 2>&1
+        ); then
+            fail "${unavailable} 준비 실패를 배포 성공으로 처리하면 안 됩니다."
+        fi
+    done
+}
+
 test_http_check_requires_exact_trimmed_body() {
     curl() { printf ' \nOK\n '; }
     http_check "http://health.test/health-check" "OK" || fail "공백을 제거한 정확한 응답은 성공해야 합니다."
@@ -208,6 +258,9 @@ test_committed_switch_does_not_roll_back() {
     rm -rf "${directory}"
 }
 
+test_monitoring_refresh_validates_recreates_and_waits
+test_monitoring_refresh_stops_on_invalid_configuration
+test_monitoring_refresh_rejects_unready_service
 test_http_check_requires_exact_trimmed_body
 test_compose_preserves_only_required_runtime_environment
 test_member_withdrawal_configuration_requires_enabled_feature
