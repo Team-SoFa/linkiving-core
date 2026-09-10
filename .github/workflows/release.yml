@@ -163,10 +163,9 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ALERTMANAGER_DISCORD_WEBHOOK_URL: ${{ secrets.AlERTMANAGER_DISCORD_WEBHOOK_URL }}
         run: |
-          printf '%s' "$SMTP_PASSWORD" > ./docker/alerting/smtp_password
-          chmod 600 ./docker/alerting/smtp_password
-          printf '%s' "$ALERTMANAGER_DISCORD_WEBHOOK_URL" > ./docker/alerting/discord_webhook
-          chmod 600 ./docker/alerting/discord_webhook
+          ./scripts/install-alertmanager-secrets.sh \
+            ./docker/alerting/smtp_password \
+            ./docker/alerting/discord_webhook
 
       - name: ✨ 배포 스크립트 실행
         env:
