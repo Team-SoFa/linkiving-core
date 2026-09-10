@@ -1,0 +1,50 @@
+rule_files:
+  - alert.rules.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: active blue slot keeps the service available
+    interval: 30s
+    input_series:
+      - series: 'up{job="linkiving-core", instance="blue:8080"}'
+        values: '1 1 1 1 1'
+      - series: 'up{job="linkiving-core", instance="green:8080"}'
+        values: '0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: InstanceDown
+        exp_alerts: []
+
+  - name: both blue-green slots down trigger service alert
+    interval: 30s
+    input_series:
+      - series: 'up{job="linkiving-core", instance="blue:8080"}'
+        values: '0 0 0 0 0'
+      - series: 'up{job="linkiving-core", instance="green:8080"}'
+        values: '0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: InstanceDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: "Linkiving Core 인스턴스 다운"
+              description: "blue/green 인스턴스가 모두 1분 이상 스크레이프되지 않습니다."
+
+  - name: notification delivery failure triggers alert
+    interval: 30s
+    input_series:
+      - series: 'alertmanager_notifications_failed_total{job="alertmanager", integration="discord"}'
+        values: '0 0 1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AlertmanagerNotificationFailure
+        exp_alerts:
+          - exp_labels:
+              integration: discord
+              severity: critical
+            exp_annotations:
+              summary: "Alertmanager 알림 전송 실패: discord"
+              description: "최근 5분 내 discord 알림 전송 실패가 발생했습니다. Alertmanager 로그와 수신 채널 설정을 확인해야 합니다."

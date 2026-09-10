@@ -22,10 +22,30 @@ jobs:
           sudo apt-get install --yes shellcheck
 
       - name: 🔍 배포 스크립트 정적 분석
-        run: shellcheck deploy.sh
+        run: shellcheck deploy.sh scripts/install-alertmanager-secrets.sh
 
       - name: 🧪 배포 스크립트 테스트
-        run: bash tests/deploy_test.sh
+        run: |
+          bash tests/deploy_test.sh
+          bash tests/install_alertmanager_secrets_test.sh
+
+      - name: 🧪 모니터링 설정 테스트
+        run: |
+          docker run --rm \
+            --volume "${PWD}/docker/alerting:/etc/prometheus:ro" \
+            --entrypoint promtool \
+            prom/prometheus:v2.53.0 \
+            check rules /etc/prometheus/alert.rules.yml
+          docker run --rm \
+            --volume "${PWD}/docker/alerting:/etc/prometheus:ro" \
+            --entrypoint promtool \
+            prom/prometheus:v2.53.0 \
+            test rules /etc/prometheus/alert.rules.test.yml
+          docker run --rm \
+            --volume "${PWD}/docker/alerting/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" \
+            --entrypoint amtool \
+            prom/alertmanager:v0.28.0 \
+            check-config /etc/alertmanager/alertmanager.yml
 
   ci:
     runs-on: ubuntu-latest
