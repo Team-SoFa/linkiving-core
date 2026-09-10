@@ -3,15 +3,26 @@ groups:
     rules:
 
       # ── 가용성 ─────────────────────────────────────────────
-      # 인스턴스가 스크레이프되지 않음 (앱 다운/네트워크 단절)
+      # blue/green 인스턴스가 모두 스크레이프되지 않음 (앱 다운/네트워크 단절)
       - alert: InstanceDown
-        expr: up{job="linkiving-core"} == 0
+        expr: sum(up{job="linkiving-core"}) == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "인스턴스 다운: {{ $labels.instance }}"
-          description: "{{ $labels.instance }} 가 1분 이상 스크레이프되지 않습니다."
+          summary: "Linkiving Core 인스턴스 다운"
+          description: "blue/green 인스턴스가 모두 1분 이상 스크레이프되지 않습니다."
+
+      # ── Alertmanager 알림 전송 실패 ──────────────────────
+      # 한 채널이 실패해도 다른 채널에서 문제를 확인할 수 있도록 통합별 실패를 감지.
+      - alert: AlertmanagerNotificationFailure
+        expr: sum by (integration) (increase(alertmanager_notifications_failed_total[5m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager 알림 전송 실패: {{ $labels.integration }}"
+          description: "최근 5분 내 {{ $labels.integration }} 알림 전송 실패가 발생했습니다. Alertmanager 로그와 수신 채널 설정을 확인해야 합니다."
 
       # ── HTTP 5xx 에러율 ────────────────────────────────────
       # 전체 요청 중 5xx 비율이 5분간 5% 초과
