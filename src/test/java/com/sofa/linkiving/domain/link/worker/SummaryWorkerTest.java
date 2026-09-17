@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
+import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
@@ -164,7 +165,7 @@ class SummaryWorkerTest {
 
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
 		given(mockRes.summary()).willReturn("요약된 내용입니다.");
-		given(summaryClient.initialSummary(linkId, 100L, "Test Title", "http://test.com", "Test Memo"))
+		given(summaryClient.initialSummary(argThat(req -> req != null && linkId.equals(req.linkId()))))
 			.willReturn(mockRes);
 
 		// when
@@ -238,11 +239,13 @@ class SummaryWorkerTest {
 
 		RagInitialSummaryRes mockRes1 = mock(RagInitialSummaryRes.class);
 		given(mockRes1.summary()).willReturn("Summary 1");
-		given(summaryClient.initialSummary(eq(linkId1), anyLong(), any(), any(), any())).willReturn(mockRes1);
+		given(summaryClient.initialSummary(argThat(req -> req != null && linkId1.equals(req.linkId()))))
+			.willReturn(mockRes1);
 
 		RagInitialSummaryRes mockRes2 = mock(RagInitialSummaryRes.class);
 		given(mockRes2.summary()).willReturn("Summary 2");
-		given(summaryClient.initialSummary(eq(linkId2), anyLong(), any(), any(), any())).willReturn(mockRes2);
+		given(summaryClient.initialSummary(argThat(req -> req != null && linkId2.equals(req.linkId()))))
+			.willReturn(mockRes2);
 
 		// when
 		summaryWorker.startWorker();
@@ -267,7 +270,7 @@ class SummaryWorkerTest {
 
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
 		given(mockRes.summary()).willReturn("요약 완료");
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(mockRes);
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class))).willReturn(mockRes);
 
 		Summary mockSummary = mock(Summary.class);
 		given(mockSummary.getId()).willReturn(10L);
@@ -302,7 +305,7 @@ class SummaryWorkerTest {
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class)))
 			.willThrow(new EmptyAiResponseException());
 
 		// when
@@ -336,7 +339,7 @@ class SummaryWorkerTest {
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
 		// AI 요청 단계에서 강제 예외 발생 유도
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class)))
 			.willThrow(new RuntimeException("Network Error"));
 
 		// when
@@ -364,7 +367,7 @@ class SummaryWorkerTest {
 
 		RagInitialSummaryRes mockRes = mock(RagInitialSummaryRes.class);
 		given(mockRes.summary()).willReturn("요약된 내용");
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(mockRes);
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class))).willReturn(mockRes);
 
 		given(summaryWorkerFacade.createInitialSummaryAndUpdateStatus(anyLong(), anyString())).willReturn(null);
 
@@ -418,7 +421,7 @@ class SummaryWorkerTest {
 		summaryWorker.startWorker();
 
 		verify(summaryWorkerFacade, timeout(1000)).updateSummaryStatus(1L, SummaryStatus.PROCESSING);
-		verify(summaryClient, after(300).never()).initialSummary(anyLong(), anyLong(), any(), any(), any());
+		verify(summaryClient, after(300).never()).initialSummary(any(RagInitialSummaryReq.class));
 		verify(summaryAnalyticsPublisher, never()).publishComplete(any(), any(), any(), anyBoolean(), anyLong());
 	}
 
@@ -431,7 +434,7 @@ class SummaryWorkerTest {
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 		RagInitialSummaryRes response = mock(RagInitialSummaryRes.class);
 		given(response.summary()).willReturn("summary");
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any())).willReturn(response);
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class))).willReturn(response);
 
 		summaryWorker.startWorker();
 
@@ -449,7 +452,7 @@ class SummaryWorkerTest {
 
 		given(summaryWorkerFacade.getLinkWithMember(1L)).willReturn(mockLink);
 
-		given(summaryClient.initialSummary(anyLong(), anyLong(), any(), any(), any()))
+		given(summaryClient.initialSummary(any(RagInitialSummaryReq.class)))
 			.willThrow(new RuntimeException("Network Error"));
 
 		willDoNothing().given(summaryWorkerFacade)

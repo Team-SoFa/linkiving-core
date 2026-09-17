@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.analytics.SummaryAnalyticsPublisher;
 import com.sofa.linkiving.domain.link.config.SummaryWorkerProperties;
+import com.sofa.linkiving.domain.link.dto.request.RagInitialSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.RagInitialSummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryRes;
 import com.sofa.linkiving.domain.link.dto.response.SummaryStatusRes;
@@ -120,6 +121,8 @@ public class SummaryWorker {
 				}
 
 				summaryWorkerFacade.updateSummaryStatus(link.getId(), SummaryStatus.PROCESSING);
+				// 상태 갱신은 별도 트랜잭션이므로 요청에 사용하는 스냅샷도 함께 맞춘다.
+				link.updateSummaryStatus(SummaryStatus.PROCESSING);
 				eventPublisher.publishEvent(new SummaryStatusEvent(
 					userEmail,
 					SummaryStatusRes.of(linkId, SummaryStatus.PROCESSING)
@@ -213,12 +216,6 @@ public class SummaryWorker {
 	public RagInitialSummaryRes callAiServerWithRetry(Link link) {
 		log.info("Attempting summary request to AI server - linkId: {}", link.getId());
 
-		return summaryClient.initialSummary(
-			link.getId(),
-			link.getMember().getId(),
-			link.getTitle(),
-			link.getUrl(),
-			link.getMemo()
-		);
+		return summaryClient.initialSummary(RagInitialSummaryReq.from(link));
 	}
 }

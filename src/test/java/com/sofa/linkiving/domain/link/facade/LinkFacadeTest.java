@@ -151,6 +151,8 @@ class LinkFacadeTest {
 		String difference = "기존 대비 상세 내용이 추가되었습니다.";
 
 		Link mockLink = mock(Link.class);
+		given(mockLink.getId()).willReturn(linkId);
+		given(mockLink.getMember()).willReturn(member);
 		given(mockLink.getUrl()).willReturn(url);
 		given(linkService.getLinkForSummaryUpdate(linkId, member)).willReturn(mockLink);
 
@@ -159,7 +161,8 @@ class LinkFacadeTest {
 		given(summaryService.getSummary(linkId)).willReturn(mockSummary);
 
 		RagRegenerateSummaryRes ragRes = new RagRegenerateSummaryRes(newSummary, difference);
-		given(summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary)).willReturn(ragRes);
+		given(summaryClient.regenerateSummary(argThat(req -> linkId.equals(req.linkId())
+			&& existingSummary.equals(req.summary())))).willReturn(ragRes);
 
 		// when
 		RegenerateSummaryRes response = linkFacade.recreateSummary(member, linkId, format);
@@ -173,7 +176,8 @@ class LinkFacadeTest {
 		// verify
 		verify(linkService, times(1)).getLinkForSummaryUpdate(linkId, member);
 		verify(summaryService, times(1)).getSummary(linkId);
-		verify(summaryClient, times(1)).regenerateSummary(linkId, member.getId(), url, existingSummary);
+		verify(summaryClient, times(1)).regenerateSummary(argThat(req -> linkId.equals(req.linkId())
+			&& existingSummary.equals(req.summary())));
 	}
 
 	@Test
