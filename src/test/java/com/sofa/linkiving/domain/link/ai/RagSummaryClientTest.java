@@ -11,6 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -47,6 +50,39 @@ public class RagSummaryClientTest {
 	private double counterCount(String operation, String result) {
 		return meterRegistry.counter("ai.client.calls",
 			"client", "summary", "operation", operation, "result", result).count();
+	}
+
+	@ParameterizedTest
+	@NullAndEmptySource
+	@ValueSource(strings = {" ", "\n\t"})
+	void rejectsBlankSummaryInBothOperations(String summary) {
+		given(ragSummaryFeign.requestInitialSummary(any()))
+			.willReturn(List.of(new RagInitialSummaryRes(summary)));
+		given(ragSummaryFeign.requestRegenerateSummary(any()))
+			.willReturn(List.of(new RagRegenerateSummaryRes(summary, "difference")));
+
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(
+			new RagInitialSummaryReq(1L, 2L, "title", "url", null)))
+			.isInstanceOf(EmptyAiResponseException.class);
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(
+			new RagRegenerateSummaryReq(1L, 2L, "url", "old")))
+			.isInstanceOf(EmptyAiResponseException.class);
+		assertThat(counterCount("initial", "success")).isZero();
+		assertThat(counterCount("regenerate", "success")).isZero();
+		assertThat(counterCount("initial", "empty")).isEqualTo(1);
+		assertThat(counterCount("regenerate", "empty")).isEqualTo(1);
+	}
+
+	@Test
+	void rejectsNullFirstElement() {
+		given(ragSummaryFeign.requestInitialSummary(any())).willReturn(Collections.singletonList(null));
+		given(ragSummaryFeign.requestRegenerateSummary(any())).willReturn(Collections.singletonList(null));
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(
+			new RagInitialSummaryReq(1L, 2L, "title", "url", null)))
+			.isInstanceOf(EmptyAiResponseException.class);
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(
+			new RagRegenerateSummaryReq(1L, 2L, "url", "old")))
+			.isInstanceOf(EmptyAiResponseException.class);
 	}
 
 	@Test

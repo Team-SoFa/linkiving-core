@@ -18,6 +18,7 @@ import com.sofa.linkiving.global.logging.LogContext;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Task;
+import com.sofa.linkiving.infra.feign.NonRetryableExternalApiException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -55,8 +56,9 @@ public class LinkSyncEventListener {
 	@Async("aiTaskExecutor")
 	@Retryable(
 		retryFor = Exception.class,
+		noRetryFor = NonRetryableExternalApiException.class,
 		maxAttempts = 3,
-		backoff = @Backoff(delay = 1000, multiplier = 2)
+		backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 8000, random = true)
 	)
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleLinkSyncEvent(LinkSyncEvent event) {

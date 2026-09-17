@@ -28,6 +28,7 @@ import com.sofa.linkiving.global.metrics.AsyncTaskMetrics;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Action;
 import com.sofa.linkiving.global.metrics.AsyncTaskMetrics.Task;
 import com.sofa.linkiving.infra.feign.EmptyAiResponseException;
+import com.sofa.linkiving.infra.feign.NonRetryableExternalApiException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -209,9 +210,9 @@ public class SummaryWorker {
 
 	@Retryable(
 		retryFor = {Exception.class},
-		noRetryFor = {EmptyAiResponseException.class},
+		noRetryFor = {EmptyAiResponseException.class, NonRetryableExternalApiException.class},
 		maxAttempts = 3,
-		backoff = @Backoff(delay = 2000)
+		backoff = @Backoff(delay = 2000, multiplier = 2, maxDelay = 8000, random = true)
 	)
 	public RagInitialSummaryRes callAiServerWithRetry(Link link) {
 		log.info("Attempting summary request to AI server - linkId: {}", link.getId());

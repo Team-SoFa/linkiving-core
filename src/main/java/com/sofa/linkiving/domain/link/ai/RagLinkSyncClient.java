@@ -9,6 +9,7 @@ import com.sofa.linkiving.global.metrics.AiClientMetrics;
 import com.sofa.linkiving.global.metrics.AiClientMetrics.Client;
 import com.sofa.linkiving.global.metrics.AiClientMetrics.Operation;
 import com.sofa.linkiving.global.metrics.AiClientMetrics.Result;
+import com.sofa.linkiving.infra.feign.ExternalApiSupport;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -54,37 +55,40 @@ public class RagLinkSyncClient implements LinkSyncClient {
 
 	@Override
 	public void syncCreate(LinkSyncUpdateReq req) {
+		long startNanos = System.nanoTime();
 		try {
 			linkSyncFeign.syncUpdate(req);
 			createSuccess.increment();
 			log.info("AI 서버 동기화 완료 (CREATE) - linkId: {}", req.linkId());
 		} catch (Exception e) {
-			createFailure.increment();
-			throw e;
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), Operation.CREATE.getValue(), req.linkId(),
+				createFailure, startNanos, e);
 		}
 	}
 
 	@Override
 	public void syncUpdate(LinkSyncUpdateReq req) {
+		long startNanos = System.nanoTime();
 		try {
 			linkSyncFeign.syncUpdate(req);
 			updateSuccess.increment();
 			log.info("AI 서버 동기화 완료 (UPDATE) - linkId: {}", req.linkId());
 		} catch (Exception e) {
-			updateFailure.increment();
-			throw e;
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), Operation.UPDATE.getValue(), req.linkId(),
+				updateFailure, startNanos, e);
 		}
 	}
 
 	@Override
 	public void syncDelete(Long linkId) {
+		long startNanos = System.nanoTime();
 		try {
 			linkSyncFeign.syncDelete(new LinkSyncDeleteReq(linkId));
 			deleteSuccess.increment();
 			log.info("AI 서버 동기화 완료 (DELETE) - linkId: {}", linkId);
 		} catch (Exception e) {
-			deleteFailure.increment();
-			throw e;
+			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), Operation.DELETE.getValue(), linkId,
+				deleteFailure, startNanos, e);
 		}
 	}
 }
