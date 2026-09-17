@@ -12,6 +12,7 @@ import com.sofa.linkiving.domain.link.ai.SummaryClient;
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.dto.internal.OgTagDto;
+import com.sofa.linkiving.domain.link.dto.request.RagRegenerateSummaryReq;
 import com.sofa.linkiving.domain.link.dto.response.LinkCardsRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDetailRes;
 import com.sofa.linkiving.domain.link.dto.response.LinkDuplicateCheckRes;
@@ -148,10 +149,10 @@ public class LinkFacade {
 	public RegenerateSummaryRes recreateSummary(Member member, Long linkId, Format format) {
 		Link link = linkService.getLinkForSummaryUpdate(linkId, member);
 
-		String url = link.getUrl();
 		String existingSummary = summaryService.getSummary(linkId).getContent();
 
-		RagRegenerateSummaryRes res = summaryClient.regenerateSummary(linkId, member.getId(), url, existingSummary);
+		RagRegenerateSummaryRes res = summaryClient.regenerateSummary(
+			RagRegenerateSummaryReq.of(link, existingSummary));
 
 		return RegenerateSummaryRes.builder()
 			.existingSummary(existingSummary)

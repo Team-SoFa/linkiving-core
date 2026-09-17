@@ -13,6 +13,9 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 - `is_model_used=true`는 생성·선택 모델 노드가 실행됐다는 의미이며 호출 성공이나 답변 정확도를 보장하지 않습니다. 오류 여부는 `is_error`, 임베딩 사용 여부는 `is_embedding_used`로 구분해야 합니다.
 - 새 선택 필드는 명시적인 `false`를 그대로 전송하고, 미수집·`null` 값은 생략합니다. 분석 시 누락된 `is_model_used`를 모델 미사용으로 집계하지 않아야 하며, n8n 응답을 받은 뒤 백엔드 후처리가 실패한 경우에는 오류 이벤트에도 이미 받은 실행 메타데이터가 유지됩니다.
 
+### Changed
+- RAG 요약·재요약·링크 동기화 요청에 최초 저장 시각과 요약 상태를 전달합니다. 제목이나 메모를 수정해도 최초 저장일이 바뀌지 않습니다.
+
 ### Fixed
 - 운영 배포에서 GA4 DebugView 설정이 서버 컨테이너에 전달되지 않던 문제를 수정했습니다. GitHub Actions Secret `ANALYTICS_GA4_DEBUG_MODE=true`를 설정하고 배포하면 서버 GA 이벤트에 `debug_mode`가 포함되어 클라이언트 연동 QA에 활용할 수 있습니다. 미설정 시 기본값은 `false`입니다.
 - DebugView 확인에는 기존 GA 수집 설정과 요청의 `clientId`가 필요하며, 브라우저 이벤트의 디버그 설정은 별도로 적용해야 합니다. 클라이언트 요청·응답 형식은 유지됩니다.

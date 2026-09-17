@@ -55,12 +55,12 @@ public class RagSummaryClient implements SummaryClient {
 	}
 
 	@Override
-	public RagInitialSummaryRes initialSummary(Long linkId, Long userId, String title, String url, String memo) {
+	public RagInitialSummaryRes initialSummary(RagInitialSummaryReq req) {
+		Long linkId = req.linkId();
 		String operation = Operation.INITIAL.getValue();
 		long startNanos = System.nanoTime();
 		List<RagInitialSummaryRes> response;
 		try {
-			RagInitialSummaryReq req = new RagInitialSummaryReq(linkId, userId, title, url, memo);
 			response = ragSummaryFeign.requestInitialSummary(req);
 		} catch (Exception e) {
 			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), operation, linkId, initialFailure, startNanos, e);
@@ -72,12 +72,12 @@ public class RagSummaryClient implements SummaryClient {
 	}
 
 	@Override
-	public RagRegenerateSummaryRes regenerateSummary(Long linkId, Long userId, String url, String existingSummary) {
+	public RagRegenerateSummaryRes regenerateSummary(RagRegenerateSummaryReq req) {
+		Long linkId = req.linkId();
 		String operation = Operation.REGENERATE.getValue();
 		long startNanos = System.nanoTime();
 		List<RagRegenerateSummaryRes> response;
 		try {
-			RagRegenerateSummaryReq req = new RagRegenerateSummaryReq(linkId, userId, url, existingSummary);
 			response = ragSummaryFeign.requestRegenerateSummary(req);
 		} catch (Exception e) {
 			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), operation, linkId, regenerateFailure,

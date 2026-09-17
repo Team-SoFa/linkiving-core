@@ -50,6 +50,17 @@ public class RagSummaryClientTest {
 	}
 
 	@Test
+	void forwardsMetadataWithoutRebuildingTheRequest() {
+		RagInitialSummaryReq request = new RagInitialSummaryReq(1L, 100L, "title", "url", "memo",
+			"2026-08-17T00:30+09:00", 1786894200000L,
+			com.sofa.linkiving.domain.link.enums.SummaryStatus.PROCESSING);
+		given(ragSummaryFeign.requestInitialSummary(same(request)))
+			.willReturn(List.of(new RagInitialSummaryRes("요약")));
+		ragSummaryClient.initialSummary(request);
+		verify(ragSummaryFeign).requestInitialSummary(same(request));
+	}
+
+	@Test
 	@DisplayName("최초 요약 요청 성공 시 응답 객체를 반환한다")
 	void shouldReturnInitialSummaryResWhenSuccess() {
 		// given
@@ -66,7 +77,8 @@ public class RagSummaryClientTest {
 			.willReturn(responseList);
 
 		// when
-		RagInitialSummaryRes result = ragSummaryClient.initialSummary(linkId, userId, title, url, memo);
+		RagInitialSummaryRes result = ragSummaryClient.initialSummary(
+			new RagInitialSummaryReq(linkId, userId, title, url, memo));
 
 		// then
 		assertThat(result).isNotNull();
@@ -84,7 +96,8 @@ public class RagSummaryClientTest {
 			.willReturn(Collections.emptyList());
 
 		// when & then
-		assertThatThrownBy(() -> ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo"))
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(
+			new RagInitialSummaryReq(1L, 100L, "Title", "URL", "Memo")))
 			.isInstanceOf(EmptyAiResponseException.class);
 		assertThat(counterCount("initial", "empty")).isEqualTo(1.0);
 	}
@@ -97,7 +110,8 @@ public class RagSummaryClientTest {
 			.willThrow(new RuntimeException("AI Server Error"));
 
 		// when & then
-		assertThatThrownBy(() -> ragSummaryClient.initialSummary(1L, 100L, "Title", "URL", "Memo"))
+		assertThatThrownBy(() -> ragSummaryClient.initialSummary(
+			new RagInitialSummaryReq(1L, 100L, "Title", "URL", "Memo")))
 			.isInstanceOf(BusinessException.class)
 			.extracting("errorCode")
 			.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
@@ -120,7 +134,8 @@ public class RagSummaryClientTest {
 			.willReturn(responseList);
 
 		// when
-		RagRegenerateSummaryRes result = ragSummaryClient.regenerateSummary(linkId, userId, url, existingSummary);
+		RagRegenerateSummaryRes result = ragSummaryClient.regenerateSummary(
+			new RagRegenerateSummaryReq(linkId, userId, url, existingSummary));
 
 		// then
 		assertThat(result).isNotNull();
@@ -138,7 +153,8 @@ public class RagSummaryClientTest {
 			.willThrow(new RuntimeException("Connection Timeout"));
 
 		// when & then
-		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(1L, 100L, "URL", "Old"))
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(
+			new RagRegenerateSummaryReq(1L, 100L, "URL", "Old")))
 			.isInstanceOf(BusinessException.class)
 			.extracting("errorCode")
 			.isEqualTo(ExternalApiErrorCode.EXTERNAL_API_COMMUNICATION_ERROR);
@@ -153,7 +169,8 @@ public class RagSummaryClientTest {
 			.willReturn(Collections.emptyList());
 
 		// when & then
-		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(1L, 100L, "URL", "Old"))
+		assertThatThrownBy(() -> ragSummaryClient.regenerateSummary(
+			new RagRegenerateSummaryReq(1L, 100L, "URL", "Old")))
 			.isInstanceOf(EmptyAiResponseException.class);
 		assertThat(counterCount("regenerate", "empty")).isEqualTo(1.0);
 	}
