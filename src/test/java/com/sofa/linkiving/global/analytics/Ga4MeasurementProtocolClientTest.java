@@ -16,6 +16,27 @@ import org.springframework.web.client.RestClient;
 class Ga4MeasurementProtocolClientTest {
 
 	@Test
+	void send_preservesFalseRagTelemetryInHttpPayload() {
+		RestClient.Builder builder = RestClient.builder().baseUrl("https://www.google-analytics.com");
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		Ga4Properties properties = new Ga4Properties(true, "G-TEST", "secret", null, false);
+		Ga4MeasurementProtocolClient client = new Ga4MeasurementProtocolClient(builder.build(), properties);
+		server.expect(once(), requestTo(
+				"https://www.google-analytics.com/mp/collect?measurement_id=G-TEST&api_secret=secret"))
+			.andExpect(jsonPath("$.events[0].params.is_model_used").value(false))
+			.andExpect(jsonPath("$.events[0].params.is_embedding_used").value(false))
+			.andExpect(jsonPath("$.events[0].params.used_fallback_path").value(false))
+			.andExpect(jsonPath("$.events[0].params.used_legacy_fallback").doesNotExist())
+			.andExpect(jsonPath("$.events[0].params.execution_path").value("metadata_direct"))
+			.andRespond(withSuccess());
+
+		client.send("123.456", "42", new Ga4Event("query_response_complete", Map.of(
+			"is_model_used", false, "is_embedding_used", false, "used_fallback_path", false,
+			"execution_path", "metadata_direct")));
+		server.verify();
+	}
+
+	@Test
 	void send_postsMeasurementProtocolPayload() {
 		RestClient.Builder builder = RestClient.builder().baseUrl("https://www.google-analytics.com");
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

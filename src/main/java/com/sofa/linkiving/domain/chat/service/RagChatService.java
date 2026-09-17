@@ -60,6 +60,7 @@ public class RagChatService {
 
 			Chat chat = chatQueryService.findChat(chatId, member);
 
+			RagAnswerRes res = null;
 			try {
 				if (hasAnalyticsClient(clientId)) {
 					long linkCountAtQuery = linkQueryService.countByMemberAndIsDeleteFalse(member);
@@ -78,7 +79,7 @@ public class RagChatService {
 					Mode.DETAILED
 				);
 
-				RagAnswerRes res = answerClient.generateAnswer(request);
+				res = answerClient.generateAnswer(request);
 
 				String fullAnswer = res.answer();
 
@@ -96,7 +97,7 @@ public class RagChatService {
 				return CompletableFuture.completedFuture(payload);
 			} catch (RuntimeException exception) {
 				publishQueryResponseComplete(member, clientId, queryId, startNanos, true,
-					analyticsErrorType(exception), null, List.of());
+					analyticsErrorType(exception), res, List.of());
 				throw exception;
 			}
 		}
@@ -146,6 +147,16 @@ public class RagChatService {
 			params.put("selected_count", firstNonNull(ragAnswer.selectedCount(), selectedLinks.size()));
 			putIfPresent(params, "retrieved_count", ragAnswer.retrievedCount());
 			putIfPresent(params, "top_similarity", ragAnswer.topSimilarity());
+			params.put("is_fallback", ragAnswer.isFallback());
+			putIfPresent(params, "is_model_used", ragAnswer.modelUsed());
+			putIfPresent(params, "execution_path", ragAnswer.executionPath());
+			putIfPresent(params, "is_embedding_used", ragAnswer.embeddingUsed());
+			putIfPresent(params, "used_fallback_path", ragAnswer.usedFallbackPath());
+			putIfPresent(params, "fallback_reason", ragAnswer.fallbackReason());
+			putIfPresent(params, "model_name", ragAnswer.modelName());
+			putIfPresent(params, "rag_version", ragAnswer.ragVersion());
+			putIfPresent(params, "has_history", ragAnswer.hasHistory());
+			putIfPresent(params, "query_length_bucket", ragAnswer.queryLengthBucket());
 		}
 		putIfPresent(params, "error_type", errorType);
 
