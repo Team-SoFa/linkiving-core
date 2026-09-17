@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -47,7 +48,7 @@ public class RagChatServiceTest {
 	@Mock
 	private MessageCommandService messageCommandService;
 	@Mock
-	private MessageQueryService messageQueryService;
+	private RagHistoryService ragHistoryService;
 	@Mock
 	private LinkQueryService linkQueryService;
 	@Mock
@@ -79,9 +80,8 @@ public class RagChatServiceTest {
 		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
 		// 3. 과거 대화 내역 조회
-		Message historyMsg = mock(Message.class);
-		given(historyMsg.getContent()).willReturn("이전 대화");
-		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(50L, chat))
+		var historyMsg = new RagAnswerReq.RagMessageReq("assistant", "이전 대화");
+		given(ragHistoryService.findHistory(50L, chat, member))
 			.willReturn(List.of(historyMsg));
 
 		// 4. AI Client 응답 설정 (유효한 링크 ID와 무효한 ID 혼합)
@@ -98,6 +98,7 @@ public class RagChatServiceTest {
 		LinkDto linkDto1 = mock(LinkDto.class);
 		Link link1 = mock(Link.class);
 		given(linkDto1.link()).willReturn(link1);
+		given(link1.getId()).willReturn(10L);
 
 		given(linkQueryService.findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member)))
 			.willReturn(List.of(linkDto1));
@@ -128,6 +129,30 @@ public class RagChatServiceTest {
 	}
 
 	@Test
+	void preservesSelectedCardOrderAndDropsInvalidDuplicateOrUnauthorizedIds() throws Exception {
+		given(chatQueryService.findChat(chatId, member)).willReturn(chat);
+		Message question = mock(Message.class);
+		given(question.getId()).willReturn(50L);
+		given(messageCommandService.saveUserMessage(eq(chat), anyString(), anyString())).willReturn(question);
+		given(ragHistoryService.findHistory(50L, chat, member)).willReturn(List.of());
+		given(answerClient.generateAnswer(any())).willReturn(new RagAnswerRes("answer",
+			Arrays.asList("20", null, "10", "20", "999", "0", "-1", "bad"), List.of(), List.of(), false));
+		Link first = mock(Link.class);
+		Link second = mock(Link.class);
+		given(first.getId()).willReturn(10L);
+		given(second.getId()).willReturn(20L);
+		given(linkQueryService.findAllByIdInWithSummary(List.of(20L, 10L, 999L), member))
+			.willReturn(List.of(new LinkDto(first, null), new LinkDto(second, null)));
+		Message answer = mock(Message.class);
+		given(messageCommandService.saveAiMessage(eq(chat), eq("answer"), anyString(), anyList())).willReturn(answer);
+
+		AnswerRes response = ragChatService.generateAnswer(chatId, member, userMessage, null).get();
+
+		verify(messageCommandService).saveAiMessage(eq(chat), eq("answer"), anyString(), eq(List.of(second, first)));
+		assertThat(response.links()).extracting("id").containsExactly(20L, 10L);
+	}
+
+	@Test
 	@DisplayName("채팅방이 존재하지 않으면 예외 발생")
 	void shouldThrowException_WhenChatNotFound() {
 		// given
@@ -153,7 +178,7 @@ public class RagChatServiceTest {
 		given(questionMsg.getId()).willReturn(50L);
 		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
-		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(anyLong(), any()))
+		given(ragHistoryService.findHistory(anyLong(), any(), any()))
 			.willReturn(Collections.emptyList());
 
 		given(answerClient.generateAnswer(any()))
@@ -177,7 +202,7 @@ public class RagChatServiceTest {
 		given(questionMsg.getId()).willReturn(50L);
 		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
-		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(50L, chat))
+		given(ragHistoryService.findHistory(50L, chat, member))
 			.willReturn(Collections.emptyList());
 
 		RagAnswerRes ragRes = new RagAnswerRes(
@@ -195,6 +220,7 @@ public class RagChatServiceTest {
 		LinkDto linkDto1 = mock(LinkDto.class);
 		Link link1 = mock(Link.class);
 		given(linkDto1.link()).willReturn(link1);
+		given(link1.getId()).willReturn(10L);
 		given(linkQueryService.findAllByIdInWithSummary(eq(List.of(10L, 20L)), eq(member)))
 			.willReturn(List.of(linkDto1));
 
@@ -245,7 +271,7 @@ public class RagChatServiceTest {
 		given(questionMsg.getId()).willReturn(50L);
 		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(questionMsg);
 
-		given(messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(anyLong(), any()))
+		given(ragHistoryService.findHistory(anyLong(), any(), any()))
 			.willReturn(Collections.emptyList());
 
 		given(answerClient.generateAnswer(any()))

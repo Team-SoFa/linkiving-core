@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,11 +19,13 @@ import com.sofa.linkiving.domain.chat.entity.Feedback;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.chat.enums.Sentiment;
 import com.sofa.linkiving.domain.chat.enums.Type;
+import com.sofa.linkiving.domain.chat.service.RagHistoryService;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.domain.member.repository.MemberRepository;
 
-@DataJpaTest
+@DataJpaTest(properties = {"test.external.base-url=http://127.0.0.1:1", "ai.server.url=http://127.0.0.1:1",
+	"spring.jpa.properties.hibernate.generate_statistics=true"})
 @ActiveProfiles("test")
 class MessageRepositoryTest {
 
@@ -57,6 +60,48 @@ class MessageRepositoryTest {
 
 		em.flush();
 		em.clear();
+	}
+
+	@Test
+	void ragHistoryFiltersForeignAndDeletedLinksAndMapsBeforeDetaching() {
+		Member other = memberRepository.save(Member.builder().email("other@example.com").build());
+		Link owned = em.persist(Link.builder().member(member).title("owned").url("https://example.com/1").build());
+		Link foreign = em.persist(Link.builder().member(other).title("foreign").url("https://example.com/2").build());
+		Link deleted = em.persist(Link.builder().member(member).title("deleted").url("https://example.com/3").build());
+		deleted.markDeleted();
+		Message visible = messageRepository.save(Message.builder().chat(chat).content("answer").type(Type.AI)
+			.links(List.of(foreign, deleted, owned)).build());
+		Message removed = messageRepository.save(Message.builder().chat(chat).content("removed").type(Type.AI).build());
+		removed.markDeleted();
+		Message question = messageRepository.save(Message.builder().chat(chat).content("follow-up")
+			.type(Type.USER).build());
+		em.flush();
+		em.clear();
+
+		var statistics = em.getEntityManager().getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+		statistics.clear();
+		var history = new RagHistoryService(messageRepository).findHistory(question.getId(), chat, member);
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+		em.clear();
+
+		assertThat(history).hasSize(1);
+		assertThat(history.get(0).messageId()).isEqualTo(visible.getId());
+		assertThat(history.get(0).links()).extracting("linkId").containsExactly(owned.getId());
+		assertThat(history.get(0).links().get(0).summary()).isNull();
+		assertThat(messageRepository.findRagHistory(chat, other, question.getId(), PageRequest.of(0, 7))).isEmpty();
+		assertThat(messageRepository.findRagHistoryLinks(List.of(visible.getId()), chat, other)).isEmpty();
+	}
+
+	@Test
+	void ragHistoryLimitsMessagesAtDatabaseQuery() {
+		for (int i = 0; i < 12; i++) {
+			messageRepository.save(Message.builder().chat(chat).content("message " + i).type(Type.USER).build());
+		}
+		em.flush();
+		assertThat(messageRepository.findRagHistory(chat, member, Long.MAX_VALUE, PageRequest.of(0, 7)))
+			.hasSize(7).extracting(Message::getContent)
+			.containsExactly("message 11", "message 10", "message 9", "message 8", "message 7", "message 6",
+				"message 5");
 	}
 
 	@Test
