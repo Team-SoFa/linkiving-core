@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RagChatService {
 	private final AnswerClient answerClient;
 	private final MessageCommandService messageCommandService;
-	private final MessageQueryService messageQueryService;
+	private final RagHistoryService ragHistoryService;
 	private final LinkQueryService linkQueryService;
 	private final ChatQueryService chatQueryService;
 	private final Ga4Publisher ga4Publisher;
@@ -68,11 +68,9 @@ public class RagChatService {
 				}
 
 				Message question = messageCommandService.saveUserMessage(chat, userMessage, queryId);
-				List<Message> history = messageQueryService.findTop7ByChatIdAndIdLessThanOrderByIdDesc(
-					question.getId(), chat);
-				Collections.reverse(history);
+				var history = ragHistoryService.findHistory(question.getId(), chat, member);
 
-				RagAnswerReq request = RagAnswerReq.of(
+				RagAnswerReq request = new RagAnswerReq(
 					memberId,
 					userMessage,
 					history,
@@ -84,7 +82,8 @@ public class RagChatService {
 				String fullAnswer = res.answer();
 
 				List<Long> linkIds = parseLinkIds(res.linkIds());
-				List<LinkDto> linkDtos = linkQueryService.findAllByIdInWithSummary(linkIds, member);
+				List<LinkDto> linkDtos = orderSelectedLinks(linkIds,
+					linkQueryService.findAllByIdInWithSummary(linkIds, member));
 				List<Link> links = linkDtos.stream().map(LinkDto::link).toList();
 
 				List<String> steps = res.reasoningSteps().stream().map(RagAnswerRes.ReasoningStep::step).toList();
@@ -109,6 +108,7 @@ public class RagChatService {
 			return Collections.emptyList();
 		}
 		return linkIds.stream()
+			.filter(Objects::nonNull)
 			.map(id -> {
 				try {
 					return Long.parseLong(id.trim());
@@ -118,7 +118,18 @@ public class RagChatService {
 				}
 			})
 			.filter(Objects::nonNull)
+			.filter(id -> id > 0)
+			.distinct()
 			.toList();
+	}
+
+	private List<LinkDto> orderSelectedLinks(List<Long> ids, List<LinkDto> authorizedLinks) {
+		Map<Long, LinkDto> byId = new HashMap<>();
+		for (LinkDto dto : authorizedLinks) {
+			byId.putIfAbsent(dto.link().getId(), dto);
+		}
+		// 소유권·삭제 여부 검증을 통과한 카드만 RAG 선택 순서로 반환한다.
+		return ids.stream().map(byId::get).filter(Objects::nonNull).toList();
 	}
 
 	private void publishQuerySubmit(Member member, String clientId, String queryId, long linkCountAtQuery) {

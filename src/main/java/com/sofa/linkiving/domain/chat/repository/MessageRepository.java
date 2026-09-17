@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.sofa.linkiving.domain.chat.dto.internal.RagHistoryLinkRow;
 import com.sofa.linkiving.domain.chat.entity.Chat;
 import com.sofa.linkiving.domain.chat.entity.Message;
 import com.sofa.linkiving.domain.member.entity.Member;
@@ -39,6 +40,24 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 	List<Message> findAllByChat(Chat chat);
 
 	List<Message> findTop7ByChatAndIdLessThanOrderByIdDesc(Chat chat, Long id);
+
+	@Query("""
+		SELECT m FROM Message m LEFT JOIN FETCH m.feedback WHERE m.chat = :chat AND m.chat.member = :member
+		AND m.chat.isDelete = false AND m.isDelete = false AND m.id < :beforeId ORDER BY m.id DESC
+		""")
+	List<Message> findRagHistory(@Param("chat") Chat chat, @Param("member") Member member,
+		@Param("beforeId") Long beforeId, Pageable pageable);
+
+	@Query("""
+		SELECT new com.sofa.linkiving.domain.chat.dto.internal.RagHistoryLinkRow(m.id, l, s)
+		FROM Message m JOIN m.links l
+		LEFT JOIN Summary s ON s.link = l AND s.selected = true AND s.isDelete = false
+		WHERE m.id IN :messageIds AND m.chat = :chat AND m.chat.member = :member
+		AND m.chat.isDelete = false AND m.isDelete = false AND l.member = :member AND l.isDelete = false
+		ORDER BY m.id DESC, l.id ASC
+		""")
+	List<RagHistoryLinkRow> findRagHistoryLinks(@Param("messageIds") List<Long> messageIds,
+		@Param("chat") Chat chat, @Param("member") Member member);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "DELETE FROM message_link WHERE message_id IN "
