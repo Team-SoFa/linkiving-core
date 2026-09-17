@@ -13,11 +13,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofa.linkiving.domain.chat.ai.AnswerClient;
 import com.sofa.linkiving.domain.chat.dto.request.RagAnswerReq;
 import com.sofa.linkiving.domain.chat.dto.response.AnswerRes;
@@ -220,6 +223,8 @@ public class RagChatServiceTest {
 		assertThat(complete.params()).containsEntry("selected_count", 2);
 		assertThat(complete.params()).containsEntry("top_similarity", 0.91);
 		assertThat(complete.params()).containsKey("latency_ms");
+		assertThat(complete.params()).containsEntry("is_fallback", false);
+		assertThat(complete.params()).doesNotContainKeys("is_model_used", "execution_path", "is_embedding_used");
 		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
 		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
 			eq((String)submit.params().get("query_id")));
@@ -262,10 +267,88 @@ public class RagChatServiceTest {
 		assertThat(complete.name()).isEqualTo("query_response_complete");
 		assertThat(complete.params()).containsEntry("is_error", true);
 		assertThat(complete.params()).containsEntry("error_type", "UNKNOWN");
+		assertThat(complete.params()).doesNotContainKeys("is_model_used", "execution_path", "is_fallback");
 		assertThat(complete.params()).containsKey("latency_ms");
 		assertThat(complete.params().get("query_id")).isEqualTo(submit.params().get("query_id"));
 		verify(messageCommandService).saveUserMessage(eq(chat), eq(userMessage),
 			eq((String)submit.params().get("query_id")));
 		assertThat(complete.params()).doesNotContainValue(userMessage);
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void shouldPreserveExplicitModelUsageInAnalytics(boolean modelUsed) throws Exception {
+		RagAnswerRes response = telemetryResponse(modelUsed);
+		prepareTelemetryRequest(response);
+		Message answer = mock(Message.class);
+		given(answer.getId()).willReturn(51L);
+		given(answer.getContent()).willReturn(response.answer());
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
+			.willReturn(answer);
+
+		ragChatService.generateAnswer(chatId, member, userMessage, "123.456").get();
+
+		Ga4Event complete = capturedCompletion();
+		assertThat(complete.params())
+			.containsEntry("is_model_used", modelUsed)
+			.containsEntry("execution_path", modelUsed ? "semantic_answer" : "metadata_direct")
+			.containsEntry("is_embedding_used", modelUsed)
+			.containsEntry("used_fallback_path", false)
+			.containsEntry("fallback_reason", "none")
+			.containsEntry("rag_version", "v37-observability-20260917")
+			.containsEntry("has_history", false)
+			.containsEntry("query_length_bucket", "short")
+			.containsEntry("is_fallback", false)
+			.doesNotContainKeys("question", "answer", "history", "linkIds", "used_legacy_fallback")
+			.doesNotContainValue(userMessage)
+			.doesNotContainValue(response.answer());
+		if (modelUsed) {
+			assertThat(complete.params()).containsEntry("model_name", "gpt-oss:120b");
+		} else {
+			assertThat(complete.params()).doesNotContainKey("model_name");
+		}
+	}
+
+	@Test
+	void shouldKeepReceivedTelemetryWhenBackendPostProcessingFails() throws Exception {
+		prepareTelemetryRequest(telemetryResponse(true));
+		given(messageCommandService.saveAiMessage(eq(chat), anyString(), anyString(), anyList()))
+			.willThrow(new RuntimeException("write failed"));
+
+		assertThatThrownBy(() -> ragChatService.generateAnswer(chatId, member, userMessage, "123.456"))
+			.isInstanceOf(RuntimeException.class).hasMessage("write failed");
+
+		assertThat(capturedCompletion().params())
+			.containsEntry("is_error", true)
+			.containsEntry("is_model_used", true)
+			.containsEntry("execution_path", "semantic_answer");
+	}
+
+	private RagAnswerRes telemetryResponse(boolean modelUsed) throws Exception {
+		return new ObjectMapper().readValue("""
+			{
+			"answer":"저장된 자료입니다.","linkIds":[],"reasoningSteps":[],"relatedLinks":[],
+			"isFallback":false,"retrievedCount":3,"selectedCount":0,
+			"is_model_used":%s,"execution_path":"%s","is_embedding_used":%s,
+			"used_fallback_path":false,"fallback_reason":"none","model_name":%s,
+			"rag_version":"v37-observability-20260917","has_history":false,"query_length_bucket":"short"
+			}
+			""".formatted(modelUsed, modelUsed ? "semantic_answer" : "metadata_direct", modelUsed,
+			modelUsed ? "\"gpt-oss:120b\"" : "null"), RagAnswerRes.class);
+	}
+
+	private void prepareTelemetryRequest(RagAnswerRes response) {
+		given(chatQueryService.findChat(chatId, member)).willReturn(chat);
+		Message question = mock(Message.class);
+		given(question.getId()).willReturn(50L);
+		given(messageCommandService.saveUserMessage(eq(chat), eq(userMessage), anyString())).willReturn(question);
+		given(answerClient.generateAnswer(any())).willReturn(response);
+		given(linkQueryService.findAllByIdInWithSummary(List.of(), member)).willReturn(List.of());
+	}
+
+	private Ga4Event capturedCompletion() {
+		ArgumentCaptor<Ga4Event> events = ArgumentCaptor.forClass(Ga4Event.class);
+		verify(ga4Publisher, times(2)).publish(eq("123.456"), eq("100"), events.capture());
+		return events.getAllValues().get(1);
 	}
 }
