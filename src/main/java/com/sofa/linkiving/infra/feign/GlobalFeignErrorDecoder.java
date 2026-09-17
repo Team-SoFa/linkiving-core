@@ -9,6 +9,10 @@ public class GlobalFeignErrorDecoder implements ErrorDecoder {
 	@Override
 	public Exception decode(String methodKey, Response response) {
 		ExternalApiErrorCode errorCode = mapErrorCode(response.status());
+		if (response.status() >= 400 && response.status() < 500
+			&& response.status() != 408 && response.status() != 429) {
+			return new NonRetryableExternalApiException(errorCode, response.status());
+		}
 		return new BusinessException(errorCode);
 	}
 
@@ -17,8 +21,12 @@ public class GlobalFeignErrorDecoder implements ErrorDecoder {
 			return ExternalApiErrorCode.EXTERNAL_API_UNAUTHORIZED;
 		}
 
-		if (status == 504) {
+		if (status == 408 || status == 504) {
 			return ExternalApiErrorCode.EXTERNAL_API_TIMEOUT;
+		}
+
+		if (status == 429) {
+			return ExternalApiErrorCode.EXTERNAL_API_UNAVAILABLE;
 		}
 
 		if (status >= 500) {

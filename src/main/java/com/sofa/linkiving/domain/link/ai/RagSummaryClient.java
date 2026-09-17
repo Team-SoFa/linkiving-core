@@ -1,6 +1,7 @@
 package com.sofa.linkiving.domain.link.ai;
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -66,7 +67,8 @@ public class RagSummaryClient implements SummaryClient {
 			throw ExternalApiSupport.handleFailure(CLIENT.getValue(), operation, linkId, initialFailure, startNanos, e);
 		}
 
-		RagInitialSummaryRes result = firstOrThrowEmpty(response, operation, linkId, initialEmpty, startNanos);
+		RagInitialSummaryRes result = firstOrThrowEmpty(response, operation, linkId, initialEmpty, startNanos,
+			RagInitialSummaryRes::summary);
 		initialSuccess.increment();
 		return result;
 	}
@@ -84,14 +86,17 @@ public class RagSummaryClient implements SummaryClient {
 				startNanos, e);
 		}
 
-		RagRegenerateSummaryRes result = firstOrThrowEmpty(response, operation, linkId, regenerateEmpty, startNanos);
+		RagRegenerateSummaryRes result = firstOrThrowEmpty(response, operation, linkId, regenerateEmpty, startNanos,
+			RagRegenerateSummaryRes::summary);
 		regenerateSuccess.increment();
 		return result;
 	}
 
 	private <T> T firstOrThrowEmpty(List<T> response, String operation, Long linkId, Counter emptyCounter,
-		long startNanos) {
-		if (response != null && !response.isEmpty()) {
+		long startNanos, Function<T, String> summaryExtractor) {
+		if (response != null && !response.isEmpty() && response.get(0) != null
+			&& summaryExtractor.apply(response.get(0)) != null
+			&& !summaryExtractor.apply(response.get(0)).isBlank()) {
 			return response.get(0);
 		}
 		emptyCounter.increment();
