@@ -1,11 +1,14 @@
 package com.sofa.linkiving.domain.link.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.global.error.exception.BusinessException;
 
@@ -16,16 +19,19 @@ import lombok.RequiredArgsConstructor;
 public class SummaryCommandService {
 
 	private final SummaryRepository summaryRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
 	 * 특정 링크에서 선택된 요약을 변경한다. (링크당 selected=true는 최대 1개)
 	 */
+	@Transactional
 	public void selectSummary(Long linkId, Long summaryId) {
 		summaryRepository.clearSelectedByLinkId(linkId);
 		int updated = summaryRepository.selectByIdAndLinkId(summaryId, linkId);
 		if (updated == 0) {
 			throw new BusinessException(SummaryErrorCode.SUMMARY_NOT_FOUND);
 		}
+		eventPublisher.publishEvent(LinkSyncEvent.refreshEvent(linkId));
 	}
 
 	public Summary save(Link link, Format format, String content) {
@@ -51,4 +57,3 @@ public class SummaryCommandService {
 		);
 	}
 }
-

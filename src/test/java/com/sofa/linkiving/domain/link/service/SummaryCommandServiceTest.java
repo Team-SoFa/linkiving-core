@@ -11,11 +11,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.Format;
 import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.repository.SummaryRepository;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -29,6 +31,9 @@ public class SummaryCommandServiceTest {
 
 	@Mock
 	private SummaryRepository summaryRepository;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	@Test
 	@DisplayName("요약 선택 변경 성공")
@@ -45,6 +50,8 @@ public class SummaryCommandServiceTest {
 		// then
 		verify(summaryRepository).clearSelectedByLinkId(linkId);
 		verify(summaryRepository).selectByIdAndLinkId(summaryId, linkId);
+		verify(eventPublisher).publishEvent(argThat((LinkSyncEvent event) ->
+			event.req().linkId().equals(linkId) && event.req().summary() == null));
 	}
 
 	@Test
@@ -63,6 +70,7 @@ public class SummaryCommandServiceTest {
 
 		verify(summaryRepository).clearSelectedByLinkId(linkId);
 		verify(summaryRepository).selectByIdAndLinkId(summaryId, linkId);
+		verifyNoInteractions(eventPublisher);
 	}
 
 	@Test
