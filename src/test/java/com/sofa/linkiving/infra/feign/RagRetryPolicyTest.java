@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -36,6 +37,7 @@ import com.sofa.linkiving.domain.link.enums.SyncAction;
 import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.event.LinkSyncEventListener;
 import com.sofa.linkiving.domain.link.facade.SummaryWorkerFacade;
+import com.sofa.linkiving.domain.link.service.LinkSyncSnapshotService;
 import com.sofa.linkiving.domain.link.service.SummaryDeadLetterService;
 import com.sofa.linkiving.domain.link.worker.SummaryQueue;
 import com.sofa.linkiving.domain.link.worker.SummaryWorker;
@@ -78,9 +80,8 @@ class RagRetryPolicyTest {
 	void syncRecoversOnceAfterClassifiedAttempts(int status, int attempts) {
 		LinkSyncClient client = mock(LinkSyncClient.class);
 		SimpleMeterRegistry registry = new SimpleMeterRegistry();
-		LinkSyncEventListener target = new LinkSyncEventListener(client, registry, mock(MemberQueryService.class));
-		ReflectionTestUtils.invokeMethod(target, "initCounters");
 		LinkSyncUpdateReq request = LinkSyncUpdateReq.builder().linkId(1L).build();
+		LinkSyncEventListener target = syncListener(client, registry, request);
 		doThrow(decode(status)).when(client).syncUpdate(request);
 
 		assertThatCode(() -> proxy(target).handleLinkSyncEvent(new LinkSyncEvent(request, SyncAction.UPDATE)))
@@ -103,9 +104,8 @@ class RagRetryPolicyTest {
 		SimpleMeterRegistry registry = new SimpleMeterRegistry();
 		RagLinkSyncClient client = new RagLinkSyncClient(feign, registry);
 		ReflectionTestUtils.invokeMethod(client, "initCounters");
-		LinkSyncEventListener target = new LinkSyncEventListener(client, registry, mock(MemberQueryService.class));
-		ReflectionTestUtils.invokeMethod(target, "initCounters");
 		LinkSyncUpdateReq request = LinkSyncUpdateReq.builder().linkId(1L).build();
+		LinkSyncEventListener target = syncListener(client, registry, request);
 		var failure = new NoFallbackAvailableException("No fallback available",
 			new CompletionException(new ExecutionException(decode(status))));
 		if (action == SyncAction.DELETE) {
@@ -129,6 +129,37 @@ class RagRetryPolicyTest {
 			.filter(meter -> !meter.getId().getName().equals("ai.client.calls"))
 			.flatMap(meter -> java.util.stream.StreamSupport.stream(meter.measure().spliterator(), false))
 			.mapToDouble(measurement -> measurement.getValue()).sum()).isEqualTo(1.0);
+	}
+
+	private LinkSyncEventListener syncListener(LinkSyncClient client, SimpleMeterRegistry registry,
+		LinkSyncUpdateReq request) {
+		LinkSyncSnapshotService snapshots = mock(LinkSyncSnapshotService.class);
+		when(snapshots.findCurrent(request.linkId())).thenReturn(Optional.of(request));
+		when(snapshots.isSyncTarget(request.linkId())).thenReturn(true);
+		LinkSyncEventListener listener = new LinkSyncEventListener(client, registry, snapshots);
+		ReflectionTestUtils.invokeMethod(listener, "initCounters");
+		return listener;
+	}
+
+	@Test
+	void syncRetryReadsFreshSnapshotInsteadOfResendingFailedPayload() {
+		LinkSyncClient client = mock(LinkSyncClient.class);
+		LinkSyncSnapshotService snapshots = mock(LinkSyncSnapshotService.class);
+		LinkSyncUpdateReq old = LinkSyncUpdateReq.builder().linkId(1L).summary("old").build();
+		LinkSyncUpdateReq latest = LinkSyncUpdateReq.builder().linkId(1L).summary("latest").build();
+		when(snapshots.findCurrent(1L)).thenReturn(Optional.of(old), Optional.of(latest));
+		when(snapshots.isSyncTarget(1L)).thenReturn(true);
+		doThrow(decode(503)).when(client).syncUpdate(old);
+		LinkSyncEventListener listener = new LinkSyncEventListener(client, new SimpleMeterRegistry(), snapshots);
+		ReflectionTestUtils.invokeMethod(listener, "initCounters");
+
+		proxy(listener).handleLinkSyncEvent(LinkSyncEvent.refreshEvent(1L));
+
+		var order = inOrder(client);
+		order.verify(client).syncUpdate(old);
+		order.verify(client).syncUpdate(latest);
+		verify(snapshots, times(2)).findCurrent(1L);
+		verifyNoMoreInteractions(client);
 	}
 
 	@Test

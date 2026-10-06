@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
@@ -21,6 +22,7 @@ import com.sofa.linkiving.domain.link.entity.Summary;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
 import com.sofa.linkiving.domain.link.error.SummaryErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.util.UrlNormalizer;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -40,6 +42,9 @@ class LinkServiceTest {
 
 	@Mock
 	private UrlNormalizer urlNormalizer;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	@Test
 	@DisplayName("회원 정보 없이 링크 ID만으로 링크를 단건 조회할 수 있다")
@@ -442,6 +447,8 @@ class LinkServiceTest {
 		// then
 		verify(linkQueryService, times(1)).findById(linkId);
 		verify(link, times(1)).updateSummaryStatus(newStatus);
+		verify(eventPublisher).publishEvent(argThat((LinkSyncEvent event) ->
+			event.req().linkId().equals(linkId) && event.req().summary() == null));
 	}
 
 	@Test
@@ -474,6 +481,7 @@ class LinkServiceTest {
 			.doesNotThrowAnyException();
 
 		verify(linkCommandService, times(1)).resetSummaryStatusForRetry(linkId, member);
+		verify(eventPublisher).publishEvent(any(LinkSyncEvent.class));
 	}
 
 	@Test

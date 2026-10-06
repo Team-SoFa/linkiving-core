@@ -17,6 +17,11 @@ public record LinkSyncEvent(
 		this(req, action, Map.of());
 	}
 
+	public static LinkSyncEvent refreshEvent(Long linkId) {
+		return new LinkSyncEvent(LinkSyncUpdateReq.builder().linkId(linkId).build(),
+			SyncAction.UPDATE, LogContext.snapshot());
+	}
+
 	public static LinkSyncEvent deleteEvent(Long linkId) {
 		LinkSyncUpdateReq req = LinkSyncUpdateReq.builder()
 			.linkId(linkId)

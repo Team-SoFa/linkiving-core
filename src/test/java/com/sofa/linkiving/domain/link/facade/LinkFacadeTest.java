@@ -172,6 +172,9 @@ class LinkFacadeTest {
 		assertThat(response.existingSummary()).isEqualTo(existingSummary);
 		assertThat(response.newSummary()).isEqualTo(newSummary);
 		assertThat(response.difference()).isEqualTo(difference);
+		verifyNoInteractions(eventPublisher);
+		verify(summaryService, never()).selectSummary(anyLong(), anyLong());
+		verify(summaryService, never()).createSummary(any(), any(), any());
 
 		// verify
 		verify(linkService, times(1)).getLinkForSummaryUpdate(linkId, member);

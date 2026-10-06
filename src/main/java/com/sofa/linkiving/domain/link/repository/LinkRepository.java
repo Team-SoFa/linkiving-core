@@ -13,6 +13,7 @@ import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.member.entity.Member;
+import com.sofa.linkiving.domain.member.enums.MemberStatus;
 
 public interface LinkRepository extends JpaRepository<Link, Long> {
 
@@ -20,6 +21,22 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 
 	@Query("SELECT l FROM Link l JOIN FETCH l.member WHERE l.id = :linkId AND l.isDelete = false")
 	Optional<Link> findByIdWithMemberFetch(@Param("linkId") Long linkId);
+
+	@Query("""
+		SELECT new com.sofa.linkiving.domain.link.dto.internal.LinkDto(l, s)
+		FROM Link l
+		LEFT JOIN Summary s ON s.link = l AND s.selected = true AND s.isDelete = false
+		WHERE l.id = :linkId AND l.isDelete = false
+		AND l.member.status = :status AND l.member.isDelete = false
+		""")
+	Optional<LinkDto> findSyncSnapshot(@Param("linkId") Long linkId, @Param("status") MemberStatus status);
+
+	@Query("""
+		SELECT COUNT(l) > 0 FROM Link l
+		WHERE l.id = :linkId AND l.isDelete = false
+		AND l.member.status = :status AND l.member.isDelete = false
+		""")
+	boolean existsSyncTarget(@Param("linkId") Long linkId, @Param("status") MemberStatus status);
 
 	boolean existsByMemberAndUrlAndIsDeleteFalse(Member member, String url);
 

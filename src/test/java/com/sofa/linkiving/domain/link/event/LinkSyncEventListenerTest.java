@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import com.sofa.linkiving.domain.link.ai.LinkSyncClient;
 import com.sofa.linkiving.domain.link.dto.request.LinkSyncUpdateReq;
 import com.sofa.linkiving.domain.link.enums.SyncAction;
+import com.sofa.linkiving.domain.link.service.LinkSyncSnapshotService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -32,17 +35,21 @@ class LinkSyncEventListenerTest {
 	private LinkSyncEventListener linkSyncEventListener;
 	@Autowired
 	private LinkSyncClient linkSyncClient;
+	@Autowired
+	private LinkSyncSnapshotService snapshotService;
 
 	@BeforeEach
 	void setUp() {
-		reset(linkSyncClient);
+		reset(linkSyncClient, snapshotService);
+		when(snapshotService.findCurrent(1L)).thenReturn(Optional.of(request()));
+		when(snapshotService.isSyncTarget(1L)).thenReturn(true);
 	}
 
 	@Test
 	@DisplayName("CREATE 액션 이벤트 수신 시 syncCreate를 호출한다")
 	void shouldCallSyncCreate_WhenActionIsCreate() {
 		// given
-		LinkSyncUpdateReq req = mock(LinkSyncUpdateReq.class);
+		LinkSyncUpdateReq req = request();
 		LinkSyncEvent event = new LinkSyncEvent(req, SyncAction.CREATE);
 
 		// when
@@ -56,7 +63,7 @@ class LinkSyncEventListenerTest {
 	@DisplayName("UPDATE 액션 이벤트 수신 시 syncUpdate를 호출한다")
 	void shouldCallSyncUpdate_WhenActionIsUpdate() {
 		// given
-		LinkSyncUpdateReq req = mock(LinkSyncUpdateReq.class);
+		LinkSyncUpdateReq req = request();
 		LinkSyncEvent event = new LinkSyncEvent(req, SyncAction.UPDATE);
 
 		// when
@@ -70,8 +77,7 @@ class LinkSyncEventListenerTest {
 	@DisplayName("DELETE 액션 이벤트 수신 시 syncDelete를 호출한다")
 	void shouldCallSyncDelete_WhenActionIsDelete() {
 		// given
-		LinkSyncUpdateReq req = mock(LinkSyncUpdateReq.class);
-		when(req.linkId()).thenReturn(1L);
+		LinkSyncUpdateReq req = request();
 		LinkSyncEvent event = new LinkSyncEvent(req, SyncAction.DELETE);
 
 		// when
@@ -85,7 +91,7 @@ class LinkSyncEventListenerTest {
 	@DisplayName("동기화 실패 시 설정된 횟수(최대 3번)만큼 재시도한다")
 	void shouldRetryUpTo3Times_WhenFails() {
 		// given
-		LinkSyncUpdateReq req = mock(LinkSyncUpdateReq.class);
+		LinkSyncUpdateReq req = request();
 		LinkSyncEvent event = new LinkSyncEvent(req, SyncAction.CREATE);
 
 		doThrow(new RuntimeException("AI Server Error")).when(linkSyncClient).syncCreate(any());
@@ -102,7 +108,7 @@ class LinkSyncEventListenerTest {
 	@DisplayName("3번 내에 성공하면 정상 종료된다 (2번 실패 후 3번째 성공)")
 	void shouldNotThrowError_WhenSucceedsWithin3Times() {
 		// given
-		LinkSyncUpdateReq req = mock(LinkSyncUpdateReq.class);
+		LinkSyncUpdateReq req = request();
 		LinkSyncEvent event = new LinkSyncEvent(req, SyncAction.UPDATE);
 
 		doThrow(new RuntimeException("AI Server Error"))
@@ -115,6 +121,10 @@ class LinkSyncEventListenerTest {
 			.doesNotThrowAnyException();
 
 		verify(linkSyncClient, times(3)).syncUpdate(req);
+	}
+
+	private static LinkSyncUpdateReq request() {
+		return LinkSyncUpdateReq.builder().linkId(1L).build();
 	}
 
 	/**
@@ -136,16 +146,13 @@ class LinkSyncEventListenerTest {
 		}
 
 		@Bean
-		public com.sofa.linkiving.domain.member.service.MemberQueryService memberQueryService() {
-			com.sofa.linkiving.domain.member.service.MemberQueryService service =
-				mock(com.sofa.linkiving.domain.member.service.MemberQueryService.class);
-			org.mockito.Mockito.when(service.isActive(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
-			return service;
+		public LinkSyncSnapshotService snapshotService() {
+			return mock(LinkSyncSnapshotService.class);
 		}
 
 		@Bean
 		public LinkSyncEventListener linkSyncEventListener(LinkSyncClient linkSyncClient, MeterRegistry meterRegistry) {
-			return new LinkSyncEventListener(linkSyncClient, meterRegistry, memberQueryService());
+			return new LinkSyncEventListener(linkSyncClient, meterRegistry, snapshotService());
 		}
 	}
 }

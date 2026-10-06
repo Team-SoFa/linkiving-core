@@ -2,13 +2,16 @@ package com.sofa.linkiving.domain.link.service;
 
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
 import com.sofa.linkiving.domain.link.dto.internal.LinksDto;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
 import com.sofa.linkiving.domain.link.error.LinkErrorCode;
+import com.sofa.linkiving.domain.link.event.LinkSyncEvent;
 import com.sofa.linkiving.domain.link.util.UrlNormalizer;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.error.exception.BusinessException;
@@ -24,6 +27,7 @@ public class LinkService {
 	private final LinkCommandService linkCommandService;
 	private final LinkQueryService linkQueryService;
 	private final UrlNormalizer urlNormalizer;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public Link createLink(Member member, String url, String title, String memo, String imageUrl) {
 		String normalizedUrl = urlNormalizer.normalize(url);
@@ -111,15 +115,19 @@ public class LinkService {
 		return linkQueryService.findIdByUrl(member, normalizedUrl);
 	}
 
+	@Transactional
 	public void updateSummaryStatus(Long linkId, SummaryStatus status) {
 		Link link = linkQueryService.findById(linkId);
 		link.updateSummaryStatus(status);
+		eventPublisher.publishEvent(LinkSyncEvent.refreshEvent(linkId));
 	}
 
+	@Transactional
 	public void resetSummaryStatusForRetry(Long linkId, Member member) {
 		int updatedRows = linkCommandService.resetSummaryStatusForRetry(linkId, member);
 
 		if (updatedRows == 1) {
+			eventPublisher.publishEvent(LinkSyncEvent.refreshEvent(linkId));
 			return;
 		}
 
