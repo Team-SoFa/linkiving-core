@@ -89,17 +89,8 @@ jobs:
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew
 
-      - name: 🏗️ Gradle 빌드
-        run: ./gradlew build
-
-      - name: 🧪 테스트 실행
-        run: ./gradlew test
-
-      - name: 📊 JaCoCo 커버리지 리포트 생성
-        run: ./gradlew jacocoTestReport
-
-      - name: 📈 JaCoCo 커버리지 검증
-        run: ./gradlew jacocoTestCoverageVerification
+      - name: 🏗️ 빌드·테스트·커버리지 검증
+        run: ./gradlew build jacocoTestCoverageVerification
 
       - name: 💬 PR에 JaCoCo 커버리지 코멘트 추가
         if: github.event_name == 'pull_request'
