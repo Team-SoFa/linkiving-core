@@ -47,7 +47,7 @@ public class PendingTermsMemberCleanupScheduler {
 	public void deleteExpiredPendingTermsMembers() {
 		LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
 		try {
-			long deletedCount = memberRepository
+			int deletedCount = memberRepository
 				.deleteByStatusAndTermsAgreedAtIsNullAndPrivacyAgreedAtIsNullAndCreatedAtBefore(
 					MemberStatus.PENDING_TERMS,
 					cutoff

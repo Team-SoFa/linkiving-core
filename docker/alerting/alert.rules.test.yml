@@ -48,3 +48,23 @@ tests:
             exp_annotations:
               summary: "Alertmanager 알림 전송 실패: discord"
               description: "최근 5분 내 discord 알림 전송 실패가 발생했습니다. Alertmanager 로그와 수신 채널 설정을 확인해야 합니다."
+
+  - name: member cleanup failure resolves when the failure leaves the window
+    interval: 30s
+    input_series:
+      - series: 'async_task_failures_total{task="member", action="DELETE"}'
+        values: '0 0 1+0x24'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AsyncTaskFinalFailure
+        exp_alerts:
+          - exp_labels:
+              task: member
+              action: DELETE
+              severity: critical
+            exp_annotations:
+              summary: "작업 실패: member (DELETE)"
+              description: "최근 10분 내 task 'member'의 action 'DELETE' 작업이 실패했습니다. resolved는 실패 집계 조건의 해제이며 작업 복구를 보장하지 않습니다. 로그와 처리 상태를 확인하세요."
+      - eval_time: 11m
+        alertname: AsyncTaskFinalFailure
+        exp_alerts: []

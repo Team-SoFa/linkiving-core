@@ -20,9 +20,12 @@ class PendingTermsMemberCleanupSchedulerTest {
 	void shouldDeleteExpiredPendingTermsMembers() {
 		// given
 		MemberRepository memberRepository = mock(MemberRepository.class);
+		SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 		PendingTermsMemberCleanupScheduler scheduler =
-			new PendingTermsMemberCleanupScheduler(memberRepository, 14, new SimpleMeterRegistry());
+			new PendingTermsMemberCleanupScheduler(memberRepository, 14, meterRegistry);
 		ReflectionTestUtils.invokeMethod(scheduler, "initCounters");
+		given(memberRepository.deleteByStatusAndTermsAgreedAtIsNullAndPrivacyAgreedAtIsNullAndCreatedAtBefore(
+			any(), any())).willReturn(2);
 		ArgumentCaptor<LocalDateTime> cutoffCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
 		LocalDateTime before = LocalDateTime.now().minusDays(14);
 
@@ -37,6 +40,8 @@ class PendingTermsMemberCleanupSchedulerTest {
 				cutoffCaptor.capture()
 			);
 		assertThat(cutoffCaptor.getValue()).isBetween(before, after);
+		assertThat(meterRegistry.counter("async.task.failures",
+			"task", "member", "action", "DELETE").count()).isZero();
 	}
 
 	@Test

@@ -89,8 +89,8 @@ groups:
           summary: "회원 탈퇴 중 refresh token 삭제 실패"
           description: "최근 10분 내 Redis refresh token 삭제 실패가 발생했습니다. 애플리케이션 로그와 Redis 잔존 키를 확인해야 합니다."
 
-      # ── 비동기 작업 최종 실패 ──────────────────────────────
-      # 재시도 소진 후 최종 실패가 발생하면 즉시 알림 (수동 복구 필요 신호)
+      # ── 비동기·스케줄 작업 실패 ───────────────────────────
+      # 재시도 여부와 관계없이 기록된 실패를 감지하며, 집계 구간이 지나면 해제된다.
       # async.task.failures 태그 키셋은 task·action 으로 통일되어 action 은 항상 존재한다.
       - alert: AsyncTaskFinalFailure
         expr: increase(async_task_failures_total[10m]) > 0
@@ -98,8 +98,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "비동기 작업 최종 실패: {{ $labels.task }} ({{ $labels.action }})"
-          description: "task '{{ $labels.task }}' 의 action '{{ $labels.action }}' 에서 재시도 소진 후 최종 실패가 발생했습니다. 수동 복구가 필요할 수 있습니다."
+          summary: "작업 실패: {{ $labels.task }} ({{ $labels.action }})"
+          description: "최근 10분 내 task '{{ $labels.task }}'의 action '{{ $labels.action }}' 작업이 실패했습니다. resolved는 실패 집계 조건의 해제이며 작업 복구를 보장하지 않습니다. 로그와 처리 상태를 확인하세요."
 
       # ── 비동기 executor 큐 포화 임박 ──────────────────────
       # executor별 큐 용량이 다르므로(app 100 / ai 30) 절대값 대신 사용률 기반으로 감지.
