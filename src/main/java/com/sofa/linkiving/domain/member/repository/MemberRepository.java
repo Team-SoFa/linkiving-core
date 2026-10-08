@@ -33,7 +33,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 			AND m.privacyAgreedAt IS NULL
 			AND m.createdAt < :createdAt
 		""")
-	long deleteByStatusAndTermsAgreedAtIsNullAndPrivacyAgreedAtIsNullAndCreatedAtBefore(
+	int deleteByStatusAndTermsAgreedAtIsNullAndPrivacyAgreedAtIsNullAndCreatedAtBefore(
 		@Param("status") MemberStatus status,
 		@Param("createdAt") LocalDateTime createdAt
 	);
