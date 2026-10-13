@@ -7,6 +7,8 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 
 ## [Unreleased]
 
+## [v0.1.3] - 2026-10-14
+
 ### Fixed
 
 - 약관 미동의 계정 정리 배치가 삭제 쿼리의 반환 타입 오류로 실패하던 문제를 수정했습니다.
@@ -74,6 +76,7 @@ For example, tag `v1.2.3` must have a `## [v1.2.3]` section.
 - 링크, 요약, 채팅 질의 이벤트의 analytics 이름과 payload 정합성을 맞췄습니다.
 - 성공한 비동기 작업이 실패로 집계되지 않도록 메트릭 집계 흐름을 정리했습니다.
 
+[v0.1.3]: https://github.com/Team-SoFa/linkiving-core/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/Team-SoFa/linkiving-core/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/Team-SoFa/linkiving-core/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/Team-SoFa/linkiving-core/releases/tag/v0.1.0
