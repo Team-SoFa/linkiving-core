@@ -5,9 +5,11 @@ import static org.mockito.Mockito.*;
 
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,12 +23,20 @@ import com.sofa.linkiving.global.util.HashidsUtils;
 
 class AnalyticsIdentifierContractTest {
 
+	private HashidsUtils previousHashids;
+
 	private final ObjectMapper mapper = new ObjectMapper();
 	private final HashidsUtils hashids = new HashidsUtils("analytics-contract-test", 8);
 
 	@BeforeEach
 	void setUp() {
+		previousHashids = (HashidsUtils)ReflectionTestUtils.getField(HashidsSerializer.class, "hashidsUtils");
 		new HashidsSerializer().setHashidsUtils(hashids);
+	}
+
+	@AfterEach
+	void tearDown() {
+		ReflectionTestUtils.setField(HashidsSerializer.class, "hashidsUtils", previousHashids);
 	}
 
 	@Test
