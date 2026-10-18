@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.link.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.link.entity.Link;
 import com.sofa.linkiving.domain.link.enums.SummaryStatus;
@@ -27,6 +28,12 @@ public record LinkRes(
 	@Schema(description = "요약 상태")
 	SummaryStatus summaryStatus
 ) {
+	@Schema(description = "GA 분석용 DB ID의 10진 문자열. API 요청에는 id를 사용합니다.")
+	@JsonProperty("analyticsId")
+	public String analyticsId() {
+		return id == null ? null : id.toString();
+	}
+
 	public static LinkRes from(Link link) {
 		return new LinkRes(
 			link.getId(),

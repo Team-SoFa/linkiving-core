@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.member.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.sofa.linkiving.domain.member.entity.Member;
 import com.sofa.linkiving.global.config.jackson.HashidsSerializer;
@@ -23,6 +24,12 @@ public record MemberProfileRes(
 	@Schema(description = "가입일", example = "2026-03-01T12:34:56")
 	LocalDateTime createdAt
 ) {
+	@Schema(description = "GA 분석용 DB ID의 10진 문자열. API 요청에는 id를 사용합니다.")
+	@JsonProperty("analyticsId")
+	public String analyticsId() {
+		return id == null ? null : id.toString();
+	}
+
 	public static MemberProfileRes from(Member member) {
 		return MemberProfileRes.builder()
 			.id(member.getId())
