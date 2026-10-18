@@ -370,7 +370,7 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
-		given(linkQueryService.findIdByUrl(member, "https://www.example.com")).willReturn(java.util.Optional.empty());
+		given(linkQueryService.findIdByUrl(eq(member), anyString())).willReturn(Optional.empty());
 
 		// when
 		Optional<Long> result = linkService.findLinkIdByUrl(member, "www.example.com");

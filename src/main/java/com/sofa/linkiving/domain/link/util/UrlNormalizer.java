@@ -2,8 +2,10 @@ package com.sofa.linkiving.domain.link.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +23,7 @@ public class UrlNormalizer {
 		Pattern.CASE_INSENSITIVE
 	);
 
+	/** 메타 수집 등 실제 접속에 사용할 URL은 입력한 호스트를 유지한다. */
 	public String normalize(String rawUrl) {
 		if (rawUrl == null || rawUrl.isBlank()) {
 			throw new BusinessException(LinkErrorCode.INVALID_URL);
@@ -34,17 +37,29 @@ public class UrlNormalizer {
 		return normalizeSchemeAndHost(normalizedUrl);
 	}
 
-	/** 정규화된 저장값을 먼저 반환하고, 루트 URL은 과거 슬래시 표기도 함께 비교한다. */
+	/** www를 제거한 저장값을 먼저 반환하고, 과거 www·루트 슬래시 표기도 함께 비교한다. */
 	public List<String> comparisonUrls(String rawUrl) {
 		String normalizedUrl = normalize(rawUrl);
 		URI uri = URI.create(normalizedUrl);
-		if (!uri.getRawPath().isEmpty()) {
-			return List.of(normalizedUrl);
+		String canonicalHost = uri.getHost();
+		while (canonicalHost.startsWith("www.") && canonicalHost.substring(4).contains(".")) {
+			canonicalHost = canonicalHost.substring(4);
 		}
 
-		int pathStart = uri.getScheme().length() + 3 + uri.getRawAuthority().length();
-		String legacyRootUrl = normalizedUrl.substring(0, pathStart) + "/" + normalizedUrl.substring(pathStart);
-		return List.of(normalizedUrl, legacyRootUrl);
+		Set<String> comparisonUrls = new LinkedHashSet<>();
+		addRootVariants(comparisonUrls, rebuildUrl(uri, uri.getScheme(), canonicalHost));
+		addRootVariants(comparisonUrls, rebuildUrl(uri, uri.getScheme(), "www." + canonicalHost));
+		addRootVariants(comparisonUrls, normalizedUrl);
+		return List.copyOf(comparisonUrls);
+	}
+
+	private void addRootVariants(Set<String> urls, String url) {
+		urls.add(url);
+		URI uri = URI.create(url);
+		if (uri.getRawPath().isEmpty()) {
+			int pathStart = uri.getScheme().length() + 3 + uri.getRawAuthority().length();
+			urls.add(url.substring(0, pathStart) + "/" + url.substring(pathStart));
+		}
 	}
 
 	private String removeDuplicatedHttpScheme(String url) {
