@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sofa.linkiving.domain.link.dto.internal.LinkDto;
@@ -38,8 +39,8 @@ class LinkServiceTest {
 	@Mock
 	private LinkQueryService linkQueryService;
 
-	@Mock
-	private UrlNormalizer urlNormalizer;
+	@Spy
+	private UrlNormalizer urlNormalizer = new UrlNormalizer();
 
 	@Test
 	@DisplayName("회원 정보 없이 링크 ID만으로 링크를 단건 조회할 수 있다")
@@ -87,7 +88,6 @@ class LinkServiceTest {
 			.title("테스트 링크")
 			.build();
 
-		given(urlNormalizer.normalize(" example.com ")).willReturn("https://example.com");
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(false);
 		given(linkCommandService.saveLink(any(), any(), any(), any(), any()))
 			.willReturn(link);
@@ -116,7 +116,6 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
-		given(urlNormalizer.normalize("https://https://example.com")).willReturn("https://example.com");
 		given(linkQueryService.existsByUrl(member, "https://example.com")).willReturn(true);
 
 		// when & then
@@ -352,7 +351,6 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
-		given(urlNormalizer.normalize("example.com")).willReturn("https://example.com");
 		given(linkQueryService.findIdByUrl(member, "https://example.com")).willReturn(java.util.Optional.of(123L));
 
 		// when
@@ -372,7 +370,6 @@ class LinkServiceTest {
 			.email("test@example.com")
 			.build();
 
-		given(urlNormalizer.normalize("www.example.com")).willReturn("https://www.example.com");
 		given(linkQueryService.findIdByUrl(member, "https://www.example.com")).willReturn(java.util.Optional.empty());
 
 		// when

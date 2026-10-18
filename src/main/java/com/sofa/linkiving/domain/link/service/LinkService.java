@@ -1,5 +1,6 @@
 package com.sofa.linkiving.domain.link.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -26,11 +27,12 @@ public class LinkService {
 	private final UrlNormalizer urlNormalizer;
 
 	public Link createLink(Member member, String url, String title, String memo, String imageUrl) {
-		String normalizedUrl = urlNormalizer.normalize(url);
-		if (linkQueryService.existsByUrl(member, normalizedUrl)) {
+		List<String> comparisonUrls = urlNormalizer.comparisonUrls(url);
+		if (comparisonUrls.stream().anyMatch(candidate -> linkQueryService.existsByUrl(member, candidate))) {
 			throw new BusinessException(LinkErrorCode.DUPLICATE_URL);
 		}
 
+		String normalizedUrl = comparisonUrls.get(0);
 		Link link = linkCommandService.saveLink(member, normalizedUrl, title, memo, imageUrl);
 		log.info("Link created - id={}, memberId={}", link.getId(), member.getId());
 
@@ -107,8 +109,10 @@ public class LinkService {
 	}
 
 	public Optional<Long> findLinkIdByUrl(Member member, String url) {
-		String normalizedUrl = urlNormalizer.normalize(url);
-		return linkQueryService.findIdByUrl(member, normalizedUrl);
+		return urlNormalizer.comparisonUrls(url).stream()
+			.map(candidate -> linkQueryService.findIdByUrl(member, candidate))
+			.flatMap(Optional::stream)
+			.findFirst();
 	}
 
 	public void updateSummaryStatus(Long linkId, SummaryStatus status) {

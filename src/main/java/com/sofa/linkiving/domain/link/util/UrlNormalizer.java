@@ -2,6 +2,7 @@ package com.sofa.linkiving.domain.link.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +32,19 @@ public class UrlNormalizer {
 		}
 
 		return normalizeSchemeAndHost(normalizedUrl);
+	}
+
+	/** 정규화된 저장값을 먼저 반환하고, 루트 URL은 과거 슬래시 표기도 함께 비교한다. */
+	public List<String> comparisonUrls(String rawUrl) {
+		String normalizedUrl = normalize(rawUrl);
+		URI uri = URI.create(normalizedUrl);
+		if (!uri.getRawPath().isEmpty()) {
+			return List.of(normalizedUrl);
+		}
+
+		int pathStart = uri.getScheme().length() + 3 + uri.getRawAuthority().length();
+		String legacyRootUrl = normalizedUrl.substring(0, pathStart) + "/" + normalizedUrl.substring(pathStart);
+		return List.of(normalizedUrl, legacyRootUrl);
 	}
 
 	private String removeDuplicatedHttpScheme(String url) {
@@ -71,7 +85,7 @@ public class UrlNormalizer {
 		StringBuilder normalizedUrl = new StringBuilder(scheme)
 			.append("://")
 			.append(normalizedAuthority)
-			.append(uri.getRawPath());
+			.append("/".equals(uri.getRawPath()) ? "" : uri.getRawPath());
 
 		if (uri.getRawQuery() != null) {
 			normalizedUrl.append('?').append(uri.getRawQuery());
