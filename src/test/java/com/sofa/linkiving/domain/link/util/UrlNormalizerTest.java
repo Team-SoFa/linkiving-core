@@ -18,6 +18,12 @@ class UrlNormalizerTest {
 	@ParameterizedTest
 	@CsvSource({
 		"naver.com, https://naver.com",
+		"naver.com/, https://naver.com",
+		"www.naver.com/, https://www.naver.com",
+		"http://naver.com/, http://naver.com",
+		"'https://naver.com/?q=abc#section', 'https://naver.com?q=abc#section'",
+		"https://naver.com/path/, https://naver.com/path/",
+		"https://naver.com//, https://naver.com//",
 		"www.naver.com, https://www.naver.com",
 		"https://www.naver.com, https://www.naver.com",
 		"http://old-site.com, http://old-site.com",
@@ -31,6 +37,21 @@ class UrlNormalizerTest {
 	@DisplayName("URL을 규칙에 맞게 정규화한다")
 	void normalizeUrl(String input, String expected) {
 		assertThat(urlNormalizer.normalize(input)).isEqualTo(expected);
+		assertThat(urlNormalizer.normalize(expected)).isEqualTo(expected);
+	}
+
+	@Test
+	@DisplayName("루트 URL의 과거 슬래시 표기를 쿼리와 fragment 앞에서 비교한다")
+	void compareLegacyRootUrl() {
+		assertThat(urlNormalizer.comparisonUrls("HTTPS://NAVER.COM/?q=%2F#section"))
+			.containsExactly("https://naver.com?q=%2F#section", "https://naver.com/?q=%2F#section");
+	}
+
+	@Test
+	@DisplayName("일반 경로의 슬래시는 비교 대상에 추가하거나 제거하지 않는다")
+	void preserveNonRootPath() {
+		assertThat(urlNormalizer.comparisonUrls("https://naver.com/path/"))
+			.containsExactly("https://naver.com/path/");
 	}
 
 	@Test
